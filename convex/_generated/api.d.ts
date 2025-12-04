@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as aiCoach from "../aiCoach.js";
 import type * as cycles from "../cycles.js";
 import type * as exercises from "../exercises.js";
 import type * as meals from "../meals.js";
@@ -20,6 +21,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiCoach: typeof aiCoach;
   cycles: typeof cycles;
   exercises: typeof exercises;
   meals: typeof meals;

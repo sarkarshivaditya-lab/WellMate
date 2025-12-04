@@ -1,0 +1,125 @@
+{
+  "$id": "https://wellmate.app/schemas/aiResponse.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["advice_text", "type", "nutrition", "plan", "escalation", "confidence", "explainability"],
+  "properties": {
+    "advice_text": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["diet", "exercise", "mixed", "safety"]
+    },
+    "nutrition": {
+      "type": "object",
+      "required": ["calories", "protein_g", "fat_g", "carbs_g"],
+      "properties": {
+        "calories": {
+          "type": "integer"
+        },
+        "protein_g": {
+          "type": "integer"
+        },
+        "fat_g": {
+          "type": "integer"
+        },
+        "carbs_g": {
+          "type": "integer"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["day"],
+        "properties": {
+          "day": {
+            "type": "integer"
+          },
+          "workout": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "sets": {
+                  "type": "integer"
+                },
+                "reps": {
+                  "type": ["integer", "string"]
+                },
+                "duration_min": {
+                  "type": "integer"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "exercise_id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "serving_text": {
+                  "type": "string"
+                },
+                "calories": {
+                  "type": "integer"
+                },
+                "protein_g": {
+                  "type": "integer"
+                },
+                "fat_g": {
+                  "type": "integer"
+                },
+                "carbs_g": {
+                  "type": "integer"
+                },
+                "notes": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "exercises_database_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation": {
+      "type": "boolean"
+    },
+    "explainability": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

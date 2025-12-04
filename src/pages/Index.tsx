@@ -5,20 +5,21 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon } from "lucide-react";
+import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon, SparklesIcon } from "lucide-react";
 import Onboarding from "./Onboarding.tsx";
 import FoodLog from "./physical/FoodLog.tsx";
 import ExerciseLog from "./physical/ExerciseLog.tsx";
 import Progress from "./physical/Progress.tsx";
 import PeriodTracker from "./physical/PeriodTracker.tsx";
+import AiCoach from "./physical/AiCoach.tsx";
 import MentalOverview from "./mental/Overview.tsx";
 
-type PhysicalScreen = "food" | "exercise" | "progress" | "period";
+type PhysicalScreen = "food" | "exercise" | "progress" | "period" | "coach";
 
 function AppContent() {
   const user = useQuery(api.users.getCurrentUser);
   const [activeTab, setActiveTab] = useState<"physical" | "mental">("physical");
-  const [physicalScreen, setPhysicalScreen] = useState<PhysicalScreen>("food");
+  const [physicalScreen, setPhysicalScreen] = useState<PhysicalScreen>("coach");
 
   if (user === undefined) {
     return (
@@ -66,6 +67,14 @@ function AppContent() {
           <div className="container mx-auto px-4">
             <div className="flex space-x-1 overflow-x-auto py-2">
               <Button
+                variant={physicalScreen === "coach" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setPhysicalScreen("coach")}
+              >
+                <SparklesIcon className="mr-2 h-4 w-4" />
+                AI Coach
+              </Button>
+              <Button
                 variant={physicalScreen === "food" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setPhysicalScreen("food")}
@@ -107,6 +116,7 @@ function AppContent() {
       <main className="container mx-auto px-4 py-6 max-w-5xl">
         {activeTab === "physical" && (
           <>
+            {physicalScreen === "coach" && <AiCoach />}
             {physicalScreen === "food" && <FoodLog />}
             {physicalScreen === "exercise" && <ExerciseLog />}
             {physicalScreen === "progress" && <Progress />}
