@@ -160,6 +160,55 @@ export default function Dev() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Mental Coach Context</CardTitle>
+            <CardDescription>View data sent to AI Mental Coach</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-sm">
+              <div>
+                <div className="font-semibold mb-1">Recent Moods:</div>
+                {moods && moods.length > 0 ? (
+                  <div className="p-3 bg-secondary/50 rounded font-mono text-xs">
+                    {moods.slice(0, 7).map((mood, i) => (
+                      <div key={i}>
+                        {new Date(mood.dateIso).toLocaleDateString()}: {mood.moodValue}/5
+                        {mood.note && ` - "${mood.note}"`}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No mood data yet</p>
+                )}
+              </div>
+              
+              <div>
+                <div className="font-semibold mb-1">Recent Journal Entries:</div>
+                {journalEntries && journalEntries.length > 0 ? (
+                  <div className="p-3 bg-secondary/50 rounded font-mono text-xs space-y-2">
+                    {journalEntries.slice(0, 3).map((entry, i) => (
+                      <div key={i}>
+                        <div className="font-semibold">{new Date(entry.dateIso).toLocaleDateString()}</div>
+                        <div className="text-muted-foreground line-clamp-2">{entry.text}</div>
+                        {entry.tags.length > 0 && (
+                          <div className="text-xs">Tags: {entry.tags.join(", ")}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No journal entries yet</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              This is the context data that gets sent to the AI Mental Coach to personalize responses.
+            </div>
+          </CardContent>
+        </Card>
         
         <Card>
           <CardHeader>

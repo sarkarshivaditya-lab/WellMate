@@ -9,6 +9,7 @@
  */
 
 import type * as aiCoach from "../aiCoach.js";
+import type * as aiMentalCoach from "../aiMentalCoach.js";
 import type * as cycles from "../cycles.js";
 import type * as exercises from "../exercises.js";
 import type * as insights from "../insights.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   aiCoach: typeof aiCoach;
+  aiMentalCoach: typeof aiMentalCoach;
   cycles: typeof cycles;
   exercises: typeof exercises;
   insights: typeof insights;

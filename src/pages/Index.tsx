@@ -16,15 +16,16 @@ import MentalOverview from "./mental/Overview.tsx";
 import MentalJournal from "./mental/Journal.tsx";
 import MentalTools from "./mental/Tools.tsx";
 import MentalResources from "./mental/Resources.tsx";
+import AiMentalCoach from "./mental/AiMentalCoach.tsx";
 
 type PhysicalScreen = "food" | "exercise" | "progress" | "period" | "coach";
-type MentalScreen = "overview" | "journal" | "tools" | "resources";
+type MentalScreen = "overview" | "journal" | "tools" | "resources" | "aicoach";
 
 function AppContent() {
   const user = useQuery(api.users.getCurrentUser);
   const [activeTab, setActiveTab] = useState<"physical" | "mental">("physical");
   const [physicalScreen, setPhysicalScreen] = useState<PhysicalScreen>("coach");
-  const [mentalScreen, setMentalScreen] = useState<MentalScreen>("overview");
+  const [mentalScreen, setMentalScreen] = useState<MentalScreen>("aicoach");
 
   if (user === undefined) {
     return (
@@ -123,6 +124,14 @@ function AppContent() {
           <div className="container mx-auto px-4">
             <div className="flex space-x-1 overflow-x-auto py-2">
               <Button
+                variant={mentalScreen === "aicoach" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setMentalScreen("aicoach")}
+              >
+                <SparklesIcon className="mr-2 h-4 w-4" />
+                AI Coach
+              </Button>
+              <Button
                 variant={mentalScreen === "overview" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setMentalScreen("overview")}
@@ -171,6 +180,7 @@ function AppContent() {
         )}
         {activeTab === "mental" && (
           <>
+            {mentalScreen === "aicoach" && <AiMentalCoach />}
             {mentalScreen === "overview" && <MentalOverview />}
             {mentalScreen === "journal" && <MentalJournal />}
             {mentalScreen === "tools" && <MentalTools />}

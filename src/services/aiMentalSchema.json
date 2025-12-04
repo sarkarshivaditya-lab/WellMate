@@ -1,0 +1,56 @@
+{
+  "type": "object",
+  "required": ["summary", "emotion", "suggestions", "practice", "escalation", "confidence"],
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "Brief empathetic acknowledgment of user's emotional state"
+    },
+    "emotion": {
+      "type": "string",
+      "enum": ["calm", "stressed", "anxious", "sad", "content", "frustrated", "overwhelmed", "hopeful"],
+      "description": "Primary emotion detected"
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "maxItems": 3,
+      "description": "Non-clinical wellness suggestions"
+    },
+    "practice": {
+      "type": "object",
+      "required": ["id", "title", "steps"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Practice ID from provided list"
+        },
+        "title": {
+          "type": "string",
+          "description": "Practice title"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Practice steps"
+        }
+      },
+      "additionalProperties": false
+    },
+    "escalation": {
+      "type": "boolean",
+      "description": "True if crisis detected and safety resources should be shown"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "AI confidence in this response"
+    }
+  },
+  "additionalProperties": false
+}
