@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { DefaultProviders } from "./components/providers/default.tsx";
 import AuthCallback from "./pages/auth/Callback.tsx";
 import RootRedirect from "./pages/RootRedirect.tsx";
+import DevPreview from "./pages/DevPreview.tsx";
 import Index from "./pages/Index.tsx";
 import Onboarding from "./pages/Onboarding.tsx";
 import Dev from "./pages/Dev.tsx";
@@ -16,6 +17,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
+          <Route path="/dev-preview" element={<DevPreview />} />
           <Route path="/physical" element={<Index />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dev" element={<Dev />} />
