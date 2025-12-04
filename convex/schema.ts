@@ -100,4 +100,46 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_week", ["userId", "weekStart"]),
+  
+  habits: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    cadence: v.union(v.literal("daily"), v.literal("weekly"), v.literal("custom")),
+    remindersEnabled: v.boolean(),
+    reminderTime: v.optional(v.string()),
+    archived: v.boolean(),
+  }).index("by_user", ["userId"]),
+  
+  habitEntries: defineTable({
+    habitId: v.id("habits"),
+    userId: v.id("users"),
+    dateIso: v.string(),
+    completed: v.boolean(),
+    note: v.optional(v.string()),
+  })
+    .index("by_habit", ["habitId"])
+    .index("by_user", ["userId"])
+    .index("by_user_and_date", ["userId", "dateIso"])
+    .index("by_habit_and_date", ["habitId", "dateIso"]),
+  
+  sleepLogs: defineTable({
+    userId: v.id("users"),
+    startIso: v.string(),
+    endIso: v.string(),
+    durationMin: v.number(),
+    rating: v.number(),
+    notes: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_start", ["userId", "startIso"]),
+  
+  subscriptions: defineTable({
+    userId: v.id("users"),
+    provider: v.union(v.literal("stripe"), v.literal("mock")),
+    status: v.union(v.literal("active"), v.literal("past_due"), v.literal("inactive")),
+    tier: v.union(v.literal("free"), v.literal("pro")),
+    expiresAt: v.optional(v.string()),
+    metadata: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
 });
