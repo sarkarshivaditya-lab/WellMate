@@ -6,7 +6,6 @@ import { SignInButton } from "@/components/ui/signin.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon, SparklesIcon, HomeIcon, BookOpenIcon, WrenchIcon, InfoIcon } from "lucide-react";
-import Onboarding from "./Onboarding.tsx";
 import FoodLog from "./physical/FoodLog.tsx";
 import ExerciseLog from "./physical/ExerciseLog.tsx";
 import Progress from "./physical/Progress.tsx";
@@ -35,17 +34,13 @@ function AppContent() {
     );
   }
 
-  if (!user?.hasCompletedOnboarding) {
-    return <Onboarding />;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <h1 className="text-2xl font-bold text-primary">WellMate</h1>
-            <p className="text-sm text-muted-foreground">Welcome, {user.name}</p>
+            <p className="text-sm text-muted-foreground">Welcome, {user?.name || "User"}</p>
           </div>
           <div className="flex space-x-1 -mb-px overflow-x-auto">
             <Button
@@ -104,7 +99,7 @@ function AppContent() {
                 <BarChart3Icon className="mr-2 h-4 w-4" />
                 Progress
               </Button>
-              {user.periodTrackingEnabled && (
+              {user?.periodTrackingEnabled && (
                 <Button
                   variant={physicalScreen === "period" ? "secondary" : "ghost"}
                   size="sm"

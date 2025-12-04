@@ -1,0 +1,135 @@
+{
+  "info": {
+    "name": "WellMate Backend API",
+    "description": "Complete API test collection for WellMate backend endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "user_12345",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Check server health and configuration"
+      }
+    },
+    {
+      "name": "AI Physical Coach",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userProfile\": {\n    \"age\": 30,\n    \"biologicalSex\": \"male\",\n    \"activityLevel\": \"moderate\",\n    \"primaryGoal\": \"lose_weight\",\n    \"height\": 180,\n    \"weight\": 85,\n    \"nutritionTargets\": {\n      \"bmr\": 1800,\n      \"tdee\": 2500,\n      \"targetCalories\": 2000,\n      \"macros\": {\n        \"protein\": 150,\n        \"carbs\": 200,\n        \"fat\": 65\n      }\n    }\n  },\n  \"message\": \"I want to lose weight but I hate running. What exercises can I do?\",\n  \"context\": {\n    \"recentMeals\": [\n      {\n        \"type\": \"breakfast\",\n        \"totalCalories\": 450\n      }\n    ],\n    \"recentExercises\": []\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ai/physical-coach",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ai", "physical-coach"]
+        },
+        "description": "Get personalized physical wellbeing advice"
+      }
+    },
+    {
+      "name": "AI Mental Coach",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"I'm feeling really stressed about work and can't sleep\",\n  \"moodHistory\": [\n    {\n      \"mood\": \"anxious\",\n      \"tags\": [\"work\", \"sleep\"],\n      \"timestamp\": \"2025-12-04T10:00:00Z\"\n    },\n    {\n      \"mood\": \"stressed\",\n      \"tags\": [\"work\"],\n      \"timestamp\": \"2025-12-03T14:00:00Z\"\n    }\n  ],\n  \"journalSummary\": \"User has been experiencing work-related stress for the past week. Mentions difficulty sleeping and feeling overwhelmed.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/ai/mental-coach",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "ai", "mental-coach"]
+        },
+        "description": "Get empathetic mental wellbeing support"
+      }
+    },
+    {
+      "name": "Create Checkout Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tier\": \"pro\",\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payments/create-checkout-session",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payments", "create-checkout-session"]
+        },
+        "description": "Create Stripe checkout session for Pro subscription"
+      }
+    },
+    {
+      "name": "Verify Payment Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"cs_test_1234567890\",\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/payments/verify",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payments", "verify"]
+        },
+        "description": "Verify payment session and retrieve subscription status"
+      }
+    },
+    {
+      "name": "Get User Subscription",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/payments/subscription/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "payments", "subscription", "{{userId}}"]
+        },
+        "description": "Fetch current subscription status for user"
+      }
+    }
+  ]
+}
