@@ -13,6 +13,18 @@ import Pricing from "./pages/Pricing.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 export default function App() {
+  // Show static preview immediately if on root path (for Hercules preview)
+  if (window.location.pathname === "/" && !window.location.search) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<RootStaticPreview />} />
+          <Route path="*" element={<RootStaticPreview />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
     <DefaultProviders>
       <BrowserRouter>
