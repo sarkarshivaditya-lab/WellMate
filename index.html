@@ -1,25 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>WellMate Preview Test</title>
-    <style>
-      body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; padding:40px; background:#f7faf9; color:#111 }
-      .card { max-width:720px; margin:40px auto; background:white; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.06); padding:28px; }
-      .btn { display:inline-block; margin-top:16px; padding:10px 14px; border-radius:8px; text-decoration:none; color:#fff; background:#2b6cb0; }
-    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WellMate</title>
   </head>
   <body>
-    <div class="card">
-      <h1>WellMate Preview Diagnostic</h1>
-      <p>This is a plain static HTML test page. If you can see this, the Hercules preview can render HTML. If this is blank, the preview iframe is blocked or failing.</p>
-      <p><strong>Next steps:</strong></p>
-      <ul>
-        <li>If this page renders: reply "STATIC RENDERS"</li>
-        <li>If this page is blank: reply "STATIC BLANK"</li>
-      </ul>
-      <a class="btn" href="/">Reload</a>
-    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
