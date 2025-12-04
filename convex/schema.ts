@@ -72,4 +72,32 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_start", ["userId", "startDateIso"]),
+  
+  moods: defineTable({
+    userId: v.id("users"),
+    dateIso: v.string(),
+    moodValue: v.number(),
+    note: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_date", ["userId", "dateIso"]),
+  
+  journalEntries: defineTable({
+    userId: v.id("users"),
+    dateIso: v.string(),
+    text: v.string(),
+    tags: v.array(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_date", ["userId", "dateIso"]),
+  
+  insightsCache: defineTable({
+    userId: v.id("users"),
+    weekStart: v.string(),
+    moodAverage: v.number(),
+    stressIndicators: v.array(v.string()),
+    notes: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_week", ["userId", "weekStart"]),
 });

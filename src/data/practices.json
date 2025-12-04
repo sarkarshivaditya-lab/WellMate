@@ -1,0 +1,152 @@
+[
+  {
+    "id": "p1",
+    "title": "Box Breathing",
+    "type": "breathing",
+    "steps": [
+      "Find a comfortable seated position",
+      "Inhale slowly through your nose for 4 seconds",
+      "Hold your breath for 4 seconds",
+      "Exhale slowly through your mouth for 4 seconds",
+      "Hold your breath for 4 seconds",
+      "Repeat for 5-10 cycles"
+    ]
+  },
+  {
+    "id": "p2",
+    "title": "5-4-3-2-1 Grounding",
+    "type": "grounding",
+    "steps": [
+      "Acknowledge 5 things you can see around you",
+      "Acknowledge 4 things you can touch",
+      "Acknowledge 3 things you can hear",
+      "Acknowledge 2 things you can smell",
+      "Acknowledge 1 thing you can taste",
+      "Take a deep breath and return to the present"
+    ]
+  },
+  {
+    "id": "p3",
+    "title": "Gratitude Reflection",
+    "type": "gratitude",
+    "steps": [
+      "Find a quiet space and close your eyes",
+      "Think of 3 things you're grateful for today",
+      "Reflect on why each one matters to you",
+      "Notice how gratitude feels in your body",
+      "Write them down if you'd like"
+    ]
+  },
+  {
+    "id": "p4",
+    "title": "Tension Release Scan",
+    "type": "reflection",
+    "steps": [
+      "Sit or lie down comfortably",
+      "Starting from your toes, notice any tension",
+      "Slowly move your attention up through your body",
+      "When you find tension, breathe into that area",
+      "Imagine releasing the tension with each exhale",
+      "Continue until you reach the top of your head"
+    ]
+  },
+  {
+    "id": "p5",
+    "title": "Positive Reframe",
+    "type": "reflection",
+    "steps": [
+      "Think of a current challenge or worry",
+      "Write it down or say it out loud",
+      "Ask: What can I learn from this?",
+      "Ask: What's one positive aspect of this situation?",
+      "Reframe the challenge as an opportunity"
+    ]
+  },
+  {
+    "id": "p6",
+    "title": "2-Minute Mindfulness",
+    "type": "breathing",
+    "steps": [
+      "Set a timer for 2 minutes",
+      "Close your eyes and focus on your breath",
+      "Notice the sensation of air entering and leaving",
+      "When your mind wanders, gently return to your breath",
+      "When the timer ends, slowly open your eyes"
+    ]
+  },
+  {
+    "id": "p7",
+    "title": "Progressive Muscle Relaxation",
+    "type": "grounding",
+    "steps": [
+      "Tense your feet muscles for 5 seconds, then release",
+      "Move up to your calves and repeat",
+      "Continue with thighs, glutes, stomach, chest",
+      "Tense and release shoulders, arms, hands",
+      "Finally, tense and release neck and face muscles",
+      "Notice the feeling of deep relaxation"
+    ]
+  },
+  {
+    "id": "p8",
+    "title": "Three Good Things",
+    "type": "gratitude",
+    "steps": [
+      "Think back over your day",
+      "Identify three good things that happened",
+      "They can be small or large",
+      "For each one, reflect on why it was good",
+      "Consider your role in making it happen"
+    ]
+  },
+  {
+    "id": "p9",
+    "title": "4-7-8 Breathing",
+    "type": "breathing",
+    "steps": [
+      "Exhale completely through your mouth",
+      "Close your mouth and inhale through nose for 4 counts",
+      "Hold your breath for 7 counts",
+      "Exhale completely through mouth for 8 counts",
+      "Repeat the cycle 3-4 times"
+    ]
+  },
+  {
+    "id": "p10",
+    "title": "Loving-Kindness Practice",
+    "type": "reflection",
+    "steps": [
+      "Sit comfortably and take a few deep breaths",
+      "Silently say: May I be happy, may I be healthy",
+      "Think of someone you care about",
+      "Say: May you be happy, may you be healthy",
+      "Extend this to all people",
+      "Notice how compassion feels"
+    ]
+  },
+  {
+    "id": "p11",
+    "title": "Nature Connection",
+    "type": "grounding",
+    "steps": [
+      "Step outside or look out a window",
+      "Notice the sky, trees, or any natural elements",
+      "Observe colors, shapes, and movements",
+      "Take 5 slow, deep breaths",
+      "Feel your connection to the natural world"
+    ]
+  },
+  {
+    "id": "p12",
+    "title": "Evening Wind-Down",
+    "type": "reflection",
+    "steps": [
+      "30 minutes before bed, dim the lights",
+      "Put away screens and devices",
+      "Do a light stretch or gentle movement",
+      "Write down any lingering thoughts",
+      "Practice gratitude or box breathing",
+      "Prepare your body and mind for rest"
+    ]
+  }
+]

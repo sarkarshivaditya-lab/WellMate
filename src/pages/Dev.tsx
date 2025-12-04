@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button.tsx";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card.tsx";
 import { toast } from "sonner";
+import practicesData from "@/data/practices.json";
 
 export default function Dev() {
   const user = useQuery(api.users.getCurrentUser);
   const meals = useQuery(api.meals.getRecentMeals, { days: 30 });
+  const moods = useQuery(api.moods.listMoods, { limit: 30 });
+  const journalEntries = useQuery(api.journal.listJournalEntries, { limit: 30 });
+  const generateInsights = useAction(api.insights.generateWeeklyInsights);
+  
   const [adapterMode, setAdapterMode] = useState<"mock" | "api">("mock");
+  const [insights, setInsights] = useState<{
+    moodAverage: number;
+    stressIndicators: string[];
+    notes: string;
+  } | null>(null);
   
   const handleExportMeals = () => {
     if (!meals || meals.length === 0) {
@@ -17,7 +27,15 @@ export default function Dev() {
     }
     const csv = [
       "Date,Name,Input Mode,Calories,Protein(g),Fat(g),Carbs(g)",
-      ...meals.map((meal) =>
+      ...meals.map((meal: {
+        dateIso: string;
+        name: string;
+        inputMode: string;
+        totalCalories: number;
+        totalProteinG: number;
+        totalFatG: number;
+        totalCarbsG: number;
+      }) =>
         [
           meal.dateIso,
           meal.name,
@@ -44,6 +62,20 @@ export default function Dev() {
     const newMode = adapterMode === "mock" ? "api" : "mock";
     setAdapterMode(newMode);
     toast.info(`Switched to ${newMode} adapter mode`);
+  };
+  
+  const handleSeedPractices = () => {
+    toast.success(`${practicesData.length} wellbeing practices are loaded from /src/data/practices.json`);
+  };
+  
+  const handleDebugInsights = async () => {
+    try {
+      const result = await generateInsights({});
+      setInsights(result);
+      toast.success("Insights generated successfully");
+    } catch (error) {
+      toast.error("Failed to generate insights");
+    }
   };
   
   return (
@@ -100,11 +132,45 @@ export default function Dev() {
         
         <Card>
           <CardHeader>
+            <CardTitle>Mental Wellbeing Tools</CardTitle>
+            <CardDescription>Debug mental health features</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Button onClick={handleSeedPractices} variant="outline" className="w-full">
+                Verify Wellbeing Practices
+              </Button>
+              <Button onClick={handleDebugInsights} className="w-full">
+                Generate Weekly Insights
+              </Button>
+            </div>
+            
+            {insights && (
+              <div className="mt-4 p-4 bg-secondary rounded-lg space-y-2 text-sm">
+                <div className="font-semibold">Insights Output:</div>
+                <div>Mood Average: {insights.moodAverage}/5</div>
+                <div>Stress Indicators:</div>
+                <ul className="list-disc list-inside ml-2">
+                  {insights.stressIndicators.map((indicator: string, i: number) => (
+                    <li key={i}>{indicator}</li>
+                  ))}
+                </ul>
+                <div className="pt-2 border-t">Notes: {insights.notes}</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
             <CardTitle>Database Stats</CardTitle>
             <CardDescription>Current data counts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>Meals logged: {meals?.length || 0}</div>
+            <div>Moods tracked: {moods?.length || 0}</div>
+            <div>Journal entries: {journalEntries?.length || 0}</div>
+            <div>Wellbeing practices: {practicesData.length}</div>
           </CardContent>
         </Card>
         

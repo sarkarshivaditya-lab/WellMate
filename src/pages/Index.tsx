@@ -5,7 +5,7 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon, SparklesIcon } from "lucide-react";
+import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon, SparklesIcon, HomeIcon, BookOpenIcon, WrenchIcon, InfoIcon } from "lucide-react";
 import Onboarding from "./Onboarding.tsx";
 import FoodLog from "./physical/FoodLog.tsx";
 import ExerciseLog from "./physical/ExerciseLog.tsx";
@@ -13,13 +13,18 @@ import Progress from "./physical/Progress.tsx";
 import PeriodTracker from "./physical/PeriodTracker.tsx";
 import AiCoach from "./physical/AiCoach.tsx";
 import MentalOverview from "./mental/Overview.tsx";
+import MentalJournal from "./mental/Journal.tsx";
+import MentalTools from "./mental/Tools.tsx";
+import MentalResources from "./mental/Resources.tsx";
 
 type PhysicalScreen = "food" | "exercise" | "progress" | "period" | "coach";
+type MentalScreen = "overview" | "journal" | "tools" | "resources";
 
 function AppContent() {
   const user = useQuery(api.users.getCurrentUser);
   const [activeTab, setActiveTab] = useState<"physical" | "mental">("physical");
   const [physicalScreen, setPhysicalScreen] = useState<PhysicalScreen>("coach");
+  const [mentalScreen, setMentalScreen] = useState<MentalScreen>("overview");
 
   if (user === undefined) {
     return (
@@ -113,7 +118,48 @@ function AppContent() {
         </div>
       )}
       
-      <main className="container mx-auto px-4 py-6 max-w-5xl">
+      {activeTab === "mental" && (
+        <div className="border-b bg-card/50">
+          <div className="container mx-auto px-4">
+            <div className="flex space-x-1 overflow-x-auto py-2">
+              <Button
+                variant={mentalScreen === "overview" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setMentalScreen("overview")}
+              >
+                <HomeIcon className="mr-2 h-4 w-4" />
+                Overview
+              </Button>
+              <Button
+                variant={mentalScreen === "journal" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setMentalScreen("journal")}
+              >
+                <BookOpenIcon className="mr-2 h-4 w-4" />
+                Journal
+              </Button>
+              <Button
+                variant={mentalScreen === "tools" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setMentalScreen("tools")}
+              >
+                <WrenchIcon className="mr-2 h-4 w-4" />
+                Tools
+              </Button>
+              <Button
+                variant={mentalScreen === "resources" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setMentalScreen("resources")}
+              >
+                <InfoIcon className="mr-2 h-4 w-4" />
+                Resources
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <main className="container mx-auto max-w-5xl">
         {activeTab === "physical" && (
           <>
             {physicalScreen === "coach" && <AiCoach />}
@@ -123,7 +169,14 @@ function AppContent() {
             {physicalScreen === "period" && <PeriodTracker />}
           </>
         )}
-        {activeTab === "mental" && <MentalOverview />}
+        {activeTab === "mental" && (
+          <>
+            {mentalScreen === "overview" && <MentalOverview />}
+            {mentalScreen === "journal" && <MentalJournal />}
+            {mentalScreen === "tools" && <MentalTools />}
+            {mentalScreen === "resources" && <MentalResources />}
+          </>
+        )}
       </main>
     </div>
   );
