@@ -1,0 +1,757 @@
+[
+  {
+    "id": "mock_001",
+    "name": "Chicken Breast (Grilled)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 165,
+    "proteinG": 31,
+    "fatG": 3.6,
+    "carbsG": 0,
+    "micros": {
+      "vitaminA_mcg": 9,
+      "vitaminC_mg": 0,
+      "calcium_mg": 15,
+      "iron_mg": 1,
+      "vitaminD_mcg": 0.1,
+      "vitaminB12_mcg": 0.3
+    }
+  },
+  {
+    "id": "mock_002",
+    "name": "Brown Rice (Cooked)",
+    "servingSizeText": "1 cup (195g)",
+    "caloriesPerServing": 218,
+    "proteinG": 4.5,
+    "fatG": 1.6,
+    "carbsG": 45.8,
+    "micros": {
+      "vitaminA_mcg": 0,
+      "vitaminC_mg": 0,
+      "calcium_mg": 20,
+      "iron_mg": 0.8,
+      "magnesium_mg": 86,
+      "phosphorus_mg": 150
+    }
+  },
+  {
+    "id": "mock_003",
+    "name": "Broccoli (Steamed)",
+    "servingSizeText": "1 cup (156g)",
+    "caloriesPerServing": 55,
+    "proteinG": 3.7,
+    "fatG": 0.6,
+    "carbsG": 11.2,
+    "micros": {
+      "vitaminA_mcg": 120,
+      "vitaminC_mg": 101,
+      "calcium_mg": 62,
+      "iron_mg": 1,
+      "vitaminK_mcg": 220,
+      "folate_mcg": 168
+    }
+  },
+  {
+    "id": "mock_004",
+    "name": "Salmon (Atlantic, Grilled)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 206,
+    "proteinG": 22,
+    "fatG": 13,
+    "carbsG": 0,
+    "micros": {
+      "vitaminA_mcg": 40,
+      "vitaminD_mcg": 11,
+      "vitaminB12_mcg": 3.2,
+      "omega3_g": 2.3,
+      "calcium_mg": 9,
+      "iron_mg": 0.3
+    }
+  },
+  {
+    "id": "mock_005",
+    "name": "Greek Yogurt (Plain, Non-fat)",
+    "servingSizeText": "1 cup (245g)",
+    "caloriesPerServing": 130,
+    "proteinG": 22,
+    "fatG": 0.7,
+    "carbsG": 9,
+    "micros": {
+      "calcium_mg": 300,
+      "vitaminB12_mcg": 1.3,
+      "phosphorus_mg": 240,
+      "potassium_mg": 320
+    }
+  },
+  {
+    "id": "mock_006",
+    "name": "Banana",
+    "servingSizeText": "1 medium (118g)",
+    "caloriesPerServing": 105,
+    "proteinG": 1.3,
+    "fatG": 0.4,
+    "carbsG": 27,
+    "micros": {
+      "vitaminC_mg": 10,
+      "potassium_mg": 422,
+      "vitaminB6_mg": 0.4,
+      "magnesium_mg": 32
+    }
+  },
+  {
+    "id": "mock_007",
+    "name": "Almonds (Raw)",
+    "servingSizeText": "1 oz (28g)",
+    "caloriesPerServing": 164,
+    "proteinG": 6,
+    "fatG": 14,
+    "carbsG": 6,
+    "micros": {
+      "vitaminE_mg": 7.3,
+      "magnesium_mg": 76,
+      "calcium_mg": 76,
+      "iron_mg": 1
+    }
+  },
+  {
+    "id": "mock_008",
+    "name": "Eggs (Large, Whole)",
+    "servingSizeText": "1 egg (50g)",
+    "caloriesPerServing": 72,
+    "proteinG": 6.3,
+    "fatG": 4.8,
+    "carbsG": 0.4,
+    "micros": {
+      "vitaminA_mcg": 80,
+      "vitaminD_mcg": 1,
+      "vitaminB12_mcg": 0.6,
+      "selenium_mcg": 15.4
+    }
+  },
+  {
+    "id": "mock_009",
+    "name": "Sweet Potato (Baked)",
+    "servingSizeText": "1 medium (114g)",
+    "caloriesPerServing": 103,
+    "proteinG": 2.3,
+    "fatG": 0.2,
+    "carbsG": 23.6,
+    "micros": {
+      "vitaminA_mcg": 1043,
+      "vitaminC_mg": 22,
+      "potassium_mg": 542,
+      "fiber_g": 3.8
+    }
+  },
+  {
+    "id": "mock_010",
+    "name": "Avocado",
+    "servingSizeText": "1/2 avocado (68g)",
+    "caloriesPerServing": 114,
+    "proteinG": 1.3,
+    "fatG": 10.5,
+    "carbsG": 6,
+    "micros": {
+      "vitaminK_mcg": 14,
+      "folate_mcg": 60,
+      "potassium_mg": 345,
+      "vitaminE_mg": 1.3
+    }
+  },
+  {
+    "id": "mock_011",
+    "name": "Oatmeal (Cooked)",
+    "servingSizeText": "1 cup (234g)",
+    "caloriesPerServing": 166,
+    "proteinG": 5.9,
+    "fatG": 3.6,
+    "carbsG": 28,
+    "micros": {
+      "iron_mg": 2.1,
+      "magnesium_mg": 61,
+      "phosphorus_mg": 180,
+      "zinc_mg": 1.4
+    }
+  },
+  {
+    "id": "mock_012",
+    "name": "Spinach (Raw)",
+    "servingSizeText": "1 cup (30g)",
+    "caloriesPerServing": 7,
+    "proteinG": 0.9,
+    "fatG": 0.1,
+    "carbsG": 1.1,
+    "micros": {
+      "vitaminA_mcg": 141,
+      "vitaminK_mcg": 145,
+      "folate_mcg": 58,
+      "iron_mg": 0.8,
+      "calcium_mg": 30
+    }
+  },
+  {
+    "id": "mock_013",
+    "name": "Quinoa (Cooked)",
+    "servingSizeText": "1 cup (185g)",
+    "caloriesPerServing": 222,
+    "proteinG": 8.1,
+    "fatG": 3.6,
+    "carbsG": 39.4,
+    "micros": {
+      "iron_mg": 2.8,
+      "magnesium_mg": 118,
+      "phosphorus_mg": 281,
+      "folate_mcg": 78
+    }
+  },
+  {
+    "id": "mock_014",
+    "name": "Turkey Breast (Roasted)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 135,
+    "proteinG": 30,
+    "fatG": 0.7,
+    "carbsG": 0,
+    "micros": {
+      "vitaminB6_mg": 0.8,
+      "vitaminB12_mcg": 1.6,
+      "niacin_mg": 11.8,
+      "selenium_mcg": 32
+    }
+  },
+  {
+    "id": "mock_015",
+    "name": "Blueberries (Fresh)",
+    "servingSizeText": "1 cup (148g)",
+    "caloriesPerServing": 84,
+    "proteinG": 1.1,
+    "fatG": 0.5,
+    "carbsG": 21.4,
+    "micros": {
+      "vitaminC_mg": 14,
+      "vitaminK_mcg": 29,
+      "fiber_g": 3.6,
+      "manganese_mg": 0.5
+    }
+  },
+  {
+    "id": "mock_016",
+    "name": "Lentils (Cooked)",
+    "servingSizeText": "1 cup (198g)",
+    "caloriesPerServing": 230,
+    "proteinG": 17.9,
+    "fatG": 0.8,
+    "carbsG": 39.9,
+    "micros": {
+      "iron_mg": 6.6,
+      "folate_mcg": 358,
+      "magnesium_mg": 71,
+      "potassium_mg": 731
+    }
+  },
+  {
+    "id": "mock_017",
+    "name": "Whole Wheat Bread",
+    "servingSizeText": "1 slice (28g)",
+    "caloriesPerServing": 69,
+    "proteinG": 3.6,
+    "fatG": 0.9,
+    "carbsG": 11.6,
+    "micros": {
+      "fiber_g": 1.9,
+      "iron_mg": 0.9,
+      "magnesium_mg": 23,
+      "selenium_mcg": 10
+    }
+  },
+  {
+    "id": "mock_018",
+    "name": "Cottage Cheese (Low-fat)",
+    "servingSizeText": "1 cup (226g)",
+    "caloriesPerServing": 163,
+    "proteinG": 28,
+    "fatG": 2.3,
+    "carbsG": 6.2,
+    "micros": {
+      "calcium_mg": 138,
+      "phosphorus_mg": 303,
+      "selenium_mcg": 20,
+      "vitaminB12_mcg": 1.4
+    }
+  },
+  {
+    "id": "mock_019",
+    "name": "Strawberries (Fresh)",
+    "servingSizeText": "1 cup (152g)",
+    "caloriesPerServing": 49,
+    "proteinG": 1,
+    "fatG": 0.5,
+    "carbsG": 11.7,
+    "micros": {
+      "vitaminC_mg": 89,
+      "folate_mcg": 36,
+      "potassium_mg": 233,
+      "manganese_mg": 0.6
+    }
+  },
+  {
+    "id": "mock_020",
+    "name": "Peanut Butter (Natural)",
+    "servingSizeText": "2 tbsp (32g)",
+    "caloriesPerServing": 188,
+    "proteinG": 8,
+    "fatG": 16,
+    "carbsG": 7,
+    "micros": {
+      "vitaminE_mg": 3,
+      "magnesium_mg": 57,
+      "potassium_mg": 238,
+      "niacin_mg": 4.3
+    }
+  },
+  {
+    "id": "mock_021",
+    "name": "Apple",
+    "servingSizeText": "1 medium (182g)",
+    "caloriesPerServing": 95,
+    "proteinG": 0.5,
+    "fatG": 0.3,
+    "carbsG": 25,
+    "micros": {
+      "vitaminC_mg": 8,
+      "potassium_mg": 195,
+      "fiber_g": 4.4
+    }
+  },
+  {
+    "id": "mock_022",
+    "name": "Tuna (Canned in Water)",
+    "servingSizeText": "1 can (142g)",
+    "caloriesPerServing": 179,
+    "proteinG": 39,
+    "fatG": 1.3,
+    "carbsG": 0,
+    "micros": {
+      "vitaminD_mcg": 6.7,
+      "vitaminB12_mcg": 2.5,
+      "selenium_mcg": 80,
+      "niacin_mg": 18.5
+    }
+  },
+  {
+    "id": "mock_023",
+    "name": "Carrots (Raw)",
+    "servingSizeText": "1 medium (61g)",
+    "caloriesPerServing": 25,
+    "proteinG": 0.6,
+    "fatG": 0.1,
+    "carbsG": 6,
+    "micros": {
+      "vitaminA_mcg": 509,
+      "vitaminK_mcg": 8,
+      "potassium_mg": 195,
+      "fiber_g": 1.7
+    }
+  },
+  {
+    "id": "mock_024",
+    "name": "Milk (Whole)",
+    "servingSizeText": "1 cup (244g)",
+    "caloriesPerServing": 149,
+    "proteinG": 7.7,
+    "fatG": 7.9,
+    "carbsG": 11.7,
+    "micros": {
+      "calcium_mg": 276,
+      "vitaminD_mcg": 3.2,
+      "vitaminB12_mcg": 1.1,
+      "phosphorus_mg": 205
+    }
+  },
+  {
+    "id": "mock_025",
+    "name": "Black Beans (Cooked)",
+    "servingSizeText": "1 cup (172g)",
+    "caloriesPerServing": 227,
+    "proteinG": 15.2,
+    "fatG": 0.9,
+    "carbsG": 40.8,
+    "micros": {
+      "iron_mg": 3.6,
+      "magnesium_mg": 120,
+      "folate_mcg": 256,
+      "fiber_g": 15
+    }
+  },
+  {
+    "id": "mock_026",
+    "name": "Tofu (Firm)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 144,
+    "proteinG": 17.3,
+    "fatG": 8.7,
+    "carbsG": 2.8,
+    "micros": {
+      "calcium_mg": 350,
+      "iron_mg": 2.7,
+      "magnesium_mg": 58,
+      "phosphorus_mg": 190
+    }
+  },
+  {
+    "id": "mock_027",
+    "name": "Tomato",
+    "servingSizeText": "1 medium (123g)",
+    "caloriesPerServing": 22,
+    "proteinG": 1.1,
+    "fatG": 0.2,
+    "carbsG": 4.8,
+    "micros": {
+      "vitaminC_mg": 17,
+      "vitaminK_mcg": 10,
+      "potassium_mg": 292,
+      "lycopene_mg": 3
+    }
+  },
+  {
+    "id": "mock_028",
+    "name": "Pasta (Whole Wheat, Cooked)",
+    "servingSizeText": "1 cup (140g)",
+    "caloriesPerServing": 174,
+    "proteinG": 7.5,
+    "fatG": 0.8,
+    "carbsG": 37.2,
+    "micros": {
+      "iron_mg": 1.5,
+      "magnesium_mg": 42,
+      "fiber_g": 6.3,
+      "selenium_mcg": 37
+    }
+  },
+  {
+    "id": "mock_029",
+    "name": "Orange",
+    "servingSizeText": "1 medium (131g)",
+    "caloriesPerServing": 62,
+    "proteinG": 1.2,
+    "fatG": 0.2,
+    "carbsG": 15.4,
+    "micros": {
+      "vitaminC_mg": 70,
+      "folate_mcg": 39,
+      "potassium_mg": 237,
+      "fiber_g": 3.1
+    }
+  },
+  {
+    "id": "mock_030",
+    "name": "Walnuts",
+    "servingSizeText": "1 oz (28g)",
+    "caloriesPerServing": 185,
+    "proteinG": 4.3,
+    "fatG": 18.5,
+    "carbsG": 3.9,
+    "micros": {
+      "omega3_g": 2.5,
+      "magnesium_mg": 45,
+      "phosphorus_mg": 98,
+      "copper_mg": 0.5
+    }
+  },
+  {
+    "id": "mock_031",
+    "name": "Chickpeas (Cooked)",
+    "servingSizeText": "1 cup (164g)",
+    "caloriesPerServing": 269,
+    "proteinG": 14.5,
+    "fatG": 4.2,
+    "carbsG": 45,
+    "micros": {
+      "iron_mg": 4.7,
+      "folate_mcg": 282,
+      "magnesium_mg": 79,
+      "fiber_g": 12.5
+    }
+  },
+  {
+    "id": "mock_032",
+    "name": "Bell Pepper (Red)",
+    "servingSizeText": "1 medium (119g)",
+    "caloriesPerServing": 37,
+    "proteinG": 1.2,
+    "fatG": 0.4,
+    "carbsG": 7.2,
+    "micros": {
+      "vitaminC_mg": 152,
+      "vitaminA_mcg": 187,
+      "vitaminB6_mg": 0.3,
+      "folate_mcg": 54
+    }
+  },
+  {
+    "id": "mock_033",
+    "name": "Cucumber",
+    "servingSizeText": "1 cup sliced (104g)",
+    "caloriesPerServing": 16,
+    "proteinG": 0.7,
+    "fatG": 0.1,
+    "carbsG": 3.6,
+    "micros": {
+      "vitaminK_mcg": 17,
+      "vitaminC_mg": 3,
+      "potassium_mg": 152
+    }
+  },
+  {
+    "id": "mock_034",
+    "name": "Kale (Raw)",
+    "servingSizeText": "1 cup (67g)",
+    "caloriesPerServing": 33,
+    "proteinG": 2.9,
+    "fatG": 0.6,
+    "carbsG": 6,
+    "micros": {
+      "vitaminA_mcg": 516,
+      "vitaminC_mg": 80,
+      "vitaminK_mcg": 547,
+      "calcium_mg": 101
+    }
+  },
+  {
+    "id": "mock_035",
+    "name": "Ground Beef (Lean, 90/10)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 176,
+    "proteinG": 25,
+    "fatG": 10,
+    "carbsG": 0,
+    "micros": {
+      "iron_mg": 2.6,
+      "zinc_mg": 6.2,
+      "vitaminB12_mcg": 2.6,
+      "selenium_mcg": 26
+    }
+  },
+  {
+    "id": "mock_036",
+    "name": "Cheese (Cheddar)",
+    "servingSizeText": "1 oz (28g)",
+    "caloriesPerServing": 114,
+    "proteinG": 7,
+    "fatG": 9,
+    "carbsG": 0.4,
+    "micros": {
+      "calcium_mg": 204,
+      "phosphorus_mg": 145,
+      "vitaminA_mcg": 75,
+      "vitaminB12_mcg": 0.2
+    }
+  },
+  {
+    "id": "mock_037",
+    "name": "Asparagus (Cooked)",
+    "servingSizeText": "1 cup (180g)",
+    "caloriesPerServing": 40,
+    "proteinG": 4.3,
+    "fatG": 0.4,
+    "carbsG": 7.4,
+    "micros": {
+      "vitaminK_mcg": 91,
+      "folate_mcg": 268,
+      "vitaminA_mcg": 100,
+      "vitaminC_mg": 13
+    }
+  },
+  {
+    "id": "mock_038",
+    "name": "Mango",
+    "servingSizeText": "1 cup (165g)",
+    "caloriesPerServing": 99,
+    "proteinG": 1.4,
+    "fatG": 0.6,
+    "carbsG": 24.7,
+    "micros": {
+      "vitaminC_mg": 60,
+      "vitaminA_mcg": 89,
+      "folate_mcg": 71,
+      "fiber_g": 2.6
+    }
+  },
+  {
+    "id": "mock_039",
+    "name": "Shrimp (Cooked)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 99,
+    "proteinG": 24,
+    "fatG": 0.3,
+    "carbsG": 0.2,
+    "micros": {
+      "selenium_mcg": 48,
+      "vitaminB12_mcg": 1.4,
+      "phosphorus_mg": 244,
+      "iron_mg": 0.5
+    }
+  },
+  {
+    "id": "mock_040",
+    "name": "Brussels Sprouts (Cooked)",
+    "servingSizeText": "1 cup (156g)",
+    "caloriesPerServing": 56,
+    "proteinG": 4,
+    "fatG": 0.8,
+    "carbsG": 11,
+    "micros": {
+      "vitaminC_mg": 97,
+      "vitaminK_mcg": 218,
+      "folate_mcg": 94,
+      "fiber_g": 4.1
+    }
+  },
+  {
+    "id": "mock_041",
+    "name": "Cauliflower (Cooked)",
+    "servingSizeText": "1 cup (124g)",
+    "caloriesPerServing": 29,
+    "proteinG": 2.3,
+    "fatG": 0.6,
+    "carbsG": 5.1,
+    "micros": {
+      "vitaminC_mg": 55,
+      "vitaminK_mcg": 17,
+      "folate_mcg": 57,
+      "fiber_g": 2.9
+    }
+  },
+  {
+    "id": "mock_042",
+    "name": "Pork Chop (Lean)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 143,
+    "proteinG": 26,
+    "fatG": 4,
+    "carbsG": 0,
+    "micros": {
+      "thiamine_mg": 0.6,
+      "selenium_mcg": 45,
+      "phosphorus_mg": 224,
+      "zinc_mg": 2.4
+    }
+  },
+  {
+    "id": "mock_043",
+    "name": "Hummus",
+    "servingSizeText": "2 tbsp (30g)",
+    "caloriesPerServing": 70,
+    "proteinG": 2,
+    "fatG": 5,
+    "carbsG": 6,
+    "micros": {
+      "iron_mg": 0.7,
+      "folate_mcg": 15,
+      "fiber_g": 2
+    }
+  },
+  {
+    "id": "mock_044",
+    "name": "Grapes (Green)",
+    "servingSizeText": "1 cup (151g)",
+    "caloriesPerServing": 104,
+    "proteinG": 1.1,
+    "fatG": 0.2,
+    "carbsG": 27.3,
+    "micros": {
+      "vitaminC_mg": 4,
+      "vitaminK_mcg": 22,
+      "potassium_mg": 288
+    }
+  },
+  {
+    "id": "mock_045",
+    "name": "Green Beans (Cooked)",
+    "servingSizeText": "1 cup (125g)",
+    "caloriesPerServing": 44,
+    "proteinG": 2.4,
+    "fatG": 0.4,
+    "carbsG": 9.9,
+    "micros": {
+      "vitaminC_mg": 12,
+      "vitaminK_mcg": 60,
+      "folate_mcg": 42,
+      "fiber_g": 4
+    }
+  },
+  {
+    "id": "mock_046",
+    "name": "Zucchini (Cooked)",
+    "servingSizeText": "1 cup (180g)",
+    "caloriesPerServing": 27,
+    "proteinG": 2,
+    "fatG": 0.5,
+    "carbsG": 4.9,
+    "micros": {
+      "vitaminC_mg": 21,
+      "vitaminA_mcg": 38,
+      "potassium_mg": 455,
+      "fiber_g": 2.5
+    }
+  },
+  {
+    "id": "mock_047",
+    "name": "Cod (Baked)",
+    "servingSizeText": "100g",
+    "caloriesPerServing": 105,
+    "proteinG": 23,
+    "fatG": 0.9,
+    "carbsG": 0,
+    "micros": {
+      "vitaminB12_mcg": 1.1,
+      "selenium_mcg": 38,
+      "phosphorus_mg": 203,
+      "niacin_mg": 2.6
+    }
+  },
+  {
+    "id": "mock_048",
+    "name": "Watermelon",
+    "servingSizeText": "1 cup (152g)",
+    "caloriesPerServing": 46,
+    "proteinG": 0.9,
+    "fatG": 0.2,
+    "carbsG": 11.5,
+    "micros": {
+      "vitaminC_mg": 12,
+      "vitaminA_mcg": 43,
+      "lycopene_mg": 6.9,
+      "potassium_mg": 170
+    }
+  },
+  {
+    "id": "mock_049",
+    "name": "Chia Seeds",
+    "servingSizeText": "1 oz (28g)",
+    "caloriesPerServing": 138,
+    "proteinG": 4.7,
+    "fatG": 8.7,
+    "carbsG": 12,
+    "micros": {
+      "fiber_g": 9.8,
+      "calcium_mg": 179,
+      "iron_mg": 2.2,
+      "omega3_g": 5
+    }
+  },
+  {
+    "id": "mock_050",
+    "name": "Mushrooms (Cooked)",
+    "servingSizeText": "1 cup (156g)",
+    "caloriesPerServing": 44,
+    "proteinG": 3.4,
+    "fatG": 0.7,
+    "carbsG": 8.3,
+    "micros": {
+      "vitaminD_mcg": 13,
+      "selenium_mcg": 16,
+      "copper_mg": 0.8,
+      "potassium_mg": 555
+    }
+  }
+]

@@ -5,14 +5,20 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ActivityIcon, BrainIcon } from "lucide-react";
+import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon } from "lucide-react";
 import Onboarding from "./Onboarding.tsx";
 import FoodLog from "./physical/FoodLog.tsx";
+import ExerciseLog from "./physical/ExerciseLog.tsx";
+import Progress from "./physical/Progress.tsx";
+import PeriodTracker from "./physical/PeriodTracker.tsx";
 import MentalOverview from "./mental/Overview.tsx";
+
+type PhysicalScreen = "food" | "exercise" | "progress" | "period";
 
 function AppContent() {
   const user = useQuery(api.users.getCurrentUser);
   const [activeTab, setActiveTab] = useState<"physical" | "mental">("physical");
+  const [physicalScreen, setPhysicalScreen] = useState<PhysicalScreen>("food");
 
   if (user === undefined) {
     return (
@@ -28,13 +34,13 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+      <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <h1 className="text-2xl font-bold text-primary">WellMate</h1>
             <p className="text-sm text-muted-foreground">Welcome, {user.name}</p>
           </div>
-          <div className="flex space-x-1 -mb-px">
+          <div className="flex space-x-1 -mb-px overflow-x-auto">
             <Button
               variant={activeTab === "physical" ? "default" : "ghost"}
               onClick={() => setActiveTab("physical")}
@@ -54,8 +60,59 @@ function AppContent() {
           </div>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-6">
-        {activeTab === "physical" && <FoodLog />}
+      
+      {activeTab === "physical" && (
+        <div className="border-b bg-card/50">
+          <div className="container mx-auto px-4">
+            <div className="flex space-x-1 overflow-x-auto py-2">
+              <Button
+                variant={physicalScreen === "food" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setPhysicalScreen("food")}
+              >
+                <UtensilsIcon className="mr-2 h-4 w-4" />
+                Food
+              </Button>
+              <Button
+                variant={physicalScreen === "exercise" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setPhysicalScreen("exercise")}
+              >
+                <DumbbellIcon className="mr-2 h-4 w-4" />
+                Exercise
+              </Button>
+              <Button
+                variant={physicalScreen === "progress" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setPhysicalScreen("progress")}
+              >
+                <BarChart3Icon className="mr-2 h-4 w-4" />
+                Progress
+              </Button>
+              {user.periodTrackingEnabled && (
+                <Button
+                  variant={physicalScreen === "period" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setPhysicalScreen("period")}
+                >
+                  <CalendarHeartIcon className="mr-2 h-4 w-4" />
+                  Period
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <main className="container mx-auto px-4 py-6 max-w-5xl">
+        {activeTab === "physical" && (
+          <>
+            {physicalScreen === "food" && <FoodLog />}
+            {physicalScreen === "exercise" && <ExerciseLog />}
+            {physicalScreen === "progress" && <Progress />}
+            {physicalScreen === "period" && <PeriodTracker />}
+          </>
+        )}
         {activeTab === "mental" && <MentalOverview />}
       </main>
     </div>
