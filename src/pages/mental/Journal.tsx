@@ -12,7 +12,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
 import JournalCard from "@/components/JournalCard";
 import TagSelector from "@/components/TagSelector";
 import { PlusIcon, BookOpenIcon, SearchIcon } from "lucide-react";
@@ -23,8 +30,8 @@ export default function Journal() {
   const [entryText, setEntryText] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  const entries = useQuery(api.journal.listJournalEntries, { 
+
+  const entries = useQuery(api.journal.listJournalEntries, {
     limit: 50,
     searchTerm: searchTerm || undefined,
   });
@@ -55,7 +62,7 @@ export default function Journal() {
 
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm("Delete this journal entry?")) return;
-    
+
     try {
       await deleteEntry({ entryId: entryId as never });
       toast.success("Entry deleted");
@@ -66,7 +73,7 @@ export default function Journal() {
 
   const handleToggleTag = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -105,7 +112,7 @@ export default function Journal() {
                   className="min-h-[200px] resize-none"
                 />
               </div>
-              
+
               <TagSelector
                 selectedTags={selectedTags}
                 onToggleTag={handleToggleTag}
@@ -163,7 +170,7 @@ export default function Journal() {
         </Empty>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry) => (
+          {entries.map((entry: any) => (
             <JournalCard
               key={entry._id}
               entry={entry}

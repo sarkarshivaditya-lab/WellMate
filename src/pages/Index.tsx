@@ -5,7 +5,19 @@ import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton } from "@/components/ui/signin.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import { ActivityIcon, BrainIcon, UtensilsIcon, DumbbellIcon, BarChart3Icon, CalendarHeartIcon, SparklesIcon, HomeIcon, BookOpenIcon, WrenchIcon, InfoIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  BrainIcon,
+  UtensilsIcon,
+  DumbbellIcon,
+  BarChart3Icon,
+  CalendarHeartIcon,
+  SparklesIcon,
+  HomeIcon,
+  BookOpenIcon,
+  WrenchIcon,
+  InfoIcon,
+} from "lucide-react";
 import FoodLog from "./physical/FoodLog.tsx";
 import ExerciseLog from "./physical/ExerciseLog.tsx";
 import Progress from "./physical/Progress.tsx";
@@ -16,6 +28,8 @@ import MentalJournal from "./mental/Journal.tsx";
 import MentalTools from "./mental/Tools.tsx";
 import MentalResources from "./mental/Resources.tsx";
 import AiMentalCoach from "./mental/AiMentalCoach.tsx";
+// using tailwind transitions for subtle motion to avoid import mismatch
+import PageLayout from "@/components/layout/PageLayout";
 
 type PhysicalScreen = "food" | "exercise" | "progress" | "period" | "coach";
 type MentalScreen = "overview" | "journal" | "tools" | "resources" | "aicoach";
@@ -35,14 +49,16 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
-            <h1 className="text-2xl font-bold text-primary">WellMate</h1>
-            <p className="text-sm text-muted-foreground">Welcome, {user?.name || "User"}</p>
+    <div className="min-h-screen bg-background flex flex-col items-center py-12 px-4">
+      <header className="w-full max-w-4xl sticky top-4 z-10">
+        <div className="bg-card border-b rounded-md">
+          <div className="flex items-center justify-between py-4 px-4">
+            <h1 className="text-3xl font-bold text-primary">WellMate</h1>
+            <p className="text-sm text-muted-foreground">
+              Welcome, {user?.name || "User"}
+            </p>
           </div>
-          <div className="flex space-x-1 -mb-px overflow-x-auto">
+          <div className="flex space-x-1 -mb-px overflow-x-auto px-4 py-2">
             <Button
               variant={activeTab === "physical" ? "default" : "ghost"}
               onClick={() => setActiveTab("physical")}
@@ -62,10 +78,10 @@ function AppContent() {
           </div>
         </div>
       </header>
-      
+
       {activeTab === "physical" && (
-        <div className="border-b bg-card/50">
-          <div className="container mx-auto px-4">
+        <div className="w-full max-w-4xl mx-auto mt-4">
+          <div className="bg-card/50 rounded-t-md px-4">
             <div className="flex space-x-1 overflow-x-auto py-2">
               <Button
                 variant={physicalScreen === "coach" ? "secondary" : "ghost"}
@@ -113,7 +129,7 @@ function AppContent() {
           </div>
         </div>
       )}
-      
+
       {activeTab === "mental" && (
         <div className="border-b bg-card/50">
           <div className="container mx-auto px-4">
@@ -162,25 +178,25 @@ function AppContent() {
           </div>
         </div>
       )}
-      
-      <main className="container mx-auto max-w-5xl">
+
+      <main className="w-full max-w-4xl mx-auto mt-8">
         {activeTab === "physical" && (
-          <>
+          <div className="transition-transform duration-200 ease-out opacity-100 translate-y-0">
             {physicalScreen === "coach" && <AiCoach />}
             {physicalScreen === "food" && <FoodLog />}
             {physicalScreen === "exercise" && <ExerciseLog />}
             {physicalScreen === "progress" && <Progress />}
             {physicalScreen === "period" && <PeriodTracker />}
-          </>
+          </div>
         )}
         {activeTab === "mental" && (
-          <>
+          <div className="transition-transform duration-200 ease-out opacity-100 translate-y-0">
             {mentalScreen === "aicoach" && <AiMentalCoach />}
             {mentalScreen === "overview" && <MentalOverview />}
             {mentalScreen === "journal" && <MentalJournal />}
             {mentalScreen === "tools" && <MentalTools />}
             {mentalScreen === "resources" && <MentalResources />}
-          </>
+          </div>
         )}
       </main>
     </div>
@@ -191,7 +207,7 @@ export default function Index() {
   return (
     <>
       <Unauthenticated>
-        <div className="min-h-screen flex items-center justify-center bg-background">
+        <PageLayout>
           <div className="text-center space-y-6">
             <div className="text-6xl mb-4">🌱</div>
             <h1 className="text-4xl text-balance font-bold tracking-tight">
@@ -202,15 +218,19 @@ export default function Index() {
             </p>
             <SignInButton />
           </div>
-        </div>
+        </PageLayout>
       </Unauthenticated>
       <AuthLoading>
-        <div className="min-h-screen flex items-center justify-center">
-          <Skeleton className="h-96 w-full max-w-4xl" />
-        </div>
+        <PageLayout>
+          <div className="flex items-center justify-center">
+            <Skeleton className="h-96 w-full max-w-4xl" />
+          </div>
+        </PageLayout>
       </AuthLoading>
       <Authenticated>
-        <AppContent />
+        <PageLayout>
+          <AppContent />
+        </PageLayout>
       </Authenticated>
     </>
   );

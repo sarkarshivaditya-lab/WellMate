@@ -2,11 +2,28 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button.tsx";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog.tsx";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog.tsx";
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select.tsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine.ts";
@@ -15,11 +32,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
-  const exercises = useQuery(api.exercises.getExercisesByDate, { dateIso: today });
+  const exercises = useQuery(api.exercises.getExercisesByDate, {
+    dateIso: today,
+  });
   const user = useQuery(api.users.getCurrentUser);
   const addExercise = useMutation(api.exercises.addExercise);
   const deleteExercise = useMutation(api.exercises.deleteExercise);
-  
+
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [form, setForm] = useState({
     type: "cardio",
@@ -27,7 +46,7 @@ export default function ExerciseLog() {
     durationMinutes: "",
     notes: "",
   });
-  
+
   const handleSaveExercise = async () => {
     if (!form.name || !form.durationMinutes) {
       toast.error("Please fill in exercise name and duration");
@@ -35,8 +54,12 @@ export default function ExerciseLog() {
     }
     const durationMinutes = parseFloat(form.durationMinutes);
     const weightKg = user?.weightKg || 70;
-    const caloriesBurnedEst = estimateCaloriesFromExercise(form.type, durationMinutes, weightKg);
-    
+    const caloriesBurnedEst = estimateCaloriesFromExercise(
+      form.type,
+      durationMinutes,
+      weightKg,
+    );
+
     try {
       await addExercise({
         dateIso: today,
@@ -53,7 +76,7 @@ export default function ExerciseLog() {
       toast.error("Failed to add exercise");
     }
   };
-  
+
   const handleDeleteExercise = async (exerciseId: Id<"exercises">) => {
     try {
       await deleteExercise({ exerciseId });
@@ -62,10 +85,18 @@ export default function ExerciseLog() {
       toast.error("Failed to delete exercise");
     }
   };
-  
-  const totalCaloriesBurned = exercises?.reduce((sum, ex) => sum + (ex.caloriesBurnedEst || 0), 0) || 0;
-  const totalDuration = exercises?.reduce((sum, ex) => sum + (ex.durationMinutes || 0), 0) || 0;
-  
+
+  const totalCaloriesBurned =
+    exercises?.reduce(
+      (sum: number, ex: any) => sum + (ex.caloriesBurnedEst || 0),
+      0,
+    ) || 0;
+  const totalDuration =
+    exercises?.reduce(
+      (sum: number, ex: any) => sum + (ex.durationMinutes || 0),
+      0,
+    ) || 0;
+
   return (
     <div className="space-y-4">
       <Card>
@@ -85,23 +116,28 @@ export default function ExerciseLog() {
         </CardHeader>
         <CardContent className="space-y-3">
           {exercises === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">
+              Loading...
+            </div>
           ) : exercises.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No exercises logged today
             </div>
           ) : (
-            exercises.map((exercise) => (
+            exercises.map((exercise: any) => (
               <Card key={exercise._id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="font-medium">{exercise.name}</div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {exercise.type} · {exercise.durationMinutes} min · ~{exercise.caloriesBurnedEst} cal
+                        {exercise.type} · {exercise.durationMinutes} min · ~
+                        {exercise.caloriesBurnedEst} cal
                       </div>
                       {exercise.notes && (
-                        <div className="text-sm text-muted-foreground mt-2">{exercise.notes}</div>
+                        <div className="text-sm text-muted-foreground mt-2">
+                          {exercise.notes}
+                        </div>
                       )}
                     </div>
                     <Button
@@ -119,18 +155,21 @@ export default function ExerciseLog() {
           )}
         </CardContent>
       </Card>
-      
+
       <Dialog open={showAddExercise} onOpenChange={setShowAddExercise}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Exercise</DialogTitle>
             <DialogDescription>Log your workout activity</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="type">Exercise Type</Label>
-              <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
+              <Select
+                value={form.type}
+                onValueChange={(value) => setForm({ ...form, type: value })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -146,7 +185,7 @@ export default function ExerciseLog() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="name">Exercise Name</Label>
               <Input
@@ -156,7 +195,7 @@ export default function ExerciseLog() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
-            
+
             <div>
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
@@ -164,10 +203,12 @@ export default function ExerciseLog() {
                 type="number"
                 placeholder="30"
                 value={form.durationMinutes}
-                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, durationMinutes: e.target.value })
+                }
               />
             </div>
-            
+
             <div>
               <Label htmlFor="notes">Notes (optional)</Label>
               <Textarea
@@ -178,7 +219,7 @@ export default function ExerciseLog() {
                 rows={3}
               />
             </div>
-            
+
             <Button onClick={handleSaveExercise} className="w-full">
               Save Exercise
             </Button>

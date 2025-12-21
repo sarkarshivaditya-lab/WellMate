@@ -45,6 +45,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.10",
     "@usehercules/auth": "^1.0.32",
+    "@auth0/auth0-react": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -74,6 +75,7 @@
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",
     "@eslint/js": "^9.39.1",
+    "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^24.10.1",
@@ -82,6 +84,7 @@
     "@usehercules/eslint-plugin": "^1.0.32",
     "@usehercules/vite": "^1.0.32",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "autoprefixer": "^10.4.23",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.24",

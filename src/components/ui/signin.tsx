@@ -60,17 +60,7 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
     },
     ref,
   ) => {
-    const { isAuthenticated, signinRedirect, removeUser, isLoading, error } =
-      useAuth();
-
-    useEffect(() => {
-      if (error) {
-        toast.error("Login error", {
-          description: error.message,
-        });
-        console.error("Login error", error);
-      }
-    }, [error]);
+    const { isAuthenticated, loginWithRedirect, logout, isLoading } = useAuth();
 
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -79,16 +69,19 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
 
         try {
           if (isAuthenticated) {
-            await removeUser();
+            // Auth0 logout; use returnTo to send user back to app
+            await logout({
+              logoutParams: { returnTo: window.location.origin },
+            });
           } else {
-            await signinRedirect();
+            await loginWithRedirect();
           }
         } catch (err) {
           console.error("Authentication error:", err);
           // Don't prevent the default here as the auth library handles errors
         }
       },
-      [isAuthenticated, removeUser, signinRedirect, onClick],
+      [isAuthenticated, logout, loginWithRedirect, onClick],
     );
 
     const isDisabled = disabled || isLoading;
@@ -125,7 +118,7 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
             ? "Sign out of your account"
             : "Sign in to your account"
         }
-        aria-describedby={error ? "auth-error" : undefined}
+        aria-describedby={undefined}
         {...props}
       >
         {showIcon && icon}

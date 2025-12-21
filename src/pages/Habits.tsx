@@ -3,34 +3,61 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import HabitCard from "@/components/HabitCard";
 import GatedFeatureBanner from "@/components/GatedFeatureBanner";
 import { PlusIcon, Target } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { checkFeatureAccess, getFeatureLimit } from "@/services/subscriptionUtils";
+import {
+  checkFeatureAccess,
+  getFeatureLimit,
+} from "@/services/subscriptionUtils";
+import PageLayout from "@/components/layout/PageLayout";
 
 export default function Habits() {
   const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [cadence, setCadence] = useState<"daily" | "weekly" | "custom">("daily");
+  const [cadence, setCadence] = useState<"daily" | "weekly" | "custom">(
+    "daily",
+  );
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState("09:00");
-  
+
   const habits = useQuery(api.habits.listHabits, { includeArchived: false });
   const subscription = useQuery(api.subscriptions.getSubscription, {});
   const today = new Date().toISOString().split("T")[0];
-  const todayEntries = useQuery(api.habits.listHabitEntriesByDate, { dateIso: today });
-  
+  const todayEntries = useQuery(api.habits.listHabitEntriesByDate, {
+    dateIso: today,
+  });
+
   const addHabit = useMutation(api.habits.addHabit);
   const toggleHabit = useMutation(api.habits.toggleHabitCompletion);
 
@@ -43,7 +70,9 @@ export default function Habits() {
     // Check habit limit
     const limit = getFeatureLimit("habits-max", subscription || null);
     if (limit !== null && habits && habits.length >= limit) {
-      toast.error(`Free plan limited to ${limit} habits. Upgrade to Pro for unlimited habits.`);
+      toast.error(
+        `Free plan limited to ${limit} habits. Upgrade to Pro for unlimited habits.`,
+      );
       navigate("/pricing");
       return;
     }
@@ -80,7 +109,7 @@ export default function Habits() {
 
   const isCompletedToday = (habitId: string): boolean => {
     if (!todayEntries) return false;
-    const entry = todayEntries.find((e) => e.habitId === habitId);
+    const entry = todayEntries.find((e: any) => e.habitId === habitId);
     return entry?.completed || false;
   };
 
@@ -92,17 +121,19 @@ export default function Habits() {
 
   if (habits === undefined || todayEntries === undefined) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <Skeleton className="h-12 w-full mb-4" />
-        <Skeleton className="h-32 w-full mb-4" />
-        <Skeleton className="h-32 w-full" />
+      <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-4xl">
+          <Skeleton className="h-12 w-full mb-4" />
+          <Skeleton className="h-32 w-full mb-4" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <PageLayout>
+      <div className="w-full space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -142,7 +173,10 @@ export default function Habits() {
                 </div>
                 <div>
                   <Label htmlFor="cadence">Frequency</Label>
-                  <Select value={cadence} onValueChange={(v: typeof cadence) => setCadence(v)}>
+                  <Select
+                    value={cadence}
+                    onValueChange={(v: typeof cadence) => setCadence(v)}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -210,7 +244,7 @@ export default function Habits() {
           </Empty>
         ) : (
           <div className="space-y-3">
-            {habits.map((habit) => (
+            {habits.map((habit: any) => (
               <HabitCard
                 key={habit._id}
                 habit={habit}
@@ -222,6 +256,6 @@ export default function Habits() {
           </div>
         )}
       </div>
-    </div>
+    </PageLayout>
   );
 }

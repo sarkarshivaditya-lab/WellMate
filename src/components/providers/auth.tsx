@@ -1,23 +1,20 @@
-import { HerculesAuthProvider } from "@usehercules/auth/react";
+import { Auth0Provider } from "@auth0/auth0-react";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const domain = import.meta.env.VITE_AUTH0_DOMAIN;
+  const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+  const redirectUri =
+    import.meta.env.VITE_AUTH0_REDIRECT_URI ?? window.location.origin;
+
   return (
-    <HerculesAuthProvider
-      authority={import.meta.env.VITE_HERCULES_OIDC_AUTHORITY!}
-      client_id={import.meta.env.VITE_HERCULES_OIDC_CLIENT_ID!}
-      userManagerSettings={{
-        prompt: import.meta.env.VITE_HERCULES_OIDC_PROMPT ?? "select_account",
-        response_type:
-          import.meta.env.VITE_HERCULES_OIDC_RESPONSE_TYPE ?? "code",
-        scope:
-          import.meta.env.VITE_HERCULES_OIDC_SCOPE ??
-          "openid profile email offline_access",
-        redirect_uri:
-          import.meta.env.VITE_HERCULES_OIDC_REDIRECT_URI ??
-          `${window.location.origin}/auth/callback`,
-      }}
+    <Auth0Provider
+      domain={domain}
+      clientId={clientId}
+      authorizationParams={{ redirect_uri: redirectUri }}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
     >
       {children}
-    </HerculesAuthProvider>
+    </Auth0Provider>
   );
 }
