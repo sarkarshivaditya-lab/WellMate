@@ -53,8 +53,7 @@ export default function Onboarding() {
 
   const age = dob
     ? Math.floor(
-        (Date.now() - new Date(dob).getTime()) /
-          (1000 * 60 * 60 * 24 * 365.25)
+        (Date.now() - new Date(dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25),
       )
     : 0;
 
@@ -112,11 +111,25 @@ export default function Onboarding() {
           </span>
 
           <h1 className="text-[2.6rem] font-semibold leading-[1.15] text-[hsl(var(--text-primary))]">
-            Welcome to WellMate
+            {step === 1 && "Welcome to WellMate"}
+            {step === 2 && "Your body metrics"}
+            {step === 3 && "Your daily activity"}
+            {step === 4 && "Your movement habits"}
+            {step === 5 && "Your weight goal"}
+            {step === 6 && "Your muscle focus"}
+            {step === 7 && "Additional health details"}
+            {step === 8 && "Your health snapshot"}
           </h1>
 
           <p className="text-base leading-relaxed text-[hsl(var(--text-secondary))] max-w-sm">
-            Let’s personalize your health experience.
+            {step === 1 && "Let’s personalize your health experience."}
+            {step === 2 && "These help us estimate your daily energy needs."}
+            {step === 3 && "Your activity level shapes your calorie baseline."}
+            {step === 4 && "Daily movement helps refine accuracy."}
+            {step === 5 && "We’ll adjust recommendations based on your goal."}
+            {step === 6 && "This helps prioritize strength vs balance."}
+            {step === 7 && "Only if applicable to you."}
+            {step === 8 && "Here’s what we’ve learned about you."}
           </p>
         </div>
 
@@ -125,7 +138,12 @@ export default function Onboarding() {
         {/* STEP 1 — IDENTITY */}
         {step === 1 && (
           <div className="space-y-6">
-            <Field label="Date of Birth" type="date" value={dob} onChange={setDob} />
+            <Field
+              label="Date of Birth"
+              type="date"
+              value={dob}
+              onChange={setDob}
+            />
             <Select
               label="Biological Sex"
               value={sex}
@@ -143,8 +161,18 @@ export default function Onboarding() {
         {/* STEP 2 — BODY */}
         {step === 2 && (
           <div className="space-y-6">
-            <Field label="Height (cm)" type="number" value={height} onChange={setHeight} />
-            <Field label="Weight (kg)" type="number" value={weight} onChange={setWeight} />
+            <Field
+              label="Height (cm)"
+              type="number"
+              value={height}
+              onChange={setHeight}
+            />
+            <Field
+              label="Weight (kg)"
+              type="number"
+              value={weight}
+              onChange={setWeight}
+            />
           </div>
         )}
 
@@ -227,6 +255,9 @@ export default function Onboarding() {
         {/* STEP 8 — SUMMARY */}
         {step === 8 && (
           <div className="space-y-4 text-sm text-[hsl(var(--text-primary))]">
+            <p className="text-sm text-[hsl(var(--text-meta))]">
+              Based on your body and activity level
+            </p>
             <Summary label="Age" value={`${age} years`} />
             <Summary label="Height" value={`${height} cm`} />
             <Summary label="Weight" value={`${weight} kg`} />
@@ -235,8 +266,12 @@ export default function Onboarding() {
             <Summary label="Muscle" value={muscleGoal} />
 
             <div className="pt-4 border-t border-[hsl(var(--surface-separator))]/40">
-              <p className="text-[hsl(var(--text-meta))]">Estimated maintenance calories</p>
-              <p className="text-2xl font-semibold">{maintenanceCalories} kcal/day</p>
+              <p className="text-[hsl(var(--text-meta))]">
+                Estimated daily maintenance calories
+              </p>
+              <p className="text-2xl font-semibold">
+                {maintenanceCalories} kcal/day
+              </p>
               <p className="text-sm text-[hsl(var(--text-secondary))]">
                 Goal target: ~{goalCalories} kcal/day
               </p>
@@ -350,7 +385,15 @@ function ChoiceGroup({ label, value, onChange, options }: any) {
             }
           `}
         >
-          <p className="text-sm font-medium">{title}</p>
+          <p
+            className={
+              value === v
+                ? "text-sm font-semibold text-[hsl(var(--text-primary))]"
+                : "text-sm font-medium text-[hsl(var(--text-secondary))]"
+            }
+          >
+            {title}
+          </p>
           {subtitle && (
             <p className="text-xs text-[hsl(var(--text-meta))]">{subtitle}</p>
           )}
