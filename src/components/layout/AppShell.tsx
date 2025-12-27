@@ -1,5 +1,6 @@
 import React from "react";
 import BottomNav from "./BottomNav";
+import { WellMateLauncher } from "@/components/ai/WellMateLauncher";
 
 export default function AppShell({
   children,
@@ -15,6 +16,9 @@ export default function AppShell({
 
       {/* Persistent bottom navigation */}
       <BottomNav />
+
+      {/* Persistent WellMate launcher */}
+      <WellMateLauncher />
     </div>
   );
 }
