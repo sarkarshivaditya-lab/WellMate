@@ -198,13 +198,15 @@ export default function Dev() {
                 <div className="font-semibold mb-1">Recent Moods:</div>
                 {moods && moods.length > 0 ? (
                   <div className="p-3 bg-secondary/50 rounded font-mono text-xs">
-                    {moods.slice(0, 7).map((mood: any, i: number) => (
-                      <div key={i}>
-                        {new Date(mood.dateIso).toLocaleDateString()}:{" "}
-                        {mood.moodValue}/5
-                        {mood.note && ` - "${mood.note}"`}
-                      </div>
-                    ))}
+                    {moods
+                      .slice(0, 7)
+                      .map((mood: (typeof moods)[number], i: number) => (
+                        <div key={i}>
+                          {new Date(mood.dateIso).toLocaleDateString()}:{" "}
+                          {mood.moodValue}/5
+                          {mood.note && ` - "${mood.note}"`}
+                        </div>
+                      ))}
                   </div>
                 ) : (
                   <p className="text-muted-foreground">No mood data yet</p>
@@ -217,21 +219,25 @@ export default function Dev() {
                 </div>
                 {journalEntries && journalEntries.length > 0 ? (
                   <div className="p-3 bg-secondary/50 rounded font-mono text-xs space-y-2">
-                    {journalEntries.slice(0, 3).map((entry: any, i: number) => (
-                      <div key={i}>
-                        <div className="font-semibold">
-                          {new Date(entry.dateIso).toLocaleDateString()}
-                        </div>
-                        <div className="text-muted-foreground line-clamp-2">
-                          {entry.text}
-                        </div>
-                        {entry.tags.length > 0 && (
-                          <div className="text-xs">
-                            Tags: {entry.tags.join(", ")}
+                    {journalEntries
+                      .slice(0, 3)
+                      .map(
+                        (entry: (typeof journalEntries)[number], i: number) => (
+                          <div key={i}>
+                            <div className="font-semibold">
+                              {new Date(entry.dateIso).toLocaleDateString()}
+                            </div>
+                            <div className="text-muted-foreground line-clamp-2">
+                              {entry.text}
+                            </div>
+                            {entry.tags.length > 0 && (
+                              <div className="text-xs">
+                                Tags: {entry.tags.join(", ")}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        ),
+                      )}
                   </div>
                 ) : (
                   <p className="text-muted-foreground">

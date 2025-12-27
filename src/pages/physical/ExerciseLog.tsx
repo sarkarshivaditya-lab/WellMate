@@ -28,13 +28,35 @@ import { Textarea } from "@/components/ui/textarea.tsx";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine.ts";
 import { toast } from "sonner";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+
+/* ---------- Types ---------- */
+
+type ExerciseEntry = Doc<"exercises">;
+
+/* ---------- Skeleton ---------- */
+
+function ExerciseRowSkeleton() {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3 animate-pulse">
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-40 rounded bg-muted" />
+        <div className="h-3 w-56 rounded bg-muted" />
+      </div>
+      <div className="h-8 w-8 rounded bg-muted" />
+    </div>
+  );
+}
+
+/* ---------- Component ---------- */
 
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
+
   const exercises = useQuery(api.exercises.getExercisesByDate, {
     dateIso: today,
-  });
+  }) as ExerciseEntry[] | undefined;
+
   const user = useQuery(api.users.getCurrentUser);
   const addExercise = useMutation(api.exercises.addExercise);
   const deleteExercise = useMutation(api.exercises.deleteExercise);
@@ -49,11 +71,13 @@ export default function ExerciseLog() {
 
   const handleSaveExercise = async () => {
     if (!form.name || !form.durationMinutes) {
-      toast.error("Please fill in exercise name and duration");
+      toast.error("Just add a name and duration to continue");
       return;
     }
-    const durationMinutes = parseFloat(form.durationMinutes);
-    const weightKg = user?.weightKg || 70;
+
+    const durationMinutes = Number(form.durationMinutes);
+    const weightKg = user?.weightKg ?? 70;
+
     const caloriesBurnedEst = estimateCaloriesFromExercise(
       form.type,
       durationMinutes,
@@ -69,98 +93,109 @@ export default function ExerciseLog() {
         caloriesBurnedEst,
         notes: form.notes || undefined,
       });
-      toast.success("Exercise added successfully");
+
+      toast.success("Exercise saved");
       setShowAddExercise(false);
       setForm({ type: "cardio", name: "", durationMinutes: "", notes: "" });
-    } catch (error) {
-      toast.error("Failed to add exercise");
+    } catch {
+      toast.error("Couldn’t save that just now");
     }
   };
 
   const handleDeleteExercise = async (exerciseId: Id<"exercises">) => {
     try {
       await deleteExercise({ exerciseId });
-      toast.success("Exercise deleted");
-    } catch (error) {
-      toast.error("Failed to delete exercise");
+      toast.success("Exercise removed");
+    } catch {
+      toast.error("Couldn’t remove exercise");
     }
   };
 
   const totalCaloriesBurned =
-    exercises?.reduce(
-      (sum: number, ex: any) => sum + (ex.caloriesBurnedEst || 0),
-      0,
-    ) || 0;
+    exercises?.reduce((sum, ex) => sum + (ex.caloriesBurnedEst ?? 0), 0) ?? 0;
+
   const totalDuration =
-    exercises?.reduce(
-      (sum: number, ex: any) => sum + (ex.durationMinutes || 0),
-      0,
-    ) || 0;
+    exercises?.reduce((sum, ex) => sum + (ex.durationMinutes ?? 0), 0) ?? 0;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Today's Exercise</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {totalDuration} min · {totalCaloriesBurned} cal burned
-              </p>
-            </div>
-            <Button onClick={() => setShowAddExercise(true)}>
-              <PlusIcon className="mr-2 h-4 w-4" />
-              Add Exercise
-            </Button>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Today’s Exercise</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {totalDuration} min · {totalCaloriesBurned} cal burned
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {exercises === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading...
+          <Button
+            onClick={() => setShowAddExercise(true)}
+            size="sm"
+            className="shadow-card hover:brightness-105 active:scale-[0.97]"
+          >
+            <PlusIcon className="mr-1.5 h-4 w-4" />
+            Add
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-2">
+        {exercises === undefined ? (
+          <div className="divide-y divide-border">
+            <ExerciseRowSkeleton />
+            <ExerciseRowSkeleton />
+          </div>
+        ) : exercises.length === 0 ? (
+          <div className="py-8 text-center space-y-1">
+            <div className="text-sm text-muted-foreground">
+              No exercise logged yet today
             </div>
-          ) : exercises.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No exercises logged today
+            <div className="text-xs text-muted-foreground">
+              Even a short walk or stretch can be helpful — totally optional.
             </div>
-          ) : (
-            exercises.map((exercise: any) => (
-              <Card key={exercise._id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{exercise.name}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {exercise.type} · {exercise.durationMinutes} min · ~
-                        {exercise.caloriesBurnedEst} cal
-                      </div>
-                      {exercise.notes && (
-                        <div className="text-sm text-muted-foreground mt-2">
-                          {exercise.notes}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteExercise(exercise._id)}
-                      className="text-destructive"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {exercises.map((exercise) => (
+              <div
+                key={exercise._id}
+                className="flex items-start justify-between gap-4 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium leading-tight">
+                    {exercise.name}
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </CardContent>
-      </Card>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {exercise.type} · {exercise.durationMinutes} min · ~
+                    {exercise.caloriesBurnedEst ?? 0} cal
+                  </div>
+                  {exercise.notes && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {exercise.notes}
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteExercise(exercise._id)}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
 
       <Dialog open={showAddExercise} onOpenChange={setShowAddExercise}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Exercise</DialogTitle>
-            <DialogDescription>Log your workout activity</DialogDescription>
+            <DialogDescription>
+              Log any activity you’d like to remember
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -190,7 +225,7 @@ export default function ExerciseLog() {
               <Label htmlFor="name">Exercise Name</Label>
               <Input
                 id="name"
-                placeholder="e.g., Morning Run"
+                placeholder="e.g., Morning walk"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -204,7 +239,10 @@ export default function ExerciseLog() {
                 placeholder="30"
                 value={form.durationMinutes}
                 onChange={(e) =>
-                  setForm({ ...form, durationMinutes: e.target.value })
+                  setForm({
+                    ...form,
+                    durationMinutes: e.target.value,
+                  })
                 }
               />
             </div>
@@ -213,19 +251,22 @@ export default function ExerciseLog() {
               <Label htmlFor="notes">Notes (optional)</Label>
               <Textarea
                 id="notes"
-                placeholder="Add any notes about your workout..."
+                placeholder="Anything you want to remember about it"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={3}
               />
             </div>
 
-            <Button onClick={handleSaveExercise} className="w-full">
+            <Button
+              onClick={handleSaveExercise}
+              className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
+            >
               Save Exercise
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }

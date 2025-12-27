@@ -1,48 +1,49 @@
-html,
-body,
-#root {
-  min-height: 100vh;
-  background-color: hsl(var(--surface-bg));
-  color: hsl(var(--text-primary));
-}
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* ===== CANVAS / ATMOSPHERE ===== */
-    --surface-bg: 222 60% 4%;
-    --surface-vignette: 222 55% 6%;
+    --background: 222 60% 3%;
+    --foreground: 210 40% 98%;
 
-    /* ===== SURFACES ===== */
-    --surface-elev-1: 222 45% 9%;
-    --surface-elev-2: 222 40% 13%;
-    --surface-separator: 220 12% 18%;
+    --card: 222 45% 11%;
+    --card-foreground: 210 40% 98%;
 
-    /* ===== TEXT (EDITORIAL) ===== */
-    --text-primary: 210 40% 98%;
-    --text-secondary: 215 18% 80%;
-    --text-label: 215 14% 72%;
-    --text-meta: 215 12% 60%;
-    --text-disabled: 215 10% 42%;
+    --popover: 222 45% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    /* ===== ACTION ===== */
-    --action-primary: 217 92% 60%;
-    --action-primary-fg: 222 84% 5%;
-    --action-pressed: 217 92% 52%;
+    --border: 220 12% 18%;
+    --input: 222 40% 15%;
 
-    /* ===== CONTROLS (CRAFTED) ===== */
-    --control-fill: 222 38% 14%;
-    --control-border: 220 10% 20%;
-    --control-inner-shadow: inset 0 1px 2px rgba(0,0,0,0.65);
-    --control-top-light: inset 0 1px 0 rgba(255,255,255,0.04);
-    --control-focus-glow: 224 76% 48%;
+    --primary: 217 92% 60%;
+    --primary-foreground: 222 84% 5%;
 
-    /* ===== ELEVATION (LAYERED) ===== */
-    --elev-card:
-      0 10px 30px rgba(0,0,0,0.45),
-      0 30px 60px rgba(0,0,0,0.65);
+    --secondary: 222 40% 15%;
+    --secondary-foreground: 215 18% 80%;
+
+    --muted: 222 40% 15%;
+    --muted-foreground: 215 12% 60%;
+
+    --accent: 222 40% 15%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 224 76% 48%;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  .transition-premium {
+    transition-property: opacity, transform, width, box-shadow;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }

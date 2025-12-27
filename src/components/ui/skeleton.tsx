@@ -5,7 +5,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="skeleton"
       className={cn(
-        "bg-muted-foreground/10 rounded-md opacity-0 animate-[fade-in_1s_ease-in-out_1s_forwards,pulse_2s_ease-in-out_1s_infinite]",
+        "rounded-md bg-muted-foreground/10 animate-pulse",
         className,
       )}
       {...props}
@@ -14,3 +14,4 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 export { Skeleton };
+

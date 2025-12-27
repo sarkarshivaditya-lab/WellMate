@@ -1,48 +1,21 @@
-import { forwardRef, useCallback, useEffect } from "react";
+import { forwardRef, useCallback } from "react";
 import { type VariantProps } from "class-variance-authority";
 import { Loader2, LogIn, LogOut } from "lucide-react";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth.ts";
-import { Button, buttonVariants } from "@/components/ui/button.tsx";
+import { Button } from "@/components/ui/button.tsx";
+import { buttonVariants } from "@/components/ui/button.variants";
 
 export interface SignInButtonProps
   extends Omit<React.ComponentProps<"button">, "onClick">,
     VariantProps<typeof buttonVariants> {
-  /**
-   * Custom onClick handler that runs before authentication action
-   */
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  /**
-   * Whether to show icons in the button
-   * @default true
-   */
   showIcon?: boolean;
-  /**
-   * Custom text for sign in state
-   * @default "Sign In"
-   */
   signInText?: string;
-  /**
-   * Custom text for sign out state
-   * @default "Sign Out"
-   */
   signOutText?: string;
-  /**
-   * Custom text for loading state
-   * @default "Signing In..." or "Signing Out..."
-   */
   loadingText?: string;
-  /**
-   * Whether to use the asChild pattern
-   * @default false
-   */
   asChild?: boolean;
 }
 
-/**
- * A button component that handles authentication sign in/out with proper loading states
- * and accessibility features.
- */
 export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
   (
     {
@@ -64,34 +37,41 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
 
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
-        // Run custom onClick first
+        event.preventDefault();
+
+        // ✅ CRITICAL: do nothing while Auth0 is hydrating
+        if (isLoading) return;
+
         onClick?.(event);
 
         try {
-          if (isAuthenticated) {
-            // Auth0 logout; use returnTo to send user back to app
-            await logout({
-              logoutParams: { returnTo: window.location.origin },
+          if (!isAuthenticated) {
+            await loginWithRedirect({
+              authorizationParams: {
+                prompt: "login",
+              },
             });
-          } else {
-            await loginWithRedirect();
+            return;
           }
+
+          await logout({
+            logoutParams: { returnTo: window.location.origin },
+          });
         } catch (err) {
           console.error("Authentication error:", err);
-          // Don't prevent the default here as the auth library handles errors
         }
       },
-      [isAuthenticated, logout, loginWithRedirect, onClick],
+      [isAuthenticated, isLoading, loginWithRedirect, logout, onClick],
     );
 
     const isDisabled = disabled || isLoading;
+
     const defaultLoadingText = isAuthenticated
       ? "Signing Out..."
       : "Signing In...";
-    const currentLoadingText = loadingText || defaultLoadingText;
 
     const buttonText = isLoading
-      ? currentLoadingText
+      ? loadingText || defaultLoadingText
       : isAuthenticated
         ? signOutText
         : signInText;
@@ -118,7 +98,6 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
             ? "Sign out of your account"
             : "Sign in to your account"
         }
-        aria-describedby={undefined}
         {...props}
       >
         {showIcon && icon}

@@ -12,13 +12,13 @@ export default defineConfig({
       overlay: false,
     },
   },
-  plugins: [
-    react(),
-    hercules(),
-  ],
+  plugins: [react(), hercules()],
   resolve: {
     alias: {
+      // MUST come first – fixes Convex generated client resolution
       "@/convex": path.resolve(__dirname, "./convex"),
+
+      // App source
       "@": path.resolve(__dirname, "./src"),
     },
   },

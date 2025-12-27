@@ -1,12 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api.js";
 
 /* ======================================================
    ONBOARDING — FULL 8 STEP FLOW
    ====================================================== */
 
+type ActivityLevel =
+  | "sedentary"
+  | "light"
+  | "moderate"
+  | "active"
+  | "veryActive";
+
 export default function Onboarding() {
   const navigate = useNavigate();
+
+  const completeOnboarding = useMutation(api.users.completeOnboarding);
+
+  /* ---------- AUTH GUARD ---------- */
+  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      loginWithRedirect({
+        appState: { returnTo: window.location.pathname },
+      });
+    }
+  }, [isAuthenticated, isLoading, loginWithRedirect]);
 
   /* ---------- core step ---------- */
   const [step, setStep] = useState(1);
@@ -20,7 +45,9 @@ export default function Onboarding() {
   const [weight, setWeight] = useState("");
 
   /* ---------- activity ---------- */
-  const [activityLevel, setActivityLevel] = useState("");
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel | null>(
+    null,
+  );
   const [dailySteps, setDailySteps] = useState("");
 
   /* ---------- goals ---------- */
@@ -42,9 +69,42 @@ export default function Onboarding() {
 
   const back = () => setStep((s) => Math.max(1, s - 1));
 
-  const finish = () => {
-    localStorage.setItem("onboarded", "true");
-    navigate("/physical");
+  const finish = async () => {
+    if (
+      !dob ||
+      !sex ||
+      !activityLevel ||
+      !weightGoal ||
+      Number(height) <= 0 ||
+      Number(weight) <= 0
+    ) {
+      alert("Please complete all required steps before finishing onboarding.");
+      console.error("Onboarding incomplete", {
+        dob,
+        sex,
+        activityLevel,
+        weightGoal,
+        height,
+        weight,
+      });
+      return;
+    }
+    try {
+      await completeOnboarding({
+        dob,
+        sex: sex as "male" | "female" | "other",
+        heightCm: Number(height),
+        weightKg: Number(weight),
+        activityLevel,
+        goal: weightGoal as "lose" | "maintain" | "gain",
+        periodTrackingEnabled: sex === "female",
+      });
+
+      localStorage.setItem("onboarded", "true");
+      navigate("/physical");
+    } catch (error) {
+      console.error("Failed to complete onboarding", error);
+    }
   };
 
   /* ======================================================
@@ -74,7 +134,8 @@ export default function Onboarding() {
     very: 1.725,
   };
 
-  const multiplier = activityMultiplierMap[activityLevel] || 1.2;
+  const multiplier =
+    (activityLevel ? activityMultiplierMap[activityLevel] : undefined) || 1.2;
   const maintenanceCalories = Math.round(BMR * multiplier);
 
   let goalCalories = maintenanceCalories;
@@ -180,13 +241,14 @@ export default function Onboarding() {
         {step === 3 && (
           <ChoiceGroup
             label="How active are you on a typical day?"
-            value={activityLevel}
-            onChange={setActivityLevel}
+            value={(activityLevel ?? "") as string}
+            onChange={setActivityLevel as (value: string) => void}
             options={[
               ["sedentary", "Sedentary", "Mostly sitting"],
               ["light", "Lightly active", "Some walking"],
               ["moderate", "Moderately active", "Exercise 3–5× / week"],
-              ["very", "Very active", "Hard training or physical job"],
+              ["active", "Active", "Daily exercise"],
+              ["veryActive", "Very active", "Hard training or physical job"],
             ]}
           />
         )}
@@ -261,7 +323,7 @@ export default function Onboarding() {
             <Summary label="Age" value={`${age} years`} />
             <Summary label="Height" value={`${height} cm`} />
             <Summary label="Weight" value={`${weight} kg`} />
-            <Summary label="Activity" value={activityLevel} />
+            <Summary label="Activity" value={activityLevel ?? "—"} />
             <Summary label="Goal" value={weightGoal} />
             <Summary label="Muscle" value={muscleGoal} />
 
@@ -312,10 +374,40 @@ export default function Onboarding() {
 }
 
 /* ======================================================
-   UI HELPERS (STYLE CONSISTENT)
+   UI HELPERS
    ====================================================== */
 
-function Field({ label, type, value, onChange }: any) {
+type FieldProps = {
+  label: string;
+  type?: React.HTMLInputTypeAttribute;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+type SelectOption = { label: string; value: string };
+
+type SelectProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+};
+
+type ChoiceOption = [value: string, title: string, subtitle?: string];
+
+type ChoiceGroupProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ChoiceOption[];
+};
+
+type SummaryProps = {
+  label: string;
+  value: React.ReactNode;
+};
+
+function Field({ label, type, value, onChange }: FieldProps) {
   return (
     <div>
       <label className="block text-[11px] uppercase tracking-wider mb-1 text-[hsl(var(--text-label))]">
@@ -331,15 +423,13 @@ function Field({ label, type, value, onChange }: any) {
           border border-[hsl(var(--control-border))]
           px-4 py-3
           text-[hsl(var(--text-primary))]
-          shadow-[var(--control-inner-shadow),var(--control-top-light)]
-          focus:outline-none focus:ring-2 focus:ring-[hsl(var(--control-focus-glow))]/20
         "
       />
     </div>
   );
 }
 
-function Select({ label, value, onChange, options }: any) {
+function Select({ label, value, onChange, options }: SelectProps) {
   return (
     <div>
       <label className="block text-[11px] uppercase tracking-wider mb-1 text-[hsl(var(--text-label))]">
@@ -348,17 +438,9 @@ function Select({ label, value, onChange, options }: any) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="
-          w-full rounded-xl
-          bg-[hsl(var(--control-fill))]/65
-          border border-[hsl(var(--control-border))]
-          px-4 py-3
-          text-[hsl(var(--text-primary))]
-          shadow-[var(--control-inner-shadow),var(--control-top-light)]
-          focus:outline-none focus:ring-2 focus:ring-[hsl(var(--control-focus-glow))]/20
-        "
+        className="w-full rounded-xl px-4 py-3"
       >
-        {options.map((o: any) => (
+        {options.map((o: SelectOption) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
@@ -368,45 +450,24 @@ function Select({ label, value, onChange, options }: any) {
   );
 }
 
-function ChoiceGroup({ label, value, onChange, options }: any) {
+function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[hsl(var(--text-secondary))]">{label}</p>
-      {options.map(([v, title, subtitle]: any) => (
-        <button
-          key={v}
-          onClick={() => onChange(v)}
-          className={`
-            w-full text-left rounded-xl px-4 py-3 border transition
-            ${
-              value === v
-                ? "bg-[hsl(var(--surface-elev-2))] border-[hsl(var(--action-primary))]"
-                : "border-[hsl(var(--surface-separator))]/40"
-            }
-          `}
-        >
-          <p
-            className={
-              value === v
-                ? "text-sm font-semibold text-[hsl(var(--text-primary))]"
-                : "text-sm font-medium text-[hsl(var(--text-secondary))]"
-            }
-          >
-            {title}
-          </p>
-          {subtitle && (
-            <p className="text-xs text-[hsl(var(--text-meta))]">{subtitle}</p>
-          )}
+      <p className="text-sm">{label}</p>
+      {options.map(([v, title, subtitle]: ChoiceOption) => (
+        <button key={v} onClick={() => onChange(v)}>
+          <p>{title}</p>
+          {subtitle && <p>{subtitle}</p>}
         </button>
       ))}
     </div>
   );
 }
 
-function Summary({ label, value }: any) {
+function Summary({ label, value }: SummaryProps) {
   return (
     <p>
-      <span className="text-[hsl(var(--text-meta))]">{label}</span> — {value}
+      <span>{label}</span> — {value}
     </p>
   );
 }

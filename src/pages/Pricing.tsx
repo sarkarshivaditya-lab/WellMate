@@ -68,19 +68,7 @@ export default function Pricing() {
           </p>
         </div>
 
-        {/* Dev Mode Notice */}
-        {paymentStatus.mode === "dev" && (
-          <Card className="border-amber-500 bg-amber-500/5">
-            <CardContent className="pt-6 text-sm">
-              <p className="font-semibold mb-1">Development Mode</p>
-              <p className="text-muted-foreground">
-                Payments are mocked. Upgrading will toggle your subscription
-                status locally. In production, this will redirect to Stripe
-                checkout.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Dev Mode Notice removed for production cleanliness */}
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 gap-6">

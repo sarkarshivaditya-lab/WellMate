@@ -1,21 +1,35 @@
 import "./index.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Auth0Provider } from "@auth0/auth0-react";
 import App from "./App";
+import { DefaultProviders } from "./components/providers/default";
 
-console.log("AUTH0 DOMAIN =", import.meta.env.VITE_AUTH0_DOMAIN);
+// auth0 domain intentionally not logged in production
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <Auth0Provider
-      domain={import.meta.env.VITE_AUTH0_DOMAIN}
-      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
-      authorizationParams={{
-        redirect_uri: import.meta.env.VITE_AUTH0_REDIRECT_URI,
-      }}
-    >
-      <App />
-    </Auth0Provider>
-  </React.StrictMode>,
-);
+function Root() {
+  const [, forceRender] = React.useState(0);
+
+  React.useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        forceRender((v) => v + 1);
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
+  return (
+    <React.StrictMode>
+      <DefaultProviders>
+        <App />
+      </DefaultProviders>
+    </React.StrictMode>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(<Root />);

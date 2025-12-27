@@ -1,13 +1,80 @@
 import React from "react";
+import { cn } from "@/lib/utils";
 
-export default function PageLayout({
-  children,
-}: {
+type PageTab = {
+  label: string;
+  value: string;
+};
+
+type PageLayoutProps = {
+  title?: string;
+  subtitle?: string;
+  tabs?: PageTab[];
+  activeTab?: string;
+  onTabChange?: (value: string) => void;
   children: React.ReactNode;
-}) {
+};
+
+function PageLayout({
+  title,
+  subtitle,
+  tabs,
+  activeTab,
+  onTabChange,
+  children,
+}: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="w-full max-w-4xl mx-auto px-6 py-12">{children}</div>
+    <div className="bg-background">
+      <main role="main" className="w-full max-w-4xl mx-auto px-6 py-8">
+        {(title || subtitle || tabs) && (
+          <header
+            data-slot="page-header"
+            className="mb-8 space-y-4"
+          >
+            {(title || subtitle) && (
+              <div>
+                {title && (
+                  <h1 className="text-2xl font-semibold leading-tight">
+                    {title}
+                  </h1>
+                )}
+                {subtitle && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {tabs && tabs.length > 0 && (
+              <div className="flex gap-1 border-b border-border">
+                {tabs.map((tab) => {
+                  const isActive = tab.value === activeTab;
+                  return (
+                    <button
+                      key={tab.value}
+                      onClick={() => onTabChange?.(tab.value)}
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium transition-colors",
+                        "border-b-2 -mb-px",
+                        isActive
+                          ? "border-foreground text-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </header>
+        )}
+
+        {children}
+      </main>
     </div>
   );
 }
+
+export default PageLayout;

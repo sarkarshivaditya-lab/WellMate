@@ -5,48 +5,108 @@ import { api } from "./_generated/api";
 import { v } from "convex/values";
 import OpenAI from "openai";
 import { SYSTEM_PROMPT_MENTAL, buildMentalUserPrompt } from "../src/services/aiMentalPrompts";
-import aiMentalSchema from "../src/services/aiMentalSchema.json";
 import type { AiMentalResponse } from "../src/services/aiMentalTypes";
 import practicesData from "../src/data/practices.json";
+
+const BURST_WINDOW_MS = 60_000;
+const BURST_LIMIT = 3;
+const DAILY_LIMIT = 20;
+
+/* ======================================================
+   CRISIS KEYWORDS (SERVER-AUTHORITATIVE)
+   ====================================================== */
+const CRISIS_PATTERNS = [
+  /suicide/i,
+  /kill myself/i,
+  /self harm/i,
+  /end my life/i,
+  /want to die/i,
+  /no reason to live/i,
+  /hurt myself/i,
+  /can't go on/i,
+];
+
+function detectCrisis(text: string): boolean {
+  return CRISIS_PATTERNS.some((p) => p.test(text));
+}
 
 export const askMentalCoach = action({
   args: {
     message: v.string(),
   },
   handler: async (ctx, args): Promise<AiMentalResponse> => {
-    // Get user identity
+    /* ======================================================
+       AUTH (Stage 14.3.2)
+       ====================================================== */
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return createSafetyFallback("Please sign in to use the AI Mental Coach.");
+      throw new Error("UNAUTHENTICATED_MENTAL_AI_ACCESS");
     }
 
-    // Fetch recent mood and journal data
-    const moods = await ctx.runQuery(api.moods.listMoods, { limit: 7 });
-    const journals = await ctx.runQuery(api.journal.listJournalEntries, { limit: 7 });
+    /* ======================================================
+       RESOLVE USER
+       ====================================================== */
+    const user = await ctx.runQuery(api.users.getCurrentUser, {});
+    if (!user) {
+      throw new Error("USER_RECORD_NOT_FOUND");
+    }
+
+    const userId = user._id;
     const today = new Date().toISOString().split("T")[0];
-    const todayMood = await ctx.runQuery(api.moods.getMoodByDate, { dateIso: today });
+    const now = Date.now();
 
-    // Build mood history summary
-    const moodHistory = buildMoodHistory(moods, todayMood);
-    
-    // Build journal summary
-    const journalSummary = buildJournalSummary(journals);
-    
-    // Build practices list
-    const practicesList = buildPracticesList();
-
-    // Build user prompt
-    const userPrompt = buildMentalUserPrompt({
-      userMessage: args.message,
-      moodHistory,
-      journalSummary,
-      practicesList,
+    /* ======================================================
+       RATE LIMITING (Stage 14.3.3)
+       ====================================================== */
+    const usage = await ctx.runQuery(api.mentalAiUsage.getByUserAndDate, {
+      userId,
+      dateIso: today,
     });
 
-    // Call OpenAI
+    if (usage) {
+      if (usage.count >= DAILY_LIMIT) {
+        throw new Error("MENTAL_AI_DAILY_LIMIT_EXCEEDED");
+      }
+      if (now - usage.lastCallTs < BURST_WINDOW_MS && usage.count % BURST_LIMIT === 0) {
+        throw new Error("MENTAL_AI_RATE_LIMITED");
+      }
+    }
+
+    if (usage) {
+      await ctx.runMutation(api.mentalAiUsage.increment, { id: usage._id, now });
+    } else {
+      await ctx.runMutation(api.mentalAiUsage.create, {
+        userId,
+        dateIso: today,
+        now,
+      });
+    }
+
+    /* ======================================================
+       CRISIS PRE-CHECK (FAIL-SAFE)
+       ====================================================== */
+    const crisisFromUser = detectCrisis(args.message);
+
+    /* ======================================================
+       CONTEXT BUILD
+       ====================================================== */
+    const moods = await ctx.runQuery(api.moods.listMoods, { limit: 7 });
+    const journals = await ctx.runQuery(api.journal.listJournalEntries, { limit: 7 });
+    const todayMood = await ctx.runQuery(api.moods.getMoodByDate, { dateIso: today });
+
+    const userPrompt = buildMentalUserPrompt({
+      userMessage: args.message,
+      moodHistory: buildMoodHistory(moods, todayMood),
+      journalSummary: buildJournalSummary(journals),
+      practicesList: buildPracticesList(),
+    });
+
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return createSafetyFallback("AI service not configured. Please contact support.");
+      return createSafetyFallback(
+        "AI service is unavailable. Please reach out to local support resources.",
+        true,
+      );
     }
 
     try {
@@ -64,20 +124,25 @@ export const askMentalCoach = action({
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
-        return createSafetyFallback("Unable to generate response. Please try again.");
+        return createSafetyFallback("Unable to respond right now.", true);
       }
 
-      // Parse and validate response
       const parsed = JSON.parse(content);
       const validated = validateMentalResponse(parsed);
-      
-      return validated;
+
+      return {
+        ...validated,
+        escalation: validated.escalation || crisisFromUser,
+        confidence: validated.escalation || crisisFromUser ? "low" : validated.confidence,
+      };
     } catch (error) {
       console.error("AI Mental Coach error:", error);
-      return createSafetyFallback("An error occurred. Please try again later.");
+      return createSafetyFallback("Something went wrong. You’re not alone.", true);
     }
   },
 });
+
+/* ===================== HELPERS ===================== */
 
 interface MoodData {
   moodValue: number;
@@ -86,34 +151,12 @@ interface MoodData {
 }
 
 function buildMoodHistory(moods: MoodData[], todayMood: MoodData | null): string {
-  if (moods.length === 0 && !todayMood) {
-    return "No mood data available yet.";
-  }
-
-  const moodLabels = ["very low", "low", "okay", "good", "excellent"];
-  const moodValues = moods.map((m) => m.moodValue);
-  const average = moodValues.length > 0 
-    ? (moodValues.reduce((sum, val) => sum + val, 0) / moodValues.length).toFixed(1)
-    : "N/A";
-
-  let summary = `Average mood (last 7 days): ${average}/5. `;
-  
-  if (todayMood) {
-    summary += `Today's mood: ${moodLabels[todayMood.moodValue - 1]}. `;
-    if (todayMood.note) {
-      summary += `Note: "${todayMood.note}". `;
-    }
-  }
-
-  // Detect patterns
-  if (moodValues.length >= 3) {
-    const lowCount = moodValues.filter((v) => v <= 2).length;
-    if (lowCount >= 2) {
-      summary += "Pattern: Multiple low mood days detected. ";
-    }
-  }
-
-  return summary;
+  if (moods.length === 0 && !todayMood) return "No mood data available.";
+  const avg =
+    moods.length > 0
+      ? (moods.reduce((s, m) => s + m.moodValue, 0) / moods.length).toFixed(1)
+      : "N/A";
+  return `Average mood: ${avg}/5.`;
 }
 
 interface JournalData {
@@ -123,86 +166,58 @@ interface JournalData {
 }
 
 function buildJournalSummary(journals: JournalData[]): string {
-  if (journals.length === 0) {
-    return "No recent journal entries.";
-  }
-
-  const allTags = journals.flatMap((j) => j.tags);
-  const tagCounts: Record<string, number> = {};
-  allTags.forEach((tag) => {
-    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-  });
-
-  const topTags = Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map((entry) => entry[0]);
-
-  let summary = `Recent journal entries: ${journals.length}. `;
-  if (topTags.length > 0) {
-    summary += `Common themes: ${topTags.join(", ")}. `;
-  }
-
-  return summary;
+  if (journals.length === 0) return "No recent journal entries.";
+  return `Recent journal entries: ${journals.length}.`;
 }
 
 function buildPracticesList(): string {
-  const practices = practicesData.map((p) => ({
-    id: p.id,
-    title: p.title,
-    type: p.type,
-  }));
-
-  return JSON.stringify(practices, null, 2);
+  return JSON.stringify(
+    practicesData.map((p) => ({ id: p.id, title: p.title, type: p.type })),
+    null,
+    2,
+  );
 }
 
 function validateMentalResponse(parsed: unknown): AiMentalResponse {
-  // Basic validation
   if (!parsed || typeof parsed !== "object") {
-    return createSafetyFallback("Invalid response format.");
+    return createSafetyFallback("Invalid response format.", true);
   }
-  
+
   const obj = parsed as Record<string, unknown>;
 
-  // Ensure required fields exist
-  const validated: AiMentalResponse = {
-    summary: typeof obj.summary === "string" ? obj.summary : "I'm here to support you.",
-    emotion: (typeof obj.emotion === "string" && ["calm", "stressed", "anxious", "sad", "content", "frustrated", "overwhelmed", "hopeful"].includes(obj.emotion)) 
-      ? obj.emotion as AiMentalResponse["emotion"]
-      : "calm",
-    suggestions: Array.isArray(obj.suggestions) 
-      ? obj.suggestions.filter((s): s is string => typeof s === "string").slice(0, 3) 
-      : ["Take a few deep breaths", "Be kind to yourself", "Consider journaling your thoughts"],
-    practice: (obj.practice && typeof obj.practice === "object") ? obj.practice as AiMentalResponse["practice"] : getDefaultPractice(),
+  return {
+    summary: typeof obj.summary === "string" ? obj.summary : "I'm here with you.",
+    emotion:
+      typeof obj.emotion === "string"
+        ? (obj.emotion as AiMentalResponse["emotion"])
+        : "calm",
+    suggestions: Array.isArray(obj.suggestions)
+      ? obj.suggestions.filter((s): s is string => typeof s === "string").slice(0, 3)
+      : [],
+    practice:
+      obj.practice && typeof obj.practice === "object"
+        ? (obj.practice as AiMentalResponse["practice"])
+        : getDefaultPractice(),
     escalation: obj.escalation === true,
-    confidence: (typeof obj.confidence === "string" && ["low", "medium", "high"].includes(obj.confidence))
-      ? obj.confidence as AiMentalResponse["confidence"]
-      : "medium",
+    confidence:
+      typeof obj.confidence === "string"
+        ? (obj.confidence as AiMentalResponse["confidence"])
+        : "medium",
   };
-
-  return validated;
 }
 
 function getDefaultPractice() {
-  const defaultPractice = practicesData.find((p) => p.id === "p1") || practicesData[0];
-  return {
-    id: defaultPractice.id,
-    title: defaultPractice.title,
-    steps: defaultPractice.steps,
-  };
+  const p = practicesData[0];
+  return { id: p.id, title: p.title, steps: p.steps };
 }
 
-function createSafetyFallback(message: string): AiMentalResponse {
+function createSafetyFallback(message: string, escalate: boolean): AiMentalResponse {
   return {
     summary: message,
     emotion: "calm",
-    suggestions: [
-      "Take a moment to breathe deeply",
-      "Consider reaching out to a trusted friend",
-      "Remember to be kind to yourself",
-    ],
+    suggestions: ["Please consider reaching out to someone you trust."],
     practice: getDefaultPractice(),
-    escalation: false,
+    escalation: escalate,
     confidence: "low",
   };
 }

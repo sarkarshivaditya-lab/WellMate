@@ -33,11 +33,35 @@ import {
 } from "@/services/mealService.ts";
 import type { MealItemData } from "@/services/mealService.ts";
 import { toast } from "sonner";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+
+/* ---------- Types ---------- */
+
+type MealWithItems = Doc<"meals"> & {
+  items: Doc<"mealItems">[];
+};
+
+/* ---------- Skeleton ---------- */
+
+function MealSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[0, 1].map((i) => (
+        <div key={i} className="h-14 rounded-md bg-muted/40 animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Component ---------- */
 
 export default function FoodLog() {
   const today = new Date().toISOString().split("T")[0];
-  const meals = useQuery(api.meals.getMealsByDate, { dateIso: today });
+
+  const meals = useQuery(api.meals.getMealsByDate, {
+    dateIso: today,
+  }) as MealWithItems[] | undefined;
+
   const addMeal = useMutation(api.meals.addMeal);
   const deleteMeal = useMutation(api.meals.deleteMeal);
 
@@ -56,30 +80,29 @@ export default function FoodLog() {
 
   const handleAddFromSearch = (result: FoodSearchResult, quantity: number) => {
     const item = foodResultToMealItem(result, quantity);
-    setMealItems([...mealItems, item]);
-    if (!mealName) {
-      setMealName(result.name);
-    }
+    setMealItems((prev) => [...prev, item]);
+    if (!mealName) setMealName(result.name);
   };
 
   const handleAddDetailed = () => {
     if (!detailedForm.name || !detailedForm.calories) {
-      toast.error("Please fill in meal name and calories");
+      toast.error("Just add a name and calories to continue");
       return;
     }
+
     const item: MealItemData = {
       name: detailedForm.name,
-      calories: parseFloat(detailedForm.calories),
-      proteinG: parseFloat(detailedForm.protein) || 0,
-      fatG: parseFloat(detailedForm.fat) || 0,
-      carbsG: parseFloat(detailedForm.carbs) || 0,
+      calories: Number(detailedForm.calories),
+      proteinG: Number(detailedForm.protein) || 0,
+      fatG: Number(detailedForm.fat) || 0,
+      carbsG: Number(detailedForm.carbs) || 0,
       quantity: 1,
       unit: "serving",
     };
-    setMealItems([...mealItems, item]);
-    if (!mealName) {
-      setMealName(detailedForm.name);
-    }
+
+    setMealItems((prev) => [...prev, item]);
+    if (!mealName) setMealName(detailedForm.name);
+
     setDetailedForm({
       name: "",
       calories: "",
@@ -91,20 +114,23 @@ export default function FoodLog() {
 
   const handleSaveMeal = async () => {
     if (mealItems.length === 0) {
-      toast.error("Please add at least one item to the meal");
+      toast.error("Add at least one item if you’d like to save this meal");
       return;
     }
+
     const totals = calculateMealTotals(mealItems);
+
     try {
       await addMeal({
         dateIso: today,
-        name: mealName || "Unnamed Meal",
+        name: mealName || "Meal",
         inputMode,
         items: mealItems,
         sourceAdapter: inputMode === "quick" ? "mock" : undefined,
         ...totals,
       });
-      toast.success("Meal added successfully");
+
+      toast.success("Meal saved");
       setShowAddMeal(false);
       setMealName("");
       setMealItems([]);
@@ -115,22 +141,22 @@ export default function FoodLog() {
         fat: "",
         carbs: "",
       });
-    } catch (error) {
-      toast.error("Failed to add meal");
+    } catch {
+      toast.error("Couldn’t save that meal just now");
     }
   };
 
   const handleDeleteMeal = async (mealId: Id<"meals">) => {
     try {
       await deleteMeal({ mealId });
-      toast.success("Meal deleted");
-    } catch (error) {
-      toast.error("Failed to delete meal");
+      toast.success("Meal removed");
+    } catch {
+      toast.error("Couldn’t remove that meal");
     }
   };
 
   const dayTotals = meals?.reduce(
-    (acc: any, meal: any) => ({
+    (acc, meal) => ({
       calories: acc.calories + meal.totalCalories,
       protein: acc.protein + meal.totalProteinG,
       fat: acc.fat + meal.totalFatG,
@@ -140,53 +166,62 @@ export default function FoodLog() {
   );
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Today's Meals</CardTitle>
-              {dayTotals && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {dayTotals.calories} cal · P: {dayTotals.protein.toFixed(1)}g
-                  · F: {dayTotals.fat.toFixed(1)}g · C:{" "}
-                  {dayTotals.carbs.toFixed(1)}g
-                </p>
-              )}
-            </div>
-            <Button onClick={() => setShowAddMeal(true)}>
-              <PlusIcon className="mr-2 h-4 w-4" />
-              Add Meal
-            </Button>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Today’s Meals</CardTitle>
+            {dayTotals && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {dayTotals.calories} cal · P: {dayTotals.protein.toFixed(1)}g ·
+                F: {dayTotals.fat.toFixed(1)}g · C: {dayTotals.carbs.toFixed(1)}
+                g
+              </p>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {meals === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading...
+          <Button
+            onClick={() => setShowAddMeal(true)}
+            size="sm"
+            className="shadow-card hover:brightness-105 active:scale-[0.97]"
+          >
+            <PlusIcon className="mr-1.5 h-4 w-4" />
+            Add
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {meals === undefined ? (
+          <MealSkeleton />
+        ) : meals.length === 0 ? (
+          <div className="py-6 text-center space-y-1">
+            <div className="text-sm text-muted-foreground">
+              No meals logged yet today
             </div>
-          ) : meals.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No meals logged today
+            <div className="text-xs text-muted-foreground">
+              If you want, you can log even one meal — totally optional.
             </div>
-          ) : (
-            meals.map((meal: any) => (
-              <MealCard
-                key={meal._id}
-                meal={meal}
-                onDelete={() => handleDeleteMeal(meal._id)}
-              />
-            ))
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {meals.map((meal) => (
+              <div key={meal._id} className="rounded-md border border-border">
+                <MealCard
+                  meal={meal}
+                  onDelete={() => handleDeleteMeal(meal._id)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
 
       <Dialog open={showAddMeal} onOpenChange={setShowAddMeal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Meal</DialogTitle>
             <DialogDescription>
-              Search for foods or enter nutrition details manually
+              Log whatever feels easiest — quick search or manual entry
             </DialogDescription>
           </DialogHeader>
 
@@ -203,7 +238,7 @@ export default function FoodLog() {
 
             <Tabs
               value={inputMode}
-              onValueChange={(v) => setInputMode(v as typeof inputMode)}
+              onValueChange={(v) => setInputMode(v as "quick" | "detailed")}
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="quick">Quick Search</TabsTrigger>
@@ -291,7 +326,11 @@ export default function FoodLog() {
                     />
                   </div>
                 </div>
-                <Button onClick={handleAddDetailed} className="w-full">
+
+                <Button
+                  onClick={handleAddDetailed}
+                  className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
+                >
                   Add Item
                 </Button>
               </TabsContent>
@@ -299,12 +338,12 @@ export default function FoodLog() {
 
             {mealItems.length > 0 && (
               <div className="space-y-2">
-                <Label>Items in this meal:</Label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {mealItems.map((item: any, i: number) => (
+                <Label>Items in this meal</Label>
+                <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+                  {mealItems.map((item, i) => (
                     <div
                       key={i}
-                      className="flex justify-between text-sm p-2 bg-muted rounded"
+                      className="flex justify-between text-xs text-muted-foreground"
                     >
                       <span>{item.name}</span>
                       <span>
@@ -318,7 +357,7 @@ export default function FoodLog() {
 
             <Button
               onClick={handleSaveMeal}
-              className="w-full"
+              className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
               disabled={mealItems.length === 0}
             >
               Save Meal
@@ -326,6 +365,6 @@ export default function FoodLog() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }

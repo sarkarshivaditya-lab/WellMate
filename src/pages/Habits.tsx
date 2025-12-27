@@ -38,7 +38,6 @@ import {
   checkFeatureAccess,
   getFeatureLimit,
 } from "@/services/subscriptionUtils";
-import PageLayout from "@/components/layout/PageLayout";
 
 export default function Habits() {
   const navigate = useNavigate();
@@ -67,7 +66,6 @@ export default function Habits() {
       return;
     }
 
-    // Check habit limit
     const limit = getFeatureLimit("habits-max", subscription || null);
     if (limit !== null && habits && habits.length >= limit) {
       toast.error(
@@ -89,7 +87,7 @@ export default function Habits() {
       setTitle("");
       setDescription("");
       setShowDialog(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to create habit");
     }
   };
@@ -97,19 +95,16 @@ export default function Habits() {
   const handleToggle = async (habitId: string) => {
     try {
       await toggleHabit({ habitId: habitId as never, dateIso: today });
-    } catch (error) {
+    } catch {
       toast.error("Failed to update habit");
     }
   };
 
-  const computeStreak = (habitId: string): number => {
-    // Simplified streak calculation - would need full history
-    return 0;
-  };
-
   const isCompletedToday = (habitId: string): boolean => {
     if (!todayEntries) return false;
-    const entry = todayEntries.find((e: any) => e.habitId === habitId);
+    const entry = todayEntries.find(
+      (e: (typeof todayEntries)[number]) => e.habitId === habitId,
+    );
     return entry?.completed || false;
   };
 
@@ -121,141 +116,141 @@ export default function Habits() {
 
   if (habits === undefined || todayEntries === undefined) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-4xl">
-          <Skeleton className="h-12 w-full mb-4" />
-          <Skeleton className="h-32 w-full mb-4" />
-          <Skeleton className="h-32 w-full" />
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="w-full max-w-xl space-y-4">
+          <Skeleton className="h-10 w-1/2" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
         </div>
       </div>
     );
   }
 
   return (
-    <PageLayout>
-      <div className="w-full space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Habits</h1>
-            <p className="text-muted-foreground">Track your daily routines</p>
-          </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button disabled={!canAddMoreHabits()}>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                New Habit
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Habit</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Exercise for 30 minutes"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description (optional)</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Go for a run or do yoga"
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cadence">Frequency</Label>
-                  <Select
-                    value={cadence}
-                    onValueChange={(v: typeof cadence) => setCadence(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="reminders">Enable Reminders</Label>
-                  <Switch
-                    id="reminders"
-                    checked={remindersEnabled}
-                    onCheckedChange={setRemindersEnabled}
-                  />
-                </div>
-                {remindersEnabled && (
-                  <div>
-                    <Label htmlFor="time">Reminder Time</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                    />
-                  </div>
-                )}
-                <Button onClick={handleAddHabit} className="w-full">
-                  Create Habit
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+    <div className="p-6 space-y-8">
+      {/* Hero */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Habits</h1>
+          <p className="text-sm text-muted-foreground">
+            Build consistency through daily actions
+          </p>
         </div>
 
-        {/* Gated Feature Banner */}
-        {!canAddMoreHabits() && (
-          <GatedFeatureBanner
-            feature="Unlimited Habits"
-            description={`You've reached the free plan limit of ${getFeatureLimit("habits-max", subscription || null)} habits`}
-            onUpgrade={() => navigate("/pricing")}
-          />
-        )}
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <DialogTrigger asChild>
+            <Button disabled={!canAddMoreHabits()}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              New Habit
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Habit</DialogTitle>
+            </DialogHeader>
 
-        {/* Habits List */}
-        {habits.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Target />
-              </EmptyMedia>
-              <EmptyTitle>No habits yet</EmptyTitle>
-              <EmptyDescription>
-                Start building better routines by creating your first habit
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button size="sm" onClick={() => setShowDialog(true)}>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create First Habit
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label>Frequency</Label>
+                <Select
+                  value={cadence}
+                  onValueChange={(v: typeof cadence) => setCadence(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label>Reminders</Label>
+                <Switch
+                  checked={remindersEnabled}
+                  onCheckedChange={setRemindersEnabled}
+                />
+              </div>
+
+              {remindersEnabled && (
+                <Input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                />
+              )}
+
+              <Button className="w-full" onClick={handleAddHabit}>
+                Create Habit
               </Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <div className="space-y-3">
-            {habits.map((habit: any) => (
-              <HabitCard
-                key={habit._id}
-                habit={habit}
-                streak={computeStreak(habit._id)}
-                isCompletedToday={isCompletedToday(habit._id)}
-                onToggle={() => handleToggle(habit._id)}
-              />
-            ))}
-          </div>
-        )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-    </PageLayout>
+
+      {/* Gating */}
+      {!canAddMoreHabits() && (
+        <GatedFeatureBanner
+          feature="Unlimited Habits"
+          description={`You've reached the free plan limit of ${getFeatureLimit("habits-max", subscription || null)} habits`}
+          onUpgrade={() => navigate("/pricing")}
+        />
+      )}
+
+      {/* Content */}
+      {habits.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Target />
+            </EmptyMedia>
+            <EmptyTitle>No habits yet</EmptyTitle>
+            <EmptyDescription>
+              Start building consistency with your first habit
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button size="sm" onClick={() => setShowDialog(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Create Habit
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <div className="space-y-3">
+          {habits.map((habit: (typeof habits)[number]) => (
+            <HabitCard
+              key={habit._id}
+              habit={habit}
+              isCompletedToday={isCompletedToday(habit._id)}
+              streak={0}
+              onToggle={() => handleToggle(habit._id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

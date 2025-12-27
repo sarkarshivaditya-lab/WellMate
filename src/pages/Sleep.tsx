@@ -54,7 +54,10 @@ export default function Sleep() {
 
   const calculateAverage = () => {
     if (!sleep || sleep.length === 0) return 0;
-    const total = sleep.reduce((sum: number, s: any) => sum + s.durationMin, 0);
+    const total = sleep.reduce(
+      (sum: number, s: (typeof sleep)[number]) => sum + s.durationMin,
+      0,
+    );
     return Math.round(total / sleep.length);
   };
 
@@ -165,7 +168,7 @@ export default function Sleep() {
                 <p>No sleep logs yet</p>
               </div>
             ) : (
-              sleep.map((s: any) => {
+              sleep.map((s: (typeof sleep)[number]) => {
                 const hours = Math.floor(s.durationMin / 60);
                 const mins = s.durationMin % 60;
                 const date = new Date(s.startIso).toLocaleDateString();

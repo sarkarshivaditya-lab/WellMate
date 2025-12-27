@@ -22,21 +22,31 @@ export default function Progress() {
   const meals = useQuery(api.meals.getMealsByDate, { dateIso: today });
   const user = useQuery(api.users.getCurrentUser);
 
+  type DayTotals = {
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+    micros: Record<string, number>;
+  };
+
+  const initialTotals: DayTotals = {
+    calories: 0,
+    protein: 0,
+    fat: 0,
+    carbs: 0,
+    micros: {},
+  };
+
   const dayTotals = meals?.reduce(
-    (acc: any, meal: any) => ({
+    (acc: DayTotals, meal: (typeof meals)[number]): DayTotals => ({
       calories: acc.calories + meal.totalCalories,
       protein: acc.protein + meal.totalProteinG,
       fat: acc.fat + meal.totalFatG,
       carbs: acc.carbs + meal.totalCarbsG,
       micros: acc.micros,
     }),
-    {
-      calories: 0,
-      protein: 0,
-      fat: 0,
-      carbs: 0,
-      micros: {} as Record<string, number>,
-    },
+    initialTotals,
   );
 
   let calorieTarget = 2000;
@@ -68,7 +78,11 @@ export default function Progress() {
           value: dayTotals.protein,
           color: "oklch(0.55 0.18 160)",
         },
-        { label: "Fat", value: dayTotals.fat, color: "oklch(0.65 0.15 200)" },
+        {
+          label: "Fat",
+          value: dayTotals.fat,
+          color: "oklch(0.65 0.15 200)",
+        },
         {
           label: "Carbs",
           value: dayTotals.carbs,
@@ -87,7 +101,7 @@ export default function Progress() {
   };
 
   const aggregateMicros: Record<string, number> = {};
-  meals?.forEach((meal: any) => {
+  meals?.forEach((meal: (typeof meals)[number]) => {
     if (meal.micronutrientsJson) {
       try {
         const micros = JSON.parse(meal.micronutrientsJson);
@@ -95,8 +109,8 @@ export default function Progress() {
           aggregateMicros[key] =
             (aggregateMicros[key] || 0) + (value as number);
         }
-      } catch (error) {
-        console.error("Error parsing micros", error);
+      } catch {
+        /* silent by design */
       }
     }
   });
@@ -116,16 +130,17 @@ export default function Progress() {
 
   return (
     <div className="space-y-4">
+      {/* SUMMARY */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle>Daily Summary</CardTitle>
           <CardDescription>Your nutrition for today</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
             <div>
-              <div className="text-sm text-muted-foreground">Calories</div>
-              <div className="text-2xl font-bold">
+              <div className="text-xs text-muted-foreground">Calories</div>
+              <div className="text-xl font-semibold">
                 {dayTotals?.calories || 0}
               </div>
               <div className="text-xs text-muted-foreground">
@@ -133,8 +148,8 @@ export default function Progress() {
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Protein</div>
-              <div className="text-2xl font-bold">
+              <div className="text-xs text-muted-foreground">Protein</div>
+              <div className="text-xl font-semibold">
                 {dayTotals?.protein.toFixed(1) || 0}g
               </div>
               <div className="text-xs text-muted-foreground">
@@ -142,8 +157,8 @@ export default function Progress() {
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Fat</div>
-              <div className="text-2xl font-bold">
+              <div className="text-xs text-muted-foreground">Fat</div>
+              <div className="text-xl font-semibold">
                 {dayTotals?.fat.toFixed(1) || 0}g
               </div>
               <div className="text-xs text-muted-foreground">
@@ -151,8 +166,8 @@ export default function Progress() {
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Carbs</div>
-              <div className="text-2xl font-bold">
+              <div className="text-xs text-muted-foreground">Carbs</div>
+              <div className="text-xl font-semibold">
                 {dayTotals?.carbs.toFixed(1) || 0}g
               </div>
               <div className="text-xs text-muted-foreground">
@@ -163,17 +178,22 @@ export default function Progress() {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      {/* CHARTS */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Macronutrient Distribution</CardTitle>
-            <CardDescription>Today's protein, fat, and carbs</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              Macronutrient Distribution
+            </CardTitle>
+            <CardDescription>
+              Relative balance for today
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             {pieData.length > 0 ? (
-              <ChartPie data={pieData} size={240} />
+              <ChartPie data={pieData} size={220} />
             ) : (
-              <div className="text-center text-muted-foreground py-12">
+              <div className="py-10 text-sm text-muted-foreground">
                 No meals logged today
               </div>
             )}
@@ -181,15 +201,19 @@ export default function Progress() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Micronutrient Intake</CardTitle>
-            <CardDescription>Percentage of daily targets</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              Micronutrient Intake
+            </CardTitle>
+            <CardDescription>
+              Progress toward daily targets
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {barData.length > 0 ? (
-              <ChartBar data={barData} height={280} />
+              <ChartBar data={barData} height={240} />
             ) : (
-              <div className="text-center text-muted-foreground py-12">
+              <div className="py-10 text-sm text-muted-foreground">
                 No micronutrient data available
               </div>
             )}
@@ -199,3 +223,4 @@ export default function Progress() {
     </div>
   );
 }
+

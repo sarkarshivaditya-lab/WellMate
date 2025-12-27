@@ -59,17 +59,17 @@ export default function Tools() {
   ];
 
   return (
-    <div className="space-y-4 p-4 pb-24">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Wellbeing Tools</h1>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold">Wellbeing Tools</h1>
         <p className="text-sm text-muted-foreground">
-          Choose a practice to support your mental wellbeing
+          A collection of guided practices you can use anytime.
         </p>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* Filters (secondary) */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {filters.map((f) => (
           <Badge
             key={f.label}
@@ -82,8 +82,8 @@ export default function Tools() {
         ))}
       </div>
 
-      {/* Practices Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Practices */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {filteredPractices.map((practice) => (
           <PracticeCard
             key={practice.id}
@@ -93,8 +93,11 @@ export default function Tools() {
         ))}
       </div>
 
-      {/* Practice Detail Dialog */}
-      <Dialog open={selectedPractice !== null} onOpenChange={(open) => !open && handleClose()}>
+      {/* Practice Dialog */}
+      <Dialog
+        open={selectedPractice !== null}
+        onOpenChange={(open) => !open && handleClose()}
+      >
         <DialogContent className="max-h-[80vh] overflow-y-auto">
           {selectedPractice && (
             <>
@@ -107,17 +110,27 @@ export default function Tools() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Step {currentStep + 1} of {selectedPractice.steps.length}
+                      Step {currentStep + 1} of{" "}
+                      {selectedPractice.steps.length}
                     </span>
                     <span className="text-muted-foreground">
-                      {Math.round(((currentStep + 1) / selectedPractice.steps.length) * 100)}%
+                      {Math.round(
+                        ((currentStep + 1) /
+                          selectedPractice.steps.length) *
+                          100,
+                      )}
+                      %
                     </span>
                   </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full bg-primary transition-all"
                       style={{
-                        width: `${((currentStep + 1) / selectedPractice.steps.length) * 100}%`,
+                        width: `${
+                          ((currentStep + 1) /
+                            selectedPractice.steps.length) *
+                          100
+                        }%`,
                       }}
                     />
                   </div>
@@ -125,23 +138,27 @@ export default function Tools() {
 
                 {/* Current Step */}
                 <div className="py-8 text-center">
-                  <p className="text-lg leading-relaxed">{selectedPractice.steps[currentStep]}</p>
+                  <p className="text-lg leading-relaxed">
+                    {selectedPractice.steps[currentStep]}
+                  </p>
                 </div>
 
                 {/* All Steps */}
                 <div className="space-y-2 pt-4 border-t">
-                  <p className="text-sm font-medium text-muted-foreground">All Steps:</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    All steps
+                  </p>
                   {selectedPractice.steps.map((step, index) => (
                     <div
                       key={index}
-                      className={`flex items-start gap-2 p-2 rounded ${
+                      className={`flex items-start gap-2 rounded p-2 ${
                         index === currentStep ? "bg-primary/10" : ""
                       }`}
                     >
                       {index <= currentStep ? (
-                        <CheckCircle2Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <CheckCircle2Icon className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                       ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-muted flex-shrink-0 mt-0.5" />
+                        <div className="h-5 w-5 rounded-full border-2 border-muted mt-0.5 flex-shrink-0" />
                       )}
                       <p className="text-sm">{step}</p>
                     </div>
@@ -158,7 +175,8 @@ export default function Tools() {
                   >
                     Previous
                   </Button>
-                  {currentStep < selectedPractice.steps.length - 1 ? (
+                  {currentStep <
+                  selectedPractice.steps.length - 1 ? (
                     <Button onClick={handleNextStep} className="flex-1">
                       Next
                     </Button>

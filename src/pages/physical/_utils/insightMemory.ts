@@ -1,0 +1,50 @@
+const MEMORY_WINDOW_DAYS = 2;
+
+type InsightMemoryRecord = {
+  lastShownIso: string;
+  lastConfidenceScore: number;
+};
+
+function daysBetween(aIso: string, bIso: string): number {
+  const a = new Date(aIso).getTime();
+  const b = new Date(bIso).getTime();
+  return Math.floor(Math.abs(a - b) / (1000 * 60 * 60 * 24));
+}
+
+export function applyInsightMemory<T extends { id: string }>(args: {
+  insights: T[];
+  confidenceScore: number;
+  todayIso: string;
+}): T[] {
+  const { insights, confidenceScore, todayIso } = args;
+
+  const result: T[] = [];
+
+  for (const insight of insights) {
+    const key = `wellmate:insight:${insight.id}`;
+    const raw = localStorage.getItem(key);
+
+    if (raw) {
+      const record: InsightMemoryRecord = JSON.parse(raw);
+      const age = daysBetween(record.lastShownIso, todayIso);
+
+      const confidenceImproved = confidenceScore > record.lastConfidenceScore;
+
+      if (age < MEMORY_WINDOW_DAYS && !confidenceImproved) {
+        continue;
+      }
+    }
+
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        lastShownIso: todayIso,
+        lastConfidenceScore: confidenceScore,
+      }),
+    );
+
+    result.push(insight);
+  }
+
+  return result;
+}

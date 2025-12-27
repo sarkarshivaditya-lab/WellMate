@@ -16,6 +16,7 @@ import type * as habits from "../habits.js";
 import type * as insights from "../insights.js";
 import type * as journal from "../journal.js";
 import type * as meals from "../meals.js";
+import type * as mentalAiUsage from "../mentalAiUsage.js";
 import type * as moods from "../moods.js";
 import type * as sleep from "../sleep.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   insights: typeof insights;
   journal: typeof journal;
   meals: typeof meals;
+  mentalAiUsage: typeof mentalAiUsage;
   moods: typeof moods;
   sleep: typeof sleep;
   subscriptions: typeof subscriptions;
