@@ -18,7 +18,13 @@ function SelectGroup(
 function SelectValue(
   props: React.ComponentProps<typeof SelectPrimitive.Value>,
 ) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
+  return (
+    <SelectPrimitive.Value
+      data-slot="select-value"
+      className="text-foreground data-[placeholder]:text-muted-foreground"
+      {...props}
+    />
+  );
 }
 
 function SelectTrigger({
@@ -35,7 +41,7 @@ function SelectTrigger({
       data-size={size}
       className={cn(
         "flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-md",
-        "border border-input bg-input px-3 text-sm shadow-xs outline-none",
+        "border border-input bg-input px-3 text-sm text-foreground shadow-xs outline-none",
         "transition-premium",
         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -49,7 +55,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="opacity-50" />
+        <ChevronDownIcon className="opacity-60" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );

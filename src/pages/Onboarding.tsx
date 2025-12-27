@@ -342,15 +342,26 @@ export default function Onboarding() {
         )}
 
         {/* ================= NAV ================= */}
-        <div className="pt-6 border-t border-[hsl(var(--surface-separator))]/40 flex justify-between items-center">
+       <div className="pt-6 border-t border-[hsl(var(--surface-separator))]/40 flex justify-between items-center">
+          {/* BACK */}
           <button
             onClick={back}
             disabled={step === 1}
-            className="text-sm px-3 py-1 text-[hsl(var(--text-meta))] disabled:text-[hsl(var(--text-disabled))]"
+            className="
+              text-sm px-3 py-1
+              text-[hsl(var(--text-meta))]
+              disabled:text-[hsl(var(--text-disabled))]
+              transition-premium
+              hover:text-[hsl(var(--text-primary))]
+              focus-visible:outline-none
+              focus-visible:ring-2 focus-visible:ring-[hsl(var(--action-primary))]/40
+              active:scale-[0.98]
+            "
           >
             Back
           </button>
 
+          {/* CONTINUE / FINISH */}
           <button
             onClick={step < 8 ? next : finish}
             className="
@@ -362,7 +373,10 @@ export default function Onboarding() {
               shadow-[0_10px_25px_rgba(0,0,0,0.45)]
               hover:brightness-105
               active:bg-[hsl(var(--action-pressed))]
-              transition
+              active:scale-[0.98]
+              focus-visible:outline-none
+              focus-visible:ring-2 focus-visible:ring-[hsl(var(--action-primary))]/50
+              transition-premium
             "
           >
             {step < 8 ? "Continue" : "Finish"}
@@ -372,6 +386,7 @@ export default function Onboarding() {
     </div>
   );
 }
+
 
 /* ======================================================
    UI HELPERS
@@ -438,7 +453,15 @@ function Select({ label, value, onChange, options }: SelectProps) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl px-4 py-3"
+        className="
+          w-full rounded-xl
+          bg-[hsl(var(--control-fill))]/65
+          border border-[hsl(var(--control-border))]
+          px-4 py-3
+          text-[hsl(var(--text-primary))]
+          focus:outline-none
+          focus:ring-2 focus:ring-[hsl(var(--action-primary))]/50
+        "
       >
         {options.map((o: SelectOption) => (
           <option key={o.value} value={o.value}>
