@@ -61,8 +61,21 @@ export default function Onboarding() {
   const [additionalHealthChoice, setAdditionalHealthChoice] = useState("");
   const [additionalHealthNotes, setAdditionalHealthNotes] = useState("");
 
+  const [attemptedNext, setAttemptedNext] = useState(false);
+
   /* ---------- navigation ---------- */
+  function isStepValid() {
+    if (step === 1) return Boolean(dob && sex);
+    if (step === 2) return Number(height) > 0 && Number(weight) > 0;
+    if (step === 3) return Boolean(activityLevel);
+    if (step === 5) return Boolean(weightGoal);
+    return true;
+  }
+
   const next = () => {
+    setAttemptedNext(true);
+    if (!isStepValid()) return;
+    setAttemptedNext(false);
     if (step === 7 && sex !== "female") {
       setStep(8);
     } else {
@@ -73,25 +86,9 @@ export default function Onboarding() {
   const back = () => setStep((s) => Math.max(1, s - 1));
 
   const finish = async () => {
-    if (
-      !dob ||
-      !sex ||
-      !activityLevel ||
-      !weightGoal ||
-      Number(height) <= 0 ||
-      Number(weight) <= 0
-    ) {
-      alert("Please complete all required steps before finishing onboarding.");
-      console.error("Onboarding incomplete", {
-        dob,
-        sex,
-        activityLevel,
-        weightGoal,
-        height,
-        weight,
-      });
-      return;
-    }
+    setAttemptedNext(true);
+    if (!isStepValid()) return;
+    setAttemptedNext(false);
     try {
       await completeOnboarding({
         dob,
@@ -206,12 +203,23 @@ export default function Onboarding() {
               label="Date of Birth"
               type="date"
               value={dob}
-              onChange={setDob}
+              onChange={(v) => {
+                setDob(v);
+                setAttemptedNext(false);
+              }}
             />
+            {attemptedNext && !dob && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
             <Select
               label="Biological Sex"
               value={sex}
-              onChange={setSex}
+              onChange={(v) => {
+                setSex(v);
+                setAttemptedNext(false);
+              }}
               options={[
                 { value: "", label: "Select" },
                 { value: "female", label: "Female" },
@@ -219,6 +227,11 @@ export default function Onboarding() {
                 { value: "other", label: "Other" },
               ]}
             />
+            {attemptedNext && !sex && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
           </div>
         )}
 
@@ -229,31 +242,59 @@ export default function Onboarding() {
               label="Height (cm)"
               type="number"
               value={height}
-              onChange={setHeight}
+              onChange={(v) => {
+                setHeight(v);
+                setAttemptedNext(false);
+              }}
             />
+            {attemptedNext && Number(height) <= 0 && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
             <Field
               label="Weight (kg)"
               type="number"
               value={weight}
-              onChange={setWeight}
+              onChange={(v) => {
+                setWeight(v);
+                setAttemptedNext(false);
+              }}
             />
+            {attemptedNext && Number(weight) <= 0 && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
           </div>
         )}
 
         {/* STEP 3 — ACTIVITY */}
         {step === 3 && (
-          <ChoiceGroup
-            label="How active are you on a typical day?"
-            value={(activityLevel ?? "") as string}
-            onChange={setActivityLevel as (value: string) => void}
-            options={[
-              ["sedentary", "Sedentary", "Mostly sitting"],
-              ["light", "Lightly active", "Some walking"],
-              ["moderate", "Moderately active", "Exercise 3–5× / week"],
-              ["active", "Active", "Daily exercise"],
-              ["veryActive", "Very active", "Hard training or physical job"],
-            ]}
-          />
+          <>
+            <ChoiceGroup
+              label="How active are you on a typical day?"
+              value={(activityLevel ?? "") as string}
+              onChange={
+                ((v: string) => {
+                  (setActivityLevel as (value: string) => void)(v);
+                  setAttemptedNext(false);
+                }) as (value: string) => void
+              }
+              options={[
+                ["sedentary", "Sedentary", "Mostly sitting"],
+                ["light", "Lightly active", "Some walking"],
+                ["moderate", "Moderately active", "Exercise 3–5× / week"],
+                ["active", "Active", "Daily exercise"],
+                ["veryActive", "Very active", "Hard training or physical job"],
+              ]}
+            />
+            {attemptedNext && !activityLevel && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
+          </>
         )}
 
         {/* STEP 4 — STEPS */}
@@ -273,16 +314,26 @@ export default function Onboarding() {
 
         {/* STEP 5 — WEIGHT GOAL */}
         {step === 5 && (
-          <ChoiceGroup
-            label="Primary weight goal"
-            value={weightGoal}
-            onChange={setWeightGoal}
-            options={[
-              ["lose", "Lose fat"],
-              ["maintain", "Maintain weight"],
-              ["gain", "Gain weight"],
-            ]}
-          />
+          <>
+            <ChoiceGroup
+              label="Primary weight goal"
+              value={weightGoal}
+              onChange={(v) => {
+                setWeightGoal(v);
+                setAttemptedNext(false);
+              }}
+              options={[
+                ["lose", "Lose fat"],
+                ["maintain", "Maintain weight"],
+                ["gain", "Gain weight"],
+              ]}
+            />
+            {attemptedNext && !weightGoal && (
+              <p className="text-xs text-[hsl(var(--destructive))]">
+                This field is required
+              </p>
+            )}
+          </>
         )}
 
         {/* STEP 6 — MUSCLE */}
@@ -348,6 +399,7 @@ export default function Onboarding() {
             <Summary label="Height" value={`${height} cm`} />
             <Summary label="Weight" value={`${weight} kg`} />
             <Summary label="Activity" value={activityLevel ?? "—"} />
+            <Summary label="Daily steps" value={dailySteps} />
             <Summary label="Goal" value={weightGoal} />
             <Summary label="Muscle" value={muscleGoal} />
 
@@ -402,6 +454,7 @@ export default function Onboarding() {
           {/* CONTINUE / FINISH */}
           <button
             onClick={step < 8 ? next : finish}
+            disabled={isStepValid() === false}
             className="
               rounded-xl
               bg-[hsl(var(--action-primary))]
