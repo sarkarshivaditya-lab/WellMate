@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as _lib_aiCoachHelpers from "../_lib/aiCoachHelpers.js";
+import type * as _lib_aiMentalHelpers from "../_lib/aiMentalHelpers.js";
 import type * as aiCoach from "../aiCoach.js";
 import type * as aiMentalCoach from "../aiMentalCoach.js";
 import type * as cycles from "../cycles.js";
@@ -21,6 +23,7 @@ import type * as moods from "../moods.js";
 import type * as sleep from "../sleep.js";
 import type * as subscriptions from "../subscriptions.js";
 import type * as users from "../users.js";
+import type * as wellmateChat from "../wellmateChat.js";
 
 import type {
   ApiFromModules,
@@ -29,6 +32,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "_lib/aiCoachHelpers": typeof _lib_aiCoachHelpers;
+  "_lib/aiMentalHelpers": typeof _lib_aiMentalHelpers;
   aiCoach: typeof aiCoach;
   aiMentalCoach: typeof aiMentalCoach;
   cycles: typeof cycles;
@@ -42,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   sleep: typeof sleep;
   subscriptions: typeof subscriptions;
   users: typeof users;
+  wellmateChat: typeof wellmateChat;
 }>;
 
 /**
