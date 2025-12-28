@@ -1,5 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 type Message = {
   id: string;
@@ -7,33 +9,56 @@ type Message = {
   text: string;
 };
 
+type ClarifyPayload = {
+  question: string;
+  options?: string[];
+};
+
 function WellMateLauncher() {
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
   const [messages, setMessages] = React.useState<Message[]>([
-    {
-      id: "m1",
-      role: "assistant",
-      text: "Hi, I’m WellMate 👋",
-    },
+    { id: "m1", role: "assistant", text: "Hi, I’m WellMate 👋" },
     {
       id: "m2",
       role: "assistant",
       text: "I’ll help you with fitness, nutrition, and wellbeing.",
     },
-    {
-      id: "m3",
-      role: "assistant",
-      text: "Ask me anything to get started.",
-    },
+    { id: "m3", role: "assistant", text: "Ask me anything to get started." },
   ]);
   const [thinking, setThinking] = React.useState(false);
+  const [clarify, setClarify] = React.useState<ClarifyPayload | null>(null);
 
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Close on Escape
+  const wellmateChat = useAction(api.wellmateChat.chat);
+
+  function safeString(payload: unknown, field: string): string | null {
+    if (!payload || typeof payload !== "object") return null;
+    const v = (payload as Record<string, unknown>)[field];
+    return typeof v === "string" ? v : null;
+  }
+
+  function safeNumber(payload: unknown, field: string): number | null {
+    if (!payload || typeof payload !== "object") return null;
+    const v = (payload as Record<string, unknown>)[field];
+    return typeof v === "number" ? v : null;
+  }
+
+  function safeNutrition(payload: unknown) {
+    if (!payload || typeof payload !== "object") return null;
+    const n = (payload as Record<string, unknown>).nutrition;
+    if (!n || typeof n !== "object") return null;
+    return {
+      calories: safeNumber(n, "calories"),
+      protein: safeNumber(n, "protein_g"),
+      carbs: safeNumber(n, "carbs_g"),
+      fat: safeNumber(n, "fat_g"),
+    };
+  }
+
   React.useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -43,7 +68,6 @@ function WellMateLauncher() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  // Close on outside click
   React.useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
@@ -55,47 +79,106 @@ function WellMateLauncher() {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  // Focus input on open
   React.useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
+    if (open) requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 
-  // Auto-scroll to bottom
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, thinking, open]);
+  }, [messages, thinking, clarify, open]);
 
-  function send() {
-    if (!input.trim() || thinking) return;
-
+  async function handleSend(text: string) {
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      text: input.trim(),
+      text,
     };
 
     setMessages((m) => [...m, userMessage]);
-    setInput("");
     setThinking(true);
+    setClarify(null);
 
-    // UI-only canned response
-    setTimeout(() => {
-      const reply: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        text:
-          "I’m still learning — but soon I’ll be able to give you personalized guidance here.",
-      };
-      setMessages((m) => [...m, reply]);
+    try {
+      const res = await wellmateChat({ message: text });
+
+      if (res.domain === "clarify") {
+        const payload = res.payload as ClarifyPayload;
+        setMessages((m) => [
+          ...m,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: payload.question,
+          },
+        ]);
+        setClarify(payload);
+      }
+
+      if (res.domain === "mental") {
+        const summary = safeString(res.payload, "summary");
+        setMessages((m) => [
+          ...m,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: summary ?? "I’m here with you.",
+          },
+        ]);
+      }
+
+      if (res.domain === "physical") {
+        const advice = safeString(res.payload, "advice_text");
+        const nutrition = safeNutrition(res.payload);
+        const confidence = safeString(res.payload, "confidence");
+
+        const lines: string[] = [];
+        if (advice) lines.push(advice);
+        if (nutrition?.calories != null) {
+          lines.push(`Calories: ${nutrition.calories} kcal`);
+        }
+        if (
+          nutrition?.protein != null &&
+          nutrition?.carbs != null &&
+          nutrition?.fat != null
+        ) {
+          lines.push(
+            `Macros → Protein ${nutrition.protein}g · Carbs ${nutrition.carbs}g · Fat ${nutrition.fat}g`,
+          );
+        }
+        if (confidence) lines.push(`Confidence: ${confidence}`);
+
+        setMessages((m) => [
+          ...m,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: lines.join("\n"),
+          },
+        ]);
+      }
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: "Something went wrong. Please try again.",
+        },
+      ]);
+    } finally {
       setThinking(false);
-    }, 700);
+    }
+  }
+
+  function send() {
+    if (!input.trim() || thinking) return;
+    const text = input.trim();
+    setInput("");
+    handleSend(text);
   }
 
   return (
     <>
-      {/* Floating launcher button */}
       <button
         type="button"
         aria-label="Open WellMate"
@@ -131,7 +214,6 @@ function WellMateLauncher() {
             "flex flex-col",
           )}
         >
-          {/* Header */}
           <div className="px-4 py-3 border-b">
             <p className="text-sm font-medium">WellMate</p>
             <p className="text-xs text-muted-foreground">
@@ -139,7 +221,6 @@ function WellMateLauncher() {
             </p>
           </div>
 
-          {/* Transcript */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
             {messages.map((m) => (
               <div
@@ -151,7 +232,7 @@ function WellMateLauncher() {
               >
                 <div
                   className={cn(
-                    "rounded-lg px-3 py-2 max-w-[85%]",
+                    "rounded-lg px-3 py-2 max-w-[85%] whitespace-pre-line",
                     m.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted",
@@ -161,6 +242,21 @@ function WellMateLauncher() {
                 </div>
               </div>
             ))}
+
+            {clarify && clarify.options && (
+              <div className="flex flex-wrap gap-2">
+                {clarify.options.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => handleSend(opt)}
+                    className="rounded-md border px-3 py-1 text-sm bg-background hover:bg-muted"
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {thinking && (
               <div className="flex justify-start">
@@ -173,7 +269,6 @@ function WellMateLauncher() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Composer */}
           <div className="border-t px-3 py-2 flex items-center gap-2">
             <input
               ref={inputRef}

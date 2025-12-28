@@ -236,7 +236,11 @@ export function parseAndValidateAiCoachResponse(rawContent: string) {
   }
 
   // Basic validation
-  if (!parsed || typeof parsed !== "object" || !(parsed as any).advice_text) {
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !(parsed as { advice_text?: unknown }).advice_text
+  ) {
     return null;
   }
 
