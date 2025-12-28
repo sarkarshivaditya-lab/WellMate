@@ -32,6 +32,18 @@
     --destructive-foreground: 210 40% 98%;
 
     --ring: 224 76% 48%;
+
+    --action-primary: var(--primary);
+    --action-primary-fg: var(--primary-foreground);
+    --action-pressed: var(--primary);
+
+    --control-fill: var(--background);
+    --control-border: var(--border);
+
+    --text-primary: var(--foreground);
+    --text-secondary: var(--muted-foreground);
+    --text-meta: var(--muted-foreground);
+    --text-disabled: var(--muted);
   }
 
   body {

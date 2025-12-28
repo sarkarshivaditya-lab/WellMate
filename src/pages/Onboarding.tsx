@@ -58,6 +58,9 @@ export default function Onboarding() {
   const [cycleLength, setCycleLength] = useState("");
   const [lastPeriod, setLastPeriod] = useState("");
 
+  const [additionalHealthChoice, setAdditionalHealthChoice] = useState("");
+  const [additionalHealthNotes, setAdditionalHealthNotes] = useState("");
+
   /* ---------- navigation ---------- */
   const next = () => {
     if (step === 7 && sex !== "female") {
@@ -314,6 +317,27 @@ export default function Onboarding() {
           </div>
         )}
 
+        {step === 7 && sex !== "female" && (
+          <ChoiceGroup
+            label="Do you have any additional health information to add?"
+            value={additionalHealthChoice}
+            onChange={setAdditionalHealthChoice}
+            options={[
+              ["yes", "Yes, add details"],
+              ["none", "No, continue"],
+              ["skip", "Skip for now"],
+            ]}
+          />
+        )}
+
+        {step === 7 && sex !== "female" && additionalHealthChoice === "yes" && (
+          <Field
+            label="Additional health information"
+            value={additionalHealthNotes}
+            onChange={setAdditionalHealthNotes}
+          />
+        )}
+
         {/* STEP 8 — SUMMARY */}
         {step === 8 && (
           <div className="space-y-4 text-sm text-[hsl(var(--text-primary))]">
@@ -326,6 +350,20 @@ export default function Onboarding() {
             <Summary label="Activity" value={activityLevel ?? "—"} />
             <Summary label="Goal" value={weightGoal} />
             <Summary label="Muscle" value={muscleGoal} />
+
+            {sex === "female" && cycleLength && (
+              <Summary label="Cycle length" value={`${cycleLength} days`} />
+            )}
+            {sex === "female" && lastPeriod && (
+              <Summary label="Last period" value={lastPeriod} />
+            )}
+
+            {sex !== "female" && additionalHealthChoice === "yes" && (
+              <Summary
+                label="Additional health info"
+                value={additionalHealthNotes}
+              />
+            )}
 
             <div className="pt-4 border-t border-[hsl(var(--surface-separator))]/40">
               <p className="text-[hsl(var(--text-meta))]">
@@ -342,7 +380,7 @@ export default function Onboarding() {
         )}
 
         {/* ================= NAV ================= */}
-       <div className="pt-6 border-t border-[hsl(var(--surface-separator))]/40 flex justify-between items-center">
+        <div className="pt-6 border-t border-[hsl(var(--surface-separator))]/40 flex justify-between items-center">
           {/* BACK */}
           <button
             onClick={back}
@@ -386,7 +424,6 @@ export default function Onboarding() {
     </div>
   );
 }
-
 
 /* ======================================================
    UI HELPERS
@@ -478,9 +515,33 @@ function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
     <div className="space-y-3">
       <p className="text-sm">{label}</p>
       {options.map(([v, title, subtitle]: ChoiceOption) => (
-        <button key={v} onClick={() => onChange(v)}>
-          <p>{title}</p>
-          {subtitle && <p>{subtitle}</p>}
+        <button
+          key={v}
+          onClick={() => onChange(v)}
+          aria-pressed={value === v}
+          className={
+            "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
+            (value === v
+              ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+              : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
+          }
+        >
+          <div className="flex flex-col gap-1">
+            <p
+              className={
+                (value === v
+                  ? "text-[hsl(var(--action-primary))]"
+                  : "text-[hsl(var(--text-primary))]") + " font-medium"
+              }
+            >
+              {title}
+            </p>
+            {subtitle && (
+              <p className="text-sm text-[hsl(var(--text-secondary))]">
+                {subtitle}
+              </p>
+            )}
+          </div>
         </button>
       ))}
     </div>
