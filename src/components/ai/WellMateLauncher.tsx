@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 function WellMateLauncher() {
   const [open, setOpen] = React.useState(false);
   const panelRef = React.useRef<HTMLDivElement | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Close on Escape key
   React.useEffect(() => {
@@ -36,6 +37,15 @@ function WellMateLauncher() {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  // Focus input when panel opens
+  React.useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    }
+  }, [open]);
+
   return (
     <>
       {/* Floating launcher button */}
@@ -60,7 +70,7 @@ function WellMateLauncher() {
         WM
       </button>
 
-      {/* Placeholder panel (UI only, no AI yet) */}
+      {/* AI panel shell */}
       {open && (
         <div
           ref={panelRef}
@@ -71,11 +81,13 @@ function WellMateLauncher() {
             "fixed z-50",
             "right-4",
             "bottom-[calc(env(safe-area-inset-bottom)+56px+64px)]",
-            "w-72",
-            "rounded-lg border bg-card text-card-foreground",
+            "w-80",
+            "rounded-xl border bg-card text-card-foreground",
             "shadow-lg",
+            "flex flex-col",
           )}
         >
+          {/* Header */}
           <div className="px-4 py-3 border-b">
             <p className="text-sm font-medium">WellMate</p>
             <p className="text-xs text-muted-foreground">
@@ -83,8 +95,42 @@ function WellMateLauncher() {
             </p>
           </div>
 
-          <div className="px-4 py-4 text-sm text-muted-foreground">
-            WellMate will be available here.
+          {/* Message list */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
+            <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2">
+              Hi, I’m WellMate 👋
+            </div>
+            <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2">
+              I’ll help you with fitness, nutrition, and wellbeing.
+            </div>
+            <div className="max-w-[85%] rounded-lg bg-muted px-3 py-2">
+              You’ll be able to ask questions here soon.
+            </div>
+          </div>
+
+          {/* Input area */}
+          <div className="border-t px-3 py-2 flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Ask WellMate…"
+              disabled
+              className={cn(
+                "flex-1 rounded-md border bg-background px-3 py-2 text-sm",
+                "text-muted-foreground",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              )}
+            />
+            <button
+              type="button"
+              disabled
+              className={cn(
+                "rounded-md px-3 py-2 text-sm font-medium",
+                "bg-muted text-muted-foreground",
+              )}
+            >
+              Send
+            </button>
           </div>
         </div>
       )}
