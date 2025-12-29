@@ -1,19 +1,23 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils.ts";
+import { Brain, HeartHandshake, Home, LayoutGrid, Repeat } from "lucide-react";
 
 function NavItem({
   to,
   label,
+  icon,
   primary = false,
 }: {
   to: string;
   label: string;
+  icon: React.ReactNode;
   primary?: boolean;
 }) {
   return (
     <NavLink
       to={to}
+      aria-label={label}
       aria-current={({ isActive }) => (isActive ? "page" : undefined)}
       className={({ isActive }) =>
         cn(
@@ -24,15 +28,7 @@ function NavItem({
         )
       }
     >
-      <span
-        className={cn(
-          "mt-1 rounded-sm px-1.5 py-0.5 leading-none",
-          "transition-colors",
-          "group-hover:bg-muted/50",
-        )}
-      >
-        {label}
-      </span>
+      <span className="h-5 w-5 flex items-center justify-center">{icon}</span>
 
       {/* active affordance */}
       <span
@@ -58,11 +54,32 @@ export default function BottomNav() {
       "
     >
       <div className="h-full flex items-center justify-around relative">
-        <NavItem to="/overview" label="Home" />
-        <NavItem to="/physical" label="Physical" primary />
-        <NavItem to="/journal" label="Mental" />
-        <NavItem to="/habits" label="Insights" />
-        <NavItem to="/tools" label="More" />
+        <NavItem
+          to="/overview"
+          label="Overview"
+          icon={<LayoutGrid className="h-5 w-5" />}
+        />
+        <NavItem
+          to="/physical"
+          label="Home"
+          primary
+          icon={<Home className="h-5 w-5" />}
+        />
+        <NavItem
+          to="/journal"
+          label="Mental"
+          icon={<Brain className="h-5 w-5" />}
+        />
+        <NavItem
+          to="/habits"
+          label="Insights"
+          icon={<Repeat className="h-5 w-5" />}
+        />
+        <NavItem
+          to="/tools"
+          label="More"
+          icon={<HeartHandshake className="h-5 w-5" />}
+        />
       </div>
     </nav>
   );
