@@ -33,6 +33,37 @@ export default function Onboarding() {
     }
   }, [isAuthenticated, isLoading, loginWithRedirect]);
 
+  const setHeightUnitAndSync = (nextUnit: "cm" | "ftin") => {
+    if (nextUnit === heightUnit) return;
+
+    if (nextUnit === "ftin") {
+      // cm -> ft/in (derive from existing cm)
+      const cm = Number(height);
+      if (Number.isFinite(cm) && cm > 0) {
+        const totalIn = Math.round(cm / 2.54);
+        const ft = Math.floor(totalIn / 12);
+        const inches = totalIn - ft * 12;
+        setHeightFt(String(ft));
+        setHeightIn(String(inches));
+      } else {
+        setHeightFt("");
+        setHeightIn("");
+      }
+      setHeightUnit("ftin");
+      return;
+    }
+
+    // ft/in -> cm (commit current ft/in into cm)
+    const ft = Number(heightFt);
+    const rawIn = Number(heightIn);
+    const clampedIn = Number.isFinite(rawIn)
+      ? Math.min(11, Math.max(0, rawIn))
+      : 0;
+    const cm = (Number.isFinite(ft) ? ft : 0) * 30.48 + clampedIn * 2.54;
+    setHeight(Number.isFinite(cm) && cm > 0 ? String(cm) : "");
+    setHeightUnit("cm");
+  };
+
   /* ---------- core step ---------- */
   const [step, setStep] = useState(1);
 
@@ -42,7 +73,33 @@ export default function Onboarding() {
 
   /* ---------- body metrics ---------- */
   const [height, setHeight] = useState("");
+  const [heightUnit, setHeightUnit] = useState<"cm" | "ftin">("cm");
+  const [heightFt, setHeightFt] = useState("");
+  const [heightIn, setHeightIn] = useState("");
   const [weight, setWeight] = useState("");
+
+  /* ---------- height unit conversion (step 2) ---------- */
+  useEffect(() => {
+    if (heightUnit !== "ftin") return;
+
+    const ft = Number(heightFt);
+    const rawIn = Number(heightIn);
+    const clampedIn = Number.isFinite(rawIn)
+      ? Math.min(11, Math.max(0, rawIn))
+      : 0;
+
+    // Clamp inches immediately (UI + normalization)
+    if (heightIn !== "" && rawIn !== clampedIn) {
+      setHeightIn(String(clampedIn));
+    }
+
+    const cm = (Number.isFinite(ft) ? ft : 0) * 30.48 + clampedIn * 2.54;
+    if (cm > 0) {
+      setHeight(String(cm));
+    } else {
+      setHeight("");
+    }
+  }, [heightUnit, heightFt, heightIn]);
 
   /* ---------- activity ---------- */
   const [activityLevel, setActivityLevel] = useState<ActivityLevel | null>(
@@ -66,7 +123,22 @@ export default function Onboarding() {
   /* ---------- navigation ---------- */
   function isStepValid() {
     if (step === 1) return Boolean(dob && sex);
-    if (step === 2) return Number(height) > 0 && Number(weight) > 0;
+    if (step === 2) {
+      if (!(Number(weight) > 0)) return false;
+
+      if (heightUnit === "cm") {
+        return Number(height) > 0;
+      }
+
+      const ft = Number(heightFt);
+      const rawIn = Number(heightIn);
+      const clampedIn = Number.isFinite(rawIn)
+        ? Math.min(11, Math.max(0, rawIn))
+        : 0;
+      const cm = (Number.isFinite(ft) ? ft : 0) * 30.48 + clampedIn * 2.54;
+
+      return Number.isFinite(ft) && ft > 0 && cm > 0;
+    }
     if (step === 3) return Boolean(activityLevel);
     if (step === 5) return Boolean(weightGoal);
     return true;
@@ -238,15 +310,93 @@ export default function Onboarding() {
         {/* STEP 2 — BODY */}
         {step === 2 && (
           <div className="space-y-6">
-            <Field
-              label="Height (cm)"
-              type="number"
-              value={height}
-              onChange={(v) => {
-                setHeight(v);
-                setAttemptedNext(false);
-              }}
-            />
+            <div className="space-y-3">
+              <p className="text-sm">Height units</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setHeightUnitAndSync("cm")}
+                  aria-pressed={heightUnit === "cm"}
+                  className={
+                    "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
+                    (heightUnit === "cm"
+                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+                      : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
+                  }
+                >
+                  <div className="flex flex-col gap-1">
+                    <p
+                      className={
+                        (heightUnit === "cm"
+                          ? "text-[hsl(var(--action-primary))]"
+                          : "text-[hsl(var(--text-primary))]") + " font-medium"
+                      }
+                    >
+                      cm
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setHeightUnitAndSync("ftin")}
+                  aria-pressed={heightUnit === "ftin"}
+                  className={
+                    "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
+                    (heightUnit === "ftin"
+                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+                      : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
+                  }
+                >
+                  <div className="flex flex-col gap-1">
+                    <p
+                      className={
+                        (heightUnit === "ftin"
+                          ? "text-[hsl(var(--action-primary))]"
+                          : "text-[hsl(var(--text-primary))]") + " font-medium"
+                      }
+                    >
+                      ft + in
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {heightUnit === "cm" && (
+              <Field
+                label="Height (cm)"
+                type="number"
+                value={height}
+                onChange={(v) => {
+                  setHeight(v);
+                  setAttemptedNext(false);
+                }}
+              />
+            )}
+
+            {heightUnit === "ftin" && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field
+                  label="Height (ft)"
+                  type="number"
+                  value={heightFt}
+                  onChange={(v) => {
+                    setHeightFt(v);
+                    setAttemptedNext(false);
+                  }}
+                />
+                <Field
+                  label="Height (in)"
+                  type="number"
+                  value={heightIn}
+                  onChange={(v) => {
+                    setHeightIn(v);
+                    setAttemptedNext(false);
+                  }}
+                />
+              </div>
+            )}
             {attemptedNext && Number(height) <= 0 && (
               <p className="text-xs text-[hsl(var(--destructive))]">
                 This field is required
@@ -396,7 +546,14 @@ export default function Onboarding() {
               Based on your body and activity level
             </p>
             <Summary label="Age" value={`${age} years`} />
-            <Summary label="Height" value={`${height} cm`} />
+            <Summary
+              label="Height"
+              value={
+                heightUnit === "cm"
+                  ? `${height} cm`
+                  : `${heightFt} ft ${heightIn} in (${height} cm)`
+              }
+            />
             <Summary label="Weight" value={`${weight} kg`} />
             <Summary label="Activity" value={activityLevel ?? "—"} />
             <Summary label="Daily steps" value={dailySteps} />
