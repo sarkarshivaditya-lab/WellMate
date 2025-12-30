@@ -46,10 +46,30 @@
     --text-disabled: var(--muted);
 
     /* ===============================
-       PAGE HEADER GRADIENT (LIGHT)
+       MULTICOLOUR HEADER GRADIENT PALETTE
+       (Employer-specified colours)
        =============================== */
-    --header-gradient-start: 214 95% 82%;
-    --header-gradient-end: 214 95% 98%;
+
+    /* #FDF5E6 */
+    --header-gradient-cream: 39 82% 95%;
+
+    /* #F0A500 */
+    --header-gradient-amber: 41 100% 47%;
+
+    /* #77C9D4 */
+    --header-gradient-sky: 187 54% 65%;
+
+    /* #57A99A */
+    --header-gradient-teal: 167 32% 50%;
+
+    /* #1C3D5A */
+    --header-gradient-navy: 208 52% 23%;
+
+    /* ===============================
+       PAGE HEADER GRADIENT (ACTIVE)
+       =============================== */
+    --header-gradient-start: var(--header-gradient-cream);
+    --header-gradient-end: var(--header-gradient-navy);
 
     /* ===============================
        CARD BLUE UNDERGLOW (LIGHT)
