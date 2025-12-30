@@ -9,7 +9,11 @@ export default function TransitionGate({
   const navigate = useNavigate();
 
   const [showTransition, setShowTransition] = React.useState<boolean>(() => {
-    return localStorage.getItem("onboarded") === "true";
+    const onboarded = localStorage.getItem("onboarded") === "true";
+    const transitionShown =
+      localStorage.getItem("postOnboardingTransitionShown") === "true";
+
+    return onboarded && !transitionShown;
   });
 
   if (showTransition) {
@@ -33,10 +37,13 @@ export default function TransitionGate({
           <button
             className="w-full rounded-lg bg-white text-black font-medium py-2.5 transition hover:bg-white/90 active:scale-[0.98]"
             onClick={() => {
-              // ✅ mark onboarding as completed
-              localStorage.setItem("onboarded", "true");
+              // ✅ mark one-time transition as completed
+              localStorage.setItem(
+                "postOnboardingTransitionShown",
+                "true",
+              );
 
-              // ✅ hide transition
+              // ✅ hide transition immediately
               setShowTransition(false);
 
               // ✅ explicit navigation (NO ambiguity)

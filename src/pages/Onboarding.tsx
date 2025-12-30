@@ -172,8 +172,10 @@ export default function Onboarding() {
         periodTrackingEnabled: sex === "female",
       });
 
-      localStorage.setItem("onboarded", "true");
-      navigate("/physical");
+     localStorage.setItem("onboarded", "true");
+localStorage.removeItem("postOnboardingTransitionShown");
+navigate("/physical");
+
     } catch (error) {
       console.error("Failed to complete onboarding", error);
     }
