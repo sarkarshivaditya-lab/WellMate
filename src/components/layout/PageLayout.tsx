@@ -23,14 +23,34 @@ function PageLayout({
   onTabChange,
   children,
 }: PageLayoutProps) {
+  const hasHeader = title || subtitle || (tabs && tabs.length > 0);
+
   return (
-    <div className="bg-background">
-      <main role="main" className="w-full max-w-4xl mx-auto px-6 py-8">
-        {(title || subtitle || tabs) && (
-          <header
-            data-slot="page-header"
-            className="mb-8 space-y-4"
-          >
+    <div className="relative min-h-screen">
+      {/* 🌈 PAGE BACKGROUND GRADIENT */}
+      <div
+  aria-hidden
+  className="
+    pointer-events-none
+    absolute inset-x-0 top-0 h-[50vh]
+    bg-gradient-to-b
+    from-header-gradient-start
+    via-header-gradient-end/60
+    to-background
+  "
+/>
+
+
+      {/* CONTENT */}
+      <main
+        role="main"
+        className={cn(
+          "relative z-10 w-full max-w-4xl mx-auto px-6 pb-8",
+          hasHeader ? "pt-16" : "pt-8",
+        )}
+      >
+        {hasHeader && (
+          <header className="mb-8 space-y-4 rounded-2xl bg-background border border-border/60 px-6 py-5">
             {(title || subtitle) && (
               <div>
                 {title && (

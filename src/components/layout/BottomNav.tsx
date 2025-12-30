@@ -18,7 +18,6 @@ function NavItem({
     <NavLink
       to={to}
       aria-label={label}
-      aria-current={({ isActive }) => (isActive ? "page" : undefined)}
       className={({ isActive }) =>
         cn(
           "flex flex-col items-center justify-center px-3 py-1 text-xs font-medium transition-colors",

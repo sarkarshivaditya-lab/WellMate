@@ -167,7 +167,7 @@ export default function Onboarding() {
         sex: sex as "male" | "female" | "other",
         heightCm: Number(height),
         weightKg: Number(weight),
-        activityLevel,
+        activityLevel: activityLevel ?? "sedentary",
         goal: weightGoal as "lose" | "maintain" | "gain",
         periodTrackingEnabled: sex === "female",
       });
@@ -232,7 +232,7 @@ export default function Onboarding() {
           bg-[hsl(var(--surface-elev-1))]/85
           backdrop-blur-2xl
           border border-[hsl(var(--surface-separator))]/40
-          shadow-[var(--elev-card)]
+          card-glow
           p-10
           space-y-10
         "
@@ -320,7 +320,7 @@ export default function Onboarding() {
                   className={
                     "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
                     (heightUnit === "cm"
-                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
                       : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
                   }
                 >
@@ -344,7 +344,7 @@ export default function Onboarding() {
                   className={
                     "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
                     (heightUnit === "ftin"
-                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
                       : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
                   }
                 >
@@ -618,7 +618,7 @@ export default function Onboarding() {
               px-6 py-3
               text-sm font-medium
               text-[hsl(var(--action-primary-fg))]
-              shadow-[0_10px_25px_rgba(0,0,0,0.45)]
+              card-glow
               hover:brightness-105
               active:bg-[hsl(var(--action-pressed))]
               active:scale-[0.98]
@@ -732,7 +732,7 @@ function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
           className={
             "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
             (value === v
-              ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] shadow-[0_0_0_1px_hsl(var(--action-primary))/40,0_8px_24px_rgba(0,0,0,0.45)]"
+              ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
               : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
           }
         >

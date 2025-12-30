@@ -182,7 +182,7 @@ export default function FoodLog() {
           <Button
             onClick={() => setShowAddMeal(true)}
             size="sm"
-            className="shadow-card hover:brightness-105 active:scale-[0.97]"
+            className="card-glow hover:brightness-105 active:scale-[0.97]"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
             Add
@@ -329,7 +329,7 @@ export default function FoodLog() {
 
                 <Button
                   onClick={handleAddDetailed}
-                  className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
+                  className="w-full card-glow hover:brightness-105 active:scale-[0.97]"
                 >
                   Add Item
                 </Button>
@@ -357,7 +357,7 @@ export default function FoodLog() {
 
             <Button
               onClick={handleSaveMeal}
-              className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
+              className="w-full card-glow hover:brightness-105 active:scale-[0.97]"
               disabled={mealItems.length === 0}
             >
               Save Meal

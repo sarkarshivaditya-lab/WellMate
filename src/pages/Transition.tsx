@@ -15,7 +15,7 @@ export default function TransitionGate({
   if (showTransition) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-neutral-950 to-black text-foreground px-6">
-        <div className="relative max-w-sm rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl shadow-2xl px-6 py-7 text-center">
+        <div className="relative max-w-sm rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl card-glow px-6 py-7 text-center">
           <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10" />
 
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-2">

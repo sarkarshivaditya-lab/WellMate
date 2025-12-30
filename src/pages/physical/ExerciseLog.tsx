@@ -130,7 +130,7 @@ export default function ExerciseLog() {
           <Button
             onClick={() => setShowAddExercise(true)}
             size="sm"
-            className="shadow-card hover:brightness-105 active:scale-[0.97]"
+            className="card-glow hover:brightness-105 active:scale-[0.97]"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
             Add
@@ -260,7 +260,7 @@ export default function ExerciseLog() {
 
             <Button
               onClick={handleSaveExercise}
-              className="w-full shadow-card hover:brightness-105 active:scale-[0.97]"
+              className="w-full card-glow hover:brightness-105 active:scale-[0.97]"
             >
               Save Exercise
             </Button>

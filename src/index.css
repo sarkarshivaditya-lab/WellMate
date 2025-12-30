@@ -4,6 +4,80 @@
 
 @layer base {
   :root {
+    --background: 0 0% 98.5%;
+    --foreground: 222 20% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 20% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 20% 14%;
+
+    --border: 214 18% 90%;
+    --input: 214 18% 90%;
+
+    --primary: 214 88% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 30% 96%;
+    --secondary-foreground: 222 20% 14%;
+
+    --muted: 210 30% 96%;
+    --muted-foreground: 215 14% 45%;
+
+    --accent: 210 30% 96%;
+    --accent-foreground: 222 20% 14%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --ring: 214 88% 52%;
+
+    --action-primary: var(--primary);
+    --action-primary-fg: var(--primary-foreground);
+    --action-pressed: var(--primary);
+
+    --control-fill: var(--background);
+    --control-border: var(--border);
+
+    --text-primary: var(--foreground);
+    --text-secondary: var(--muted-foreground);
+    --text-meta: var(--muted-foreground);
+    --text-disabled: var(--muted);
+
+    /* ===============================
+       PAGE HEADER GRADIENT (LIGHT)
+       =============================== */
+    --header-gradient-start: 214 95% 82%;
+    --header-gradient-end: 214 95% 98%;
+
+    /* ===============================
+       CARD BLUE UNDERGLOW (LIGHT)
+       =============================== */
+    --card-glow-color: 214 90% 70%;
+
+    /* ===============================
+       CARD SHADOW TOKENS (LIGHT)
+       =============================== */
+    --card-shadow-rest:
+      0 6px 16px hsl(var(--card-glow-color) / 0.18);
+
+    --card-shadow-hover:
+      0 14px 40px hsl(var(--card-glow-color) / 0.35),
+      0 36px 70px hsl(var(--card-glow-color) / 0.25);
+
+    --card-shadow-pressed:
+      0 10px 30px hsl(var(--card-glow-color) / 0.45),
+      0 4px 12px hsl(var(--card-glow-color) / 0.35);
+  }
+
+  /*
+  =====================================================
+  DARK MODE — TEMPORARILY DISABLED
+  Reason: force light theme during redesign
+  =====================================================
+
+  .dark {
     --background: 222 60% 3%;
     --foreground: 210 40% 98%;
 
@@ -44,7 +118,11 @@
     --text-secondary: var(--muted-foreground);
     --text-meta: var(--muted-foreground);
     --text-disabled: var(--muted);
+
+    --header-gradient-start: 222 45% 11%;
+    --header-gradient-end: 222 60% 3%;
   }
+  */
 
   body {
     background-color: hsl(var(--background));
@@ -57,5 +135,20 @@
     transition-property: opacity, transform, width, box-shadow;
     transition-duration: 180ms;
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ===============================
+     CARD SHADOW UTILITIES (BYPASS TAILWIND SHADOWS)
+     =============================== */
+  .card-shadow-rest {
+    box-shadow: var(--card-shadow-rest);
+  }
+
+  .card-shadow-hover {
+    box-shadow: var(--card-shadow-hover);
+  }
+
+  .card-shadow-pressed {
+    box-shadow: var(--card-shadow-pressed);
   }
 }
