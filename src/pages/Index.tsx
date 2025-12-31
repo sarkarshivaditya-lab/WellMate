@@ -3,10 +3,19 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import PageLayout from "@/components/layout/PageLayout";
 import { Spinner } from "@/components/ui/spinner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+/* ✅ ADDED — Slice A */
+import CheckInFlow from "@/pages/mental/CheckInFlow";
+import { hasBaseline } from "@/lib/mentalWellbeingStore";
 
 export default function Index() {
   const user = useQuery(api.users.getCurrentUser);
   const [backendTimeout, setBackendTimeout] = React.useState(false);
+
+  /* ✅ ADDED — Slice A */
+  const [showCheckIn, setShowCheckIn] = React.useState(false);
 
   React.useEffect(() => {
     if (user !== undefined) return;
@@ -47,11 +56,44 @@ export default function Index() {
       title="Overview"
       subtitle="Your personal health dashboard and quick orientation."
     >
-      <section className="space-y-4">
+      <section className="space-y-6">
+
+        {/* ✅ Mental Wellbeing Check-in (ONE-TIME BASELINE) */}
+        {!hasBaseline() && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Mental Wellbeing Check-in
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                A short set of questions to help personalize your experience.
+              </p>
+              <Button onClick={() => setShowCheckIn(true)}>
+                Start check-in
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <p className="text-sm text-muted-foreground max-w-md">
           Welcome back{user.name ? `, ${user.name}` : ""}.  
           Visit the Physical tab for today’s insights and progress.
         </p>
+
+        {/* ✅ Full-screen Check-in Flow */}
+        {showCheckIn && (
+          <CheckInFlow
+            onComplete={() => {
+              setShowCheckIn(false);
+            }}
+            onCancel={() => {
+              setShowCheckIn(false);
+            }}
+          />
+        )}
+
       </section>
     </PageLayout>
   );
