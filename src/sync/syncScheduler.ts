@@ -12,8 +12,13 @@ import { syncExercises } from "./exerciseSync";
  * - Runs sequentially
  * - One failure never blocks others
  * - Safe to call repeatedly
+ * - Safe when offline or unauthenticated
  */
-export async function runOfflineSync(convex: ConvexReactClient) {
+export async function runOfflineSync(
+  convex: ConvexReactClient | null | undefined,
+) {
+  if (!convex) return;
+
   try {
     await syncExercises(convex);
   } catch {
