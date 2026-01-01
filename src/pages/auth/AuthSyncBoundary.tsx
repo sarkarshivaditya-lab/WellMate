@@ -1,24 +1,23 @@
 import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useMutation } from "convex/react";
+import { useMutation, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { runOfflineSync } from "@/sync/syncScheduler";
 
 /**
  * AuthSyncBoundary
  *
- * Observes authentication state and opportunistically
- * syncs identity + local data when available.
- *
- * - NEVER redirects
+ * - Attaches auth identity to Convex
+ * - Opportunistically syncs offline data
  * - NEVER blocks rendering
+ * - NEVER redirects
  * - NEVER throws
- * - Safe in offline / unauthenticated mode
  */
 export default function AuthSyncBoundary() {
   const { isAuthenticated, isLoading, user } = useAuth0();
   const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const convex = useConvex();
 
-  // Prevent duplicate syncs per session
   const hasSyncedRef = useRef(false);
 
   useEffect(() => {
@@ -28,12 +27,14 @@ export default function AuthSyncBoundary() {
 
     hasSyncedRef.current = true;
 
-    // Fire-and-forget identity attachment
-    updateCurrentUser().catch(() => {
-      // Intentionally swallowed
-      // Sync must never crash the app
-    });
-  }, [isLoading, isAuthenticated, user, updateCurrentUser]);
+    updateCurrentUser()
+      .then(() => {
+        return runOfflineSync(convex);
+      })
+      .catch(() => {
+        // swallowed intentionally
+      });
+  }, [isLoading, isAuthenticated, user, updateCurrentUser, convex]);
 
   return null;
 }

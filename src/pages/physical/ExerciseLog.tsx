@@ -1,72 +1,34 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button.tsx";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card.tsx";
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { Label } from "@/components/ui/label.tsx";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PlusIcon, TrashIcon } from "lucide-react";
-import { estimateCaloriesFromExercise } from "@/services/nutritionEngine.ts";
 import { toast } from "sonner";
+import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
+import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 
-/* ======================================================
-   LOCAL TYPES (TEMP)
-   ====================================================== */
-
-type LocalExercise = {
-  id: string;
-  type: string;
-  name: string;
-  durationMinutes: number;
-  caloriesBurnedEst: number;
-  notes?: string;
-};
-
-/* ======================================================
-   LOCAL EXERCISE STORE (IN-MEMORY)
-   ====================================================== */
-
-function useLocalExercisesByDate(_dateIso: string) {
-  const [exercises, setExercises] = useState<LocalExercise[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const addExercise = (exercise: LocalExercise) => {
-    setExercises((prev) => [exercise, ...prev]);
-  };
-
-  const deleteExercise = (id: string) => {
-    setExercises((prev) => prev.filter((e) => e.id !== id));
-  };
-
-  useEffect(() => {
-    setExercises([]);
-    setLoading(false);
-  }, [_dateIso]);
-
-  return { exercises, loading, addExercise, deleteExercise };
-}
-
-/* ======================================================
-   SKELETON
-   ====================================================== */
+/* ---------- Skeleton ---------- */
 
 function ExerciseRowSkeleton() {
   return (
@@ -80,19 +42,13 @@ function ExerciseRowSkeleton() {
   );
 }
 
-/* ======================================================
-   COMPONENT
-   ====================================================== */
+/* ---------- Component ---------- */
 
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
 
-  const {
-    exercises,
-    loading,
-    addExercise,
-    deleteExercise,
-  } = useLocalExercisesByDate(today);
+  const { exercises, addExercise, deleteExercise } =
+    useExercisesByDate(today);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [form, setForm] = useState({
@@ -109,7 +65,7 @@ export default function ExerciseLog() {
     }
 
     const durationMinutes = Number(form.durationMinutes);
-    const weightKg = 70; // local fallback
+    const weightKg = 70;
 
     const caloriesBurnedEst = estimateCaloriesFromExercise(
       form.type,
@@ -118,7 +74,7 @@ export default function ExerciseLog() {
     );
 
     addExercise({
-      id: crypto.randomUUID(),
+      dateIso: today,
       type: form.type,
       name: form.name,
       durationMinutes,
@@ -132,12 +88,10 @@ export default function ExerciseLog() {
   };
 
   const totalCaloriesBurned =
-    exercises.reduce((sum, ex) => sum + ex.caloriesBurnedEst, 0);
+    exercises?.reduce((sum, ex) => sum + ex.caloriesBurnedEst, 0) ?? 0;
 
   const totalDuration =
-    exercises.reduce((sum, ex) => sum + ex.durationMinutes, 0);
-
-  if (loading) return null;
+    exercises?.reduce((sum, ex) => sum + ex.durationMinutes, 0) ?? 0;
 
   return (
     <Card>
@@ -152,7 +106,7 @@ export default function ExerciseLog() {
           <Button
             onClick={() => setShowAddExercise(true)}
             size="sm"
-            className="card-glow hover:brightness-105 active:scale-[0.97]"
+            className="card-glow"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
             Add
@@ -161,7 +115,12 @@ export default function ExerciseLog() {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {exercises.length === 0 ? (
+        {exercises === undefined ? (
+          <>
+            <ExerciseRowSkeleton />
+            <ExerciseRowSkeleton />
+          </>
+        ) : exercises.length === 0 ? (
           <div className="py-8 text-center space-y-1">
             <div className="text-sm text-muted-foreground">
               No exercise logged yet today
@@ -178,7 +137,7 @@ export default function ExerciseLog() {
                 className="flex items-start justify-between gap-4 py-3"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-medium leading-tight">
+                  <div className="text-sm font-medium">
                     {exercise.name}
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
@@ -196,7 +155,6 @@ export default function ExerciseLog() {
                   variant="ghost"
                   size="icon"
                   onClick={() => deleteExercise(exercise.id)}
-                  className="text-muted-foreground hover:text-destructive"
                 >
                   <TrashIcon className="h-4 w-4" />
                 </Button>
@@ -220,7 +178,9 @@ export default function ExerciseLog() {
               <Label>Exercise Type</Label>
               <Select
                 value={form.type}
-                onValueChange={(value) => setForm({ ...form, type: value })}
+                onValueChange={(value) =>
+                  setForm({ ...form, type: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -241,9 +201,10 @@ export default function ExerciseLog() {
             <div>
               <Label>Exercise Name</Label>
               <Input
-                placeholder="e.g., Morning walk"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, name: e.target.value })
+                }
               />
             </div>
 
@@ -251,10 +212,12 @@ export default function ExerciseLog() {
               <Label>Duration (minutes)</Label>
               <Input
                 type="number"
-                placeholder="30"
                 value={form.durationMinutes}
                 onChange={(e) =>
-                  setForm({ ...form, durationMinutes: e.target.value })
+                  setForm({
+                    ...form,
+                    durationMinutes: e.target.value,
+                  })
                 }
               />
             </div>
@@ -262,17 +225,15 @@ export default function ExerciseLog() {
             <div>
               <Label>Notes (optional)</Label>
               <Textarea
-                placeholder="Anything you want to remember about it"
                 value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, notes: e.target.value })
+                }
                 rows={3}
               />
             </div>
 
-            <Button
-              onClick={handleSaveExercise}
-              className="w-full card-glow hover:brightness-105 active:scale-[0.97]"
-            >
+            <Button onClick={handleSaveExercise} className="w-full">
               Save Exercise
             </Button>
           </div>
