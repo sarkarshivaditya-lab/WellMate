@@ -1,7 +1,14 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils.ts";
-import { Brain, HeartHandshake, Home, LayoutGrid, Repeat } from "lucide-react";
+import {
+  Brain,
+  HeartHandshake,
+  Home,
+  LayoutGrid,
+  Repeat,
+  User,
+} from "lucide-react";
 
 function NavItem({
   to,
@@ -27,7 +34,9 @@ function NavItem({
         )
       }
     >
-      <span className="h-5 w-5 flex items-center justify-center">{icon}</span>
+      <span className="h-5 w-5 flex items-center justify-center">
+        {icon}
+      </span>
 
       {/* active affordance */}
       <span
@@ -75,9 +84,9 @@ export default function BottomNav() {
           icon={<Repeat className="h-5 w-5" />}
         />
         <NavItem
-          to="/tools"
-          label="More"
-          icon={<HeartHandshake className="h-5 w-5" />}
+          to="/profile"
+          label="Profile"
+          icon={<User className="h-5 w-5" />}
         />
       </div>
     </nav>

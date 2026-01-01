@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Journal from "./pages/mental/Journal";
 import Tools from "./pages/Tools";
 import AiMentalCoach from "./pages/mental/AiMentalCoach";
+import Profile from "./pages/Profile";
 
 import AppShell from "./components/layout/AppShell";
 
@@ -69,7 +70,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* AuthSyncBoundary intentionally disabled until sign-in UI exists */}
+      {/* AuthSyncBoundary intentionally disabled until sign-in is wired */}
       {/* <AuthSyncBoundary /> */}
 
       <Routes>
@@ -139,6 +140,18 @@ export default function App() {
             <RequireOnboarding>
               <AppShell>
                 <Tools />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
+
+        {/* NEW: Profile / Settings */}
+        <Route
+          path="/profile"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <Profile />
               </AppShell>
             </RequireOnboarding>
           }
