@@ -3,7 +3,7 @@
 import type { ConvexReactClient } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
-  getAllLocalMeals,
+  getPendingMeals,
   markMealSynced,
   markMealError,
   type LocalMeal,
@@ -27,9 +27,7 @@ export async function syncMeals(
   let pending: LocalMeal[];
 
   try {
-    pending = getAllLocalMeals().filter(
-      (m) => m.syncStatus === "pending",
-    );
+    pending = getPendingMeals();
   } catch {
     return;
   }
