@@ -23,10 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusIcon, TrashIcon } from "lucide-react";
+import { PlusIcon, TrashIcon, RefreshCcwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
+import { runOfflineSync } from "@/sync/syncScheduler";
+import { useConvex } from "convex/react";
 
 /* ---------- Skeleton ---------- */
 
@@ -84,6 +86,8 @@ function SyncBadge({ status }: { status?: SyncStatus }) {
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
 
+  const convex = useConvex();
+
   const { exercises, addExercise, deleteExercise } =
     useExercisesByDate(today);
 
@@ -94,6 +98,15 @@ export default function ExerciseLog() {
     durationMinutes: "",
     notes: "",
   });
+
+  const handleRetrySync = async () => {
+    try {
+      await runOfflineSync(convex);
+      toast.message("Sync triggered");
+    } catch {
+      // must never surface
+    }
+  };
 
   const handleSaveExercise = () => {
     if (!form.name || !form.durationMinutes) {
@@ -140,14 +153,26 @@ export default function ExerciseLog() {
               {totalDuration} min · {totalCaloriesBurned} cal burned
             </p>
           </div>
-          <Button
-            onClick={() => setShowAddExercise(true)}
-            size="sm"
-            className="card-glow"
-          >
-            <PlusIcon className="mr-1.5 h-4 w-4" />
-            Add
-          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRetrySync}
+              title="Retry Sync (dev)"
+            >
+              <RefreshCcwIcon className="h-4 w-4" />
+            </Button>
+
+            <Button
+              onClick={() => setShowAddExercise(true)}
+              size="sm"
+              className="card-glow"
+            >
+              <PlusIcon className="mr-1.5 h-4 w-4" />
+              Add
+            </Button>
+          </div>
         </div>
       </CardHeader>
 

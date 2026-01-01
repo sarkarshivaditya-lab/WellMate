@@ -3,18 +3,27 @@
 import type { ConvexReactClient } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
-  getMealsByDate,
+  getAllLocalMeals,
   markMealSynced,
-  getPendingMeals,
+  markMealError,
+  type LocalMeal,
 } from "@/data/local/mealsStore";
 
+/* ======================================================
+   CONFIG
+   ====================================================== */
 
 const SYNC_BATCH_SIZE = 10;
 
-/**
- * Sync pending local meals to Convex
- */
-export async function syncMeals(convex: ConvexReactClient) {
+/* ======================================================
+   MEAL SYNC (FIRE-AND-FORGET, OFFLINE-SAFE)
+   ====================================================== */
+
+export async function syncMeals(
+  convex: ConvexReactClient | null | undefined,
+) {
+  if (!convex) return;
+
   let pending: LocalMeal[];
 
   try {
@@ -43,9 +52,17 @@ export async function syncMeals(convex: ConvexReactClient) {
         sourceAdapter: meal.sourceAdapter,
       });
 
-      markMealSynced(meal.id);
+      try {
+        markMealSynced(meal.id);
+      } catch {
+        // local write failure is non-fatal
+      }
     } catch {
-      markMealError(meal.id);
+      try {
+        markMealError(meal.id);
+      } catch {
+        // swallow
+      }
     }
   }
 }

@@ -1,16 +1,15 @@
 import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useConvex } from "convex/react";
-import { useMutation } from "convex/react";
+import { useConvex, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { runOfflineSync } from "@/sync/syncScheduler";
 
 /**
  * AuthSyncBoundary
  *
- * - Observes auth + network readiness
- * - Attaches Convex identity
- * - Opportunistically syncs offline data
+ * - Observes auth readiness
+ * - Best-effort identity bootstrap
+ * - Triggers offline → Convex sync exactly once
  *
  * HARD GUARANTEES:
  * - NEVER redirects
@@ -35,15 +34,18 @@ export default function AuthSyncBoundary() {
     hasRunRef.current = true;
 
     (async () => {
+      // 1️⃣ Identity bootstrap — best effort only
       try {
-        // 1️⃣ Ensure user exists in Convex
         await updateCurrentUser();
+      } catch {
+        // swallow — identity may already exist or backend not ready
+      }
 
-        // 2️⃣ Run offline → Convex sync (currently inert by design)
+      // 2️⃣ Offline → Convex sync (must still run)
+      try {
         await runOfflineSync(convex);
       } catch {
-        // 🔕 swallow absolutely everything
-        // Sync must never destabilize the app
+        // swallow — sync must never destabilize app
       }
     })();
   }, [isLoading, isAuthenticated, convex, updateCurrentUser]);
