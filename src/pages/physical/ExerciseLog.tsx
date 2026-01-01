@@ -44,7 +44,16 @@ function ExerciseRowSkeleton() {
 
 /* ---------- Sync Badge (UI-Only) ---------- */
 
-function SyncBadge({ status }: { status?: "pending" | "synced" | "error" }) {
+type SyncStatus = "pending" | "synced" | "error";
+
+function normalizeSyncStatus(value: unknown): SyncStatus {
+  if (value === "synced" || value === "error" || value === "pending") {
+    return value;
+  }
+  return "pending";
+}
+
+function SyncBadge({ status }: { status?: SyncStatus }) {
   const s = status ?? "pending";
 
   if (s === "synced") {
@@ -159,42 +168,46 @@ export default function ExerciseLog() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {exercises.map((exercise) => (
-              <div
-                key={exercise.id}
-                className="flex items-start justify-between gap-4 py-3"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-medium">
-                      {exercise.name}
-                    </div>
-                    <SyncBadge
-                      status={(exercise as any).syncStatus}
-                    />
-                  </div>
+            {exercises.map((exercise) => {
+              const syncStatus = normalizeSyncStatus(
+                (exercise as any).syncStatus,
+              );
 
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    {exercise.type} · {exercise.durationMinutes} min · ~
-                    {exercise.caloriesBurnedEst} cal
-                  </div>
-
-                  {exercise.notes && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {exercise.notes}
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteExercise(exercise.id)}
+              return (
+                <div
+                  key={exercise.id}
+                  className="flex items-start justify-between gap-4 py-3"
                 >
-                  <TrashIcon className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium">
+                        {exercise.name}
+                      </div>
+                      <SyncBadge status={syncStatus} />
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {exercise.type} · {exercise.durationMinutes} min · ~
+                      {exercise.caloriesBurnedEst} cal
+                    </div>
+
+                    {exercise.notes && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {exercise.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteExercise(exercise.id)}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
@@ -225,7 +238,9 @@ export default function ExerciseLog() {
                   <SelectItem value="running">Running</SelectItem>
                   <SelectItem value="cycling">Cycling</SelectItem>
                   <SelectItem value="swimming">Swimming</SelectItem>
-                  <SelectItem value="weightlifting">Weightlifting</SelectItem>
+                  <SelectItem value="weightlifting">
+                    Weightlifting
+                  </SelectItem>
                   <SelectItem value="yoga">Yoga</SelectItem>
                   <SelectItem value="hiit">HIIT</SelectItem>
                   <SelectItem value="cardio">Cardio</SelectItem>
