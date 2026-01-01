@@ -1,8 +1,6 @@
 import { useState } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 import Progress from "./Progress";
 import ExerciseLog from "./ExerciseLog";
@@ -12,11 +10,20 @@ import PhysicalInsightsCard from "./PhysicalInsightsCard";
 import PhysicalGoalAdvisor from "./PhysicalGoalAdvisor";
 import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 
-function PhysicalSummaryCard() {
-  const user = useQuery(api.users.getCurrentUser);
+/* ======================================================
+   LOCAL SAFE PROFILE SNAPSHOT (TEMP)
+   ====================================================== */
 
-  const heightCm = typeof user?.heightCm === "number" ? user.heightCm : null;
-  const weightKg = typeof user?.weightKg === "number" ? user.weightKg : null;
+function useLocalPhysicalProfile() {
+  // Temporary local snapshot — Convex will rehydrate later
+  return {
+    heightCm: null as number | null,
+    weightKg: null as number | null,
+  };
+}
+
+function PhysicalSummaryCard() {
+  const { heightCm, weightKg } = useLocalPhysicalProfile();
 
   let bmiDisplay = "—";
   if (heightCm && weightKg) {
@@ -75,7 +82,6 @@ export default function PhysicalDashboard() {
 
           <PhysicalInsightsCard />
 
-          {/* ✅ BUTTON LIVES HERE */}
           <PhysicalGoalAdvisor />
 
           <PhysicalSummaryCard />
@@ -84,15 +90,23 @@ export default function PhysicalDashboard() {
 
       {tab === "nutrition" && (
         <div className="space-y-6">
-          <Card><Progress /></Card>
-          <Card><FoodLog /></Card>
+          <Card>
+            <Progress />
+          </Card>
+          <Card>
+            <FoodLog />
+          </Card>
         </div>
       )}
 
       {tab === "activity" && (
         <div className="space-y-6">
-          <Card><ExerciseLog /></Card>
-          <Card><PeriodTracker /></Card>
+          <Card>
+            <ExerciseLog />
+          </Card>
+          <Card>
+            <PeriodTracker />
+          </Card>
         </div>
       )}
     </PageLayout>
