@@ -9,7 +9,7 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  *
  * - Observes auth readiness
  * - Best-effort identity bootstrap
- * - Triggers offline → Convex sync exactly once
+ * - Triggers offline → Convex sync exactly once per session
  *
  * HARD GUARANTEES:
  * - NEVER redirects
@@ -31,6 +31,7 @@ export default function AuthSyncBoundary() {
     if (!navigator.onLine) return;
     if (hasRunRef.current) return;
 
+    // Lock immediately to guarantee exactly-once semantics
     hasRunRef.current = true;
 
     (async () => {
@@ -41,7 +42,7 @@ export default function AuthSyncBoundary() {
         // swallow — identity may already exist or backend not ready
       }
 
-      // 2️⃣ Offline → Convex sync (must still run)
+      // 2️⃣ Offline → Convex sync (fire-and-forget)
       try {
         await runOfflineSync(convex);
       } catch {
