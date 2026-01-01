@@ -1,6 +1,9 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 
+import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
+
+
 import Onboarding from "./pages/Onboarding";
 import TransitionGate from "./pages/Transition";
 import PhysicalDashboard from "./pages/physical/PhysicalDashboard";
@@ -67,6 +70,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {/* Passive auth observation + sync (no enforcement) */}
+      <AuthSyncBoundary />
+
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/onboarding" element={<Onboarding />} />
