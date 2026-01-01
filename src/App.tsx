@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 
-// import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
+import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 
 import Onboarding from "./pages/Onboarding";
 import TransitionGate from "./pages/Transition";
@@ -70,8 +70,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* AuthSyncBoundary intentionally disabled until sign-in is wired */}
-      {/* <AuthSyncBoundary /> */}
+      {/* Passive auth observation + one-time sync (safe mode) */}
+      <AuthSyncBoundary />
 
       <Routes>
         <Route path="/" element={<RootRedirect />} />
@@ -145,7 +145,6 @@ export default function App() {
           }
         />
 
-        {/* NEW: Profile / Settings */}
         <Route
           path="/profile"
           element={
