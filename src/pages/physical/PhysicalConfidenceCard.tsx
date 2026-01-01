@@ -33,13 +33,16 @@ export default function PhysicalConfidenceCard() {
     );
   }
 
-  if (mealsToday === null || exercisesToday === null || sleep7 === null || meals7 === null) {
+  if (
+    mealsToday === null ||
+    exercisesToday === null ||
+    sleep7 === null ||
+    meals7 === null
+  ) {
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">
-            Insight Confidence
-          </CardTitle>
+          <CardTitle className="text-base">Insight Confidence</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           Sign in to see confidence score based on your recent logs.
@@ -55,23 +58,17 @@ export default function PhysicalConfidenceCard() {
     sleepLast7: sleep7,
     mealsToday,
     exercisesToday,
-    sleepToday: sleep7.filter((s: DatedEntry) =>
-      s.startIso?.startsWith(today),
-    ),
+    sleepToday: sleep7.filter((s: DatedEntry) => s.startIso?.startsWith(today)),
   });
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">
-          Insight Confidence
-        </CardTitle>
+        <CardTitle className="text-base">Insight Confidence</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-medium">
-          {result.confidenceScore}%
-        </div>
+        <div className="text-xl font-medium">{result.confidenceScore}%</div>
 
         <div className="text-xs text-muted-foreground">
           An estimate based on your recent logs
@@ -79,9 +76,7 @@ export default function PhysicalConfidenceCard() {
 
         <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground space-y-1">
           {result.explanations.map((e, i) => (
-            <li key={i}>
-              {e}
-            </li>
+            <li key={i}>{e}</li>
           ))}
         </ul>
       </CardContent>

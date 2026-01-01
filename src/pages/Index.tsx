@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
@@ -37,9 +36,7 @@ export default function Index() {
       <PageLayout title="Overview">
         <section className="py-24 flex flex-col items-center justify-center text-center space-y-3">
           <Spinner />
-          <p className="text-sm text-muted-foreground">
-            Loading your overview
-          </p>
+          <p className="text-sm text-muted-foreground">Loading your overview</p>
         </section>
       </PageLayout>
     );
@@ -62,15 +59,12 @@ export default function Index() {
               <p className="text-sm text-muted-foreground">
                 Sign in to see your personal overview and insights.
               </p>
-              <Button disabled>
-                Sign-in required
-              </Button>
+              <Button disabled>Sign-in required</Button>
             </CardContent>
           </Card>
 
           <p className="text-sm text-muted-foreground max-w-md">
-            Youre in preview modeonce auth is wired, your data will show
-            here.
+            Youre in preview modeonce auth is wired, your data will show here.
           </p>
         </section>
       </PageLayout>
@@ -85,26 +79,21 @@ export default function Index() {
       <section className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              Mental Wellbeing Check-in
-            </CardTitle>
+            <CardTitle className="text-lg">Mental Wellbeing Check-in</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Mental wellbeing check-ins are coming soon.
             </p>
-            <Button disabled>
-              Check-in coming soon
-            </Button>
+            <Button disabled>Check-in coming soon</Button>
           </CardContent>
         </Card>
 
         <p className="text-sm text-muted-foreground max-w-md">
-          Welcome back{user.name ? `, ${user.name}` : ""}. Visit the Physical tab
-          for today’s insights and progress.
+          Welcome back{user.name ? `, ${user.name}` : ""}. Visit the Physical
+          tab for today’s insights and progress.
         </p>
       </section>
     </PageLayout>
   );
 }
-

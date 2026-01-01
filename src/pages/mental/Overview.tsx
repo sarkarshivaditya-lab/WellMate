@@ -50,10 +50,9 @@ export default function Overview() {
     steps: string[];
   }
 
-  const suggestedPractice =
-    practicesData[
-      Math.floor(Math.random() * practicesData.length)
-    ] as Practice;
+  const suggestedPractice = practicesData[
+    Math.floor(Math.random() * practicesData.length)
+  ] as Practice;
 
   if (
     todayMood === undefined ||
@@ -98,9 +97,7 @@ export default function Overview() {
         { label: "Tools", value: "tools" },
       ]}
       activeTab={tab}
-      onTabChange={(v) =>
-        setTab(v as "overview" | "journal" | "tools")
-      }
+      onTabChange={(v) => setTab(v as "overview" | "journal" | "tools")}
     >
       {/* ---------- OVERVIEW TAB ---------- */}
       {tab === "overview" && (
@@ -220,8 +217,7 @@ export default function Overview() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <SparklesIcon className="h-5 w-5" />
-                A gentle practice for today
+                <SparklesIcon className="h-5 w-5" />A gentle practice for today
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -244,22 +240,14 @@ export default function Overview() {
               {recentEntries.length > 0 ? (
                 <div className="space-y-2">
                   {recentEntries.map(
-                    (entry: {
-                      _id: string;
-                      text: string;
-                      dateIso: string;
-                    }) => (
+                    (entry: { _id: string; text: string; dateIso: string }) => (
                       <div
                         key={entry._id}
                         className="rounded-lg bg-secondary/50 p-3"
                       >
-                        <p className="line-clamp-2 text-sm">
-                          {entry.text}
-                        </p>
+                        <p className="line-clamp-2 text-sm">{entry.text}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(
-                            entry.dateIso,
-                          ).toLocaleDateString()}
+                          {new Date(entry.dateIso).toLocaleDateString()}
                         </p>
                       </div>
                     ),

@@ -61,7 +61,12 @@ export default function PhysicalInsightsCard() {
     );
   }
 
-  if (mealsToday === null || exercisesToday === null || sleep7 === null || meals7 === null) {
+  if (
+    mealsToday === null ||
+    exercisesToday === null ||
+    sleep7 === null ||
+    meals7 === null
+  ) {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -84,8 +89,7 @@ export default function PhysicalInsightsCard() {
   const burnedCalories =
     exercisesToday.length > 0
       ? exercisesToday.reduce(
-          (sum: number, e: ExerciseEntry) =>
-            sum + (e.caloriesBurnedEst || 0),
+          (sum: number, e: ExerciseEntry) => sum + (e.caloriesBurnedEst || 0),
           0,
         )
       : null;
@@ -144,9 +148,7 @@ export default function PhysicalInsightsCard() {
     sleepLast7: sleep7,
     mealsToday,
     exercisesToday,
-    sleepToday: sleep7.filter((s: DatedEntry) =>
-      s.startIso?.startsWith(today),
-    ),
+    sleepToday: sleep7.filter((s: DatedEntry) => s.startIso?.startsWith(today)),
   });
 
   const decayedConfidence = applyConfidenceDecay({
@@ -230,9 +232,7 @@ export default function PhysicalInsightsCard() {
 
         <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground space-y-1">
           {confidence.explanations.map((e, i) => (
-            <li key={i}>
-              {applyConfidenceToExplanation(e, confidenceLevel)}
-            </li>
+            <li key={i}>{applyConfidenceToExplanation(e, confidenceLevel)}</li>
           ))}
         </ul>
 
@@ -242,9 +242,7 @@ export default function PhysicalInsightsCard() {
               key={insight.id}
               className="rounded-md border border-border p-3"
             >
-              <div className="text-sm font-medium">
-                {insight.displayTitle}
-              </div>
+              <div className="text-sm font-medium">{insight.displayTitle}</div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {insight.displayBody}
               </div>

@@ -1,11 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { generateGoalAdvice } from "./_utils/goalAdvisor";
 
@@ -63,9 +58,7 @@ export default function PhysicalGoalAdvisor() {
         <div className="flex items-center justify-between">
           <CardTitle>Goal Alignment</CardTitle>
 
-          <Button size="sm">
-            Improve
-          </Button>
+          <Button size="sm">Improve</Button>
         </div>
       </CardHeader>
 
