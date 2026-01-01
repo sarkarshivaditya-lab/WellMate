@@ -13,11 +13,31 @@ export default function PhysicalGoalAdvisor() {
   const meals = useQuery(api.meals.getRecentMeals, { days: 7 });
   const user = useQuery(api.users.getCurrentUser);
 
-  if (meals === undefined || user === undefined || !user?.goal) {
+  if (meals === undefined || user === undefined) {
     return (
       <Card>
         <CardContent className="text-sm text-muted-foreground">
           Loading goal analysis…
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (user === null) {
+    return (
+      <Card>
+        <CardContent className="text-sm text-muted-foreground">
+          Sign in to get personalized goal alignment tips.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user.goal) {
+    return (
+      <Card>
+        <CardContent className="text-sm text-muted-foreground">
+          Add a goal in onboarding to get goal alignment tips.
         </CardContent>
       </Card>
     );

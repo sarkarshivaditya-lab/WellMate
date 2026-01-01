@@ -24,7 +24,39 @@ export default function PeriodTracker() {
     notes: "",
   });
   
-  if (!user?.periodTrackingEnabled) {
+  if (user === undefined) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Period Tracking</CardTitle>
+          <CardDescription>Loading</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Loading your profile
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (user === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Period Tracking</CardTitle>
+          <CardDescription>Sign-in required</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Sign in to enable and use period tracking.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user.periodTrackingEnabled) {
     return (
       <Card>
         <CardHeader>
@@ -133,7 +165,7 @@ export default function PeriodTracker() {
         </CardHeader>
         <CardContent className="space-y-3">
           {cycles === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading</div>
           ) : sortedCycles.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No cycles logged yet

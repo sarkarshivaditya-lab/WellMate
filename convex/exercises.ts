@@ -23,7 +23,7 @@ export const addExercise = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user) {
@@ -44,15 +44,12 @@ export const getExercisesByDate = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "User not logged in",
-      });
+      return [];
     }
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user) {
@@ -64,7 +61,7 @@ export const getExercisesByDate = query({
     return await ctx.db
       .query("exercises")
       .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", user._id).eq("dateIso", args.dateIso)
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
       )
       .collect();
   },
@@ -90,7 +87,7 @@ export const deleteExercise = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user || exercise.userId !== user._id) {

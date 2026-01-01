@@ -71,6 +71,19 @@ export default function Overview() {
     );
   }
 
+  if (recentMoods === null || recentEntries === null) {
+    return (
+      <PageLayout
+        title="Mental Wellbeing"
+        subtitle="Mood, reflection, and gentle mental care."
+      >
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          Sign in to view your mood trends and journal entries.
+        </div>
+      </PageLayout>
+    );
+  }
+
   const moodData = recentMoods
     .map((m: { moodValue: number }) => m.moodValue)
     .reverse();
@@ -139,6 +152,15 @@ export default function Overview() {
                       />
                     </DialogContent>
                   </Dialog>
+                </div>
+              ) : todayMood === null ? (
+                <div className="py-6 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Sign in to track your mood.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Once auth is wired, youll be able to check in here.
+                  </p>
                 </div>
               ) : (
                 <div className="py-6 text-center space-y-2">

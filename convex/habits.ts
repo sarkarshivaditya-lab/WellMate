@@ -6,7 +6,11 @@ export const addHabit = mutation({
   args: {
     title: v.string(),
     description: v.optional(v.string()),
-    cadence: v.union(v.literal("daily"), v.literal("weekly"), v.literal("custom")),
+    cadence: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("custom"),
+    ),
     remindersEnabled: v.boolean(),
     reminderTime: v.optional(v.string()),
   },
@@ -22,7 +26,7 @@ export const addHabit = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -52,7 +56,9 @@ export const updateHabit = mutation({
     habitId: v.id("habits"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
-    cadence: v.optional(v.union(v.literal("daily"), v.literal("weekly"), v.literal("custom"))),
+    cadence: v.optional(
+      v.union(v.literal("daily"), v.literal("weekly"), v.literal("custom")),
+    ),
     remindersEnabled: v.optional(v.boolean()),
     reminderTime: v.optional(v.string()),
     archived: v.optional(v.boolean()),
@@ -69,7 +75,7 @@ export const updateHabit = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -92,8 +98,10 @@ export const updateHabit = mutation({
     if (args.title !== undefined) updates.title = args.title;
     if (args.description !== undefined) updates.description = args.description;
     if (args.cadence !== undefined) updates.cadence = args.cadence;
-    if (args.remindersEnabled !== undefined) updates.remindersEnabled = args.remindersEnabled;
-    if (args.reminderTime !== undefined) updates.reminderTime = args.reminderTime;
+    if (args.remindersEnabled !== undefined)
+      updates.remindersEnabled = args.remindersEnabled;
+    if (args.reminderTime !== undefined)
+      updates.reminderTime = args.reminderTime;
     if (args.archived !== undefined) updates.archived = args.archived;
 
     await ctx.db.patch(args.habitId, updates);
@@ -114,7 +122,7 @@ export const deleteHabit = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -142,16 +150,13 @@ export const listHabits = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        message: "User not logged in",
-        code: "UNAUTHENTICATED",
-      });
+      return [];
     }
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -194,7 +199,7 @@ export const addHabitEntry = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -217,7 +222,7 @@ export const addHabitEntry = mutation({
     const existing = await ctx.db
       .query("habitEntries")
       .withIndex("by_habit_and_date", (q) =>
-        q.eq("habitId", args.habitId).eq("dateIso", args.dateIso)
+        q.eq("habitId", args.habitId).eq("dateIso", args.dateIso),
       )
       .first();
 
@@ -248,16 +253,13 @@ export const listHabitEntriesByDate = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        message: "User not logged in",
-        code: "UNAUTHENTICATED",
-      });
+      return [];
     }
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -271,7 +273,7 @@ export const listHabitEntriesByDate = query({
     const entries = await ctx.db
       .query("habitEntries")
       .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", user._id).eq("dateIso", args.dateIso)
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
       )
       .collect();
 
@@ -296,7 +298,7 @@ export const toggleHabitCompletion = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -319,7 +321,7 @@ export const toggleHabitCompletion = mutation({
     const existing = await ctx.db
       .query("habitEntries")
       .withIndex("by_habit_and_date", (q) =>
-        q.eq("habitId", args.habitId).eq("dateIso", args.dateIso)
+        q.eq("habitId", args.habitId).eq("dateIso", args.dateIso),
       )
       .first();
 

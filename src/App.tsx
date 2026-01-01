@@ -1,9 +1,5 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
-import { Authenticated, AuthLoading } from "convex/react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 import Onboarding from "./pages/Onboarding";
 import TransitionGate from "./pages/Transition";
@@ -12,23 +8,9 @@ import Habits from "./pages/Habits";
 import Index from "./pages/Index";
 import Journal from "./pages/mental/Journal";
 import Tools from "./pages/Tools";
-import AiMentalCoach from "./pages/mental/AiMentalCoach"; // ✅ NEW
+import AiMentalCoach from "./pages/mental/AiMentalCoach";
 
 import AppShell from "./components/layout/AppShell";
-
-/* ======================================================
-   ENSURE USER RECORD EXISTS (CRITICAL)
-   ====================================================== */
-
-function EnsureUserRecord({ children }: { children: React.ReactNode }) {
-  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
-
-  React.useEffect(() => {
-    updateCurrentUser().catch(console.error);
-  }, [updateCurrentUser]);
-
-  return <>{children}</>;
-}
 
 /* ======================================================
    ROUTE HELPERS
@@ -81,133 +63,94 @@ function useGlobalRuntimeGuards() {
    ====================================================== */
 
 export default function App() {
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
-
   useGlobalRuntimeGuards();
-
-  React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      loginWithRedirect();
-    }
-  }, [isLoading, isAuthenticated, loginWithRedirect]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading…
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Redirecting to login…
-      </div>
-    );
-  }
 
   return (
     <BrowserRouter>
-      <AuthLoading>
-        <div className="min-h-screen flex items-center justify-center">
-          Loading…
-        </div>
-      </AuthLoading>
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/onboarding" element={<Onboarding />} />
 
-      <Authenticated>
-        <EnsureUserRecord>
-          <Routes>
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+        <Route
+          path="/overview"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <Index />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            {/* ---------------- AppShell routes ---------------- */}
+        <Route
+          path="/physical"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <TransitionGate>
+                  <PhysicalDashboard />
+                </TransitionGate>
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            <Route
-              path="/overview"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <Index />
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
+        <Route
+          path="/journal"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <Journal />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            <Route
-              path="/physical"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <TransitionGate>
-                      <PhysicalDashboard />
-                    </TransitionGate>
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
+        <Route
+          path="/mental/coach"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <AiMentalCoach />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            <Route
-              path="/journal"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <Journal />
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
+        <Route
+          path="/habits"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <Habits />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            {/* ✅ Mental AI Coach route */}
-            <Route
-              path="/mental/coach"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <AiMentalCoach />
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
+        <Route
+          path="/tools"
+          element={
+            <RequireOnboarding>
+              <AppShell>
+                <Tools />
+              </AppShell>
+            </RequireOnboarding>
+          }
+        />
 
-            <Route
-              path="/habits"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <Habits />
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
-
-            <Route
-              path="/tools"
-              element={
-                <RequireOnboarding>
-                  <AppShell>
-                    <Tools />
-                  </AppShell>
-                </RequireOnboarding>
-              }
-            />
-
-            {/* ---------------- Fallback ---------------- */}
-
-            <Route
-              path="*"
-              element={
-                <div className="min-h-screen bg-background text-foreground p-8">
-                  <h1 className="text-2xl font-bold">Not Found</h1>
-                  <p className="mt-2">
-                    Nothing here — <Link to="/">Go home</Link>
-                  </p>
-                </div>
-              }
-            />
-          </Routes>
-        </EnsureUserRecord>
-      </Authenticated>
+        <Route
+          path="*"
+          element={
+            <div className="min-h-screen bg-background text-foreground p-8">
+              <h1 className="text-2xl font-bold">Not Found</h1>
+              <p className="mt-2">
+                Nothing here — <Link to="/">Go home</Link>
+              </p>
+            </div>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

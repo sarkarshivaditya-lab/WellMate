@@ -33,6 +33,21 @@ export default function PhysicalConfidenceCard() {
     );
   }
 
+  if (mealsToday === null || exercisesToday === null || sleep7 === null || meals7 === null) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">
+            Insight Confidence
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Sign in to see confidence score based on your recent logs.
+        </CardContent>
+      </Card>
+    );
+  }
+
   const result = calculateConfidenceScore({
     user,
     mealsLast7: meals7,

@@ -23,7 +23,7 @@ export const addMeal = mutation({
         micronutrientsJson: v.optional(v.string()),
         quantity: v.number(),
         unit: v.string(),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {
@@ -37,7 +37,7 @@ export const addMeal = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user) {
@@ -73,15 +73,12 @@ export const getMealsByDate = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "User not logged in",
-      });
+      return [];
     }
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user) {
@@ -93,7 +90,7 @@ export const getMealsByDate = query({
     const meals = await ctx.db
       .query("meals")
       .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", user._id).eq("dateIso", args.dateIso)
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
       )
       .collect();
     const mealsWithItems = await Promise.all(
@@ -103,7 +100,7 @@ export const getMealsByDate = query({
           .withIndex("by_meal", (q) => q.eq("mealId", meal._id))
           .collect();
         return { ...meal, items };
-      })
+      }),
     );
     return mealsWithItems;
   },
@@ -114,15 +111,12 @@ export const getRecentMeals = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "User not logged in",
-      });
+      return [];
     }
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user) {
@@ -160,7 +154,7 @@ export const deleteMeal = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
     if (!user || meal.userId !== user._id) {

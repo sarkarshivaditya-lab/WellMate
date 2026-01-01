@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
 
 /* ======================================================
    ONBOARDING — FULL 8 STEP FLOW
@@ -18,20 +15,7 @@ type ActivityLevel =
 export default function Onboarding() {
   const navigate = useNavigate();
 
-  const completeOnboarding = useMutation(api.users.completeOnboarding);
-
-  /* ---------- AUTH GUARD ---------- */
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (!isAuthenticated) {
-      loginWithRedirect({
-        appState: { returnTo: window.location.pathname },
-      });
-    }
-  }, [isAuthenticated, isLoading, loginWithRedirect]);
+  /* ---------- NO AUTH GUARD DURING ONBOARDING ---------- */
 
   const setHeightUnitAndSync = (nextUnit: "cm" | "ftin") => {
     if (nextUnit === heightUnit) return;
@@ -161,24 +145,9 @@ export default function Onboarding() {
     setAttemptedNext(true);
     if (!isStepValid()) return;
     setAttemptedNext(false);
-    try {
-      await completeOnboarding({
-        dob,
-        sex: sex as "male" | "female" | "other",
-        heightCm: Number(height),
-        weightKg: Number(weight),
-        activityLevel: activityLevel ?? "sedentary",
-        goal: weightGoal as "lose" | "maintain" | "gain",
-        periodTrackingEnabled: sex === "female",
-      });
-
-     localStorage.setItem("onboarded", "true");
-localStorage.removeItem("postOnboardingTransitionShown");
-navigate("/physical");
-
-    } catch (error) {
-      console.error("Failed to complete onboarding", error);
-    }
+    localStorage.setItem("onboarded", "true");
+    localStorage.removeItem("postOnboardingTransitionShown");
+    navigate("/physical");
   };
 
   /* ======================================================

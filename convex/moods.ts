@@ -20,7 +20,7 @@ export const addMood = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -35,7 +35,7 @@ export const addMood = mutation({
     const existing = await ctx.db
       .query("moods")
       .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", user._id).eq("dateIso", args.dateIso)
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
       )
       .first();
 
@@ -65,16 +65,13 @@ export const getMoodByDate = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        message: "User not logged in",
-        code: "UNAUTHENTICATED",
-      });
+      return null;
     }
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -88,7 +85,7 @@ export const getMoodByDate = query({
     const mood = await ctx.db
       .query("moods")
       .withIndex("by_user_and_date", (q) =>
-        q.eq("userId", user._id).eq("dateIso", args.dateIso)
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
       )
       .first();
 
@@ -101,16 +98,13 @@ export const listMoods = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new ConvexError({
-        message: "User not logged in",
-        code: "UNAUTHENTICATED",
-      });
+      return [];
     }
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 
@@ -145,7 +139,7 @@ export const deleteMood = mutation({
     const user = await ctx.db
       .query("users")
       .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
+        q.eq("tokenIdentifier", identity.tokenIdentifier),
       )
       .unique();
 

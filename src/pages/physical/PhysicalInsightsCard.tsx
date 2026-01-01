@@ -61,6 +61,19 @@ export default function PhysicalInsightsCard() {
     );
   }
 
+  if (mealsToday === null || exercisesToday === null || sleep7 === null || meals7 === null) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Health Insights</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Sign in to see your personalized health insights.
+        </CardContent>
+      </Card>
+    );
+  }
+
   /* ---------- TODAY SNAPSHOT ---------- */
 
   const intakeCalories = mealsToday.reduce(
