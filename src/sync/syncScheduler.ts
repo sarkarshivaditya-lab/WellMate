@@ -2,25 +2,29 @@
 
 import type { ConvexReactClient } from "convex/react";
 import { syncExercises } from "./exerciseSync";
-import { syncMeals } from "./mealSync";
+// import { syncMeals } from "./mealSync";
 
 /**
  * Central offline → Convex sync orchestrator
  *
+ * GUARANTEES:
  * - Never throws
- * - Runs workers sequentially
- * - One failure does not block others
+ * - Runs sequentially
+ * - One failure never blocks others
+ * - Safe to call repeatedly
  */
 export async function runOfflineSync(convex: ConvexReactClient) {
   try {
     await syncExercises(convex);
   } catch {
-    // swallow
+    // swallow — exercise sync must never crash app
   }
 
+  /*
   try {
     await syncMeals(convex);
   } catch {
-    // swallow
+    // meals sync intentionally disabled for now
   }
+  */
 }

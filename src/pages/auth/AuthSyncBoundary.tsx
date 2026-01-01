@@ -1,40 +1,52 @@
 import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useMutation, useConvex } from "convex/react";
+import { useConvex } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { runOfflineSync } from "@/sync/syncScheduler";
 
 /**
  * AuthSyncBoundary
  *
- * - Attaches auth identity to Convex
+ * - Observes auth + network readiness
+ * - Attaches Convex identity
  * - Opportunistically syncs offline data
- * - NEVER blocks rendering
+ *
+ * HARD GUARANTEES:
  * - NEVER redirects
+ * - NEVER blocks rendering
  * - NEVER throws
+ * - Safe offline
+ * - Safe unauthenticated
  */
 export default function AuthSyncBoundary() {
-  const { isAuthenticated, isLoading, user } = useAuth0();
-  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const { isAuthenticated, isLoading } = useAuth0();
   const convex = useConvex();
+  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
 
-  const hasSyncedRef = useRef(false);
+  const hasRunRef = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) return;
-    if (hasSyncedRef.current) return;
+    if (!navigator.onLine) return;
+    if (hasRunRef.current) return;
 
-    hasSyncedRef.current = true;
+    hasRunRef.current = true;
 
-    updateCurrentUser()
-      .then(() => {
-        return runOfflineSync(convex);
-      })
-      .catch(() => {
-        // swallowed intentionally
-      });
-  }, [isLoading, isAuthenticated, user, updateCurrentUser, convex]);
+    (async () => {
+      try {
+        // 1️⃣ Ensure user exists in Convex
+        await updateCurrentUser();
+
+        // 2️⃣ Run offline → Convex sync (currently inert by design)
+        await runOfflineSync(convex);
+      } catch {
+        // 🔕 swallow absolutely everything
+        // Sync must never destabilize the app
+      }
+    })();
+  }, [isLoading, isAuthenticated, convex, updateCurrentUser]);
 
   return null;
 }
