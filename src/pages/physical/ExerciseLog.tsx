@@ -42,6 +42,34 @@ function ExerciseRowSkeleton() {
   );
 }
 
+/* ---------- Sync Badge (UI-Only) ---------- */
+
+function SyncBadge({ status }: { status?: "pending" | "synced" | "error" }) {
+  const s = status ?? "pending";
+
+  if (s === "synced") {
+    return (
+      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+        synced
+      </span>
+    );
+  }
+
+  if (s === "error") {
+    return (
+      <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-600">
+        error
+      </span>
+    );
+  }
+
+  return (
+    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+      pending
+    </span>
+  );
+}
+
 /* ---------- Component ---------- */
 
 export default function ExerciseLog() {
@@ -137,13 +165,20 @@ export default function ExerciseLog() {
                 className="flex items-start justify-between gap-4 py-3"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-medium">
-                    {exercise.name}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-medium">
+                      {exercise.name}
+                    </div>
+                    <SyncBadge
+                      status={(exercise as any).syncStatus}
+                    />
                   </div>
+
                   <div className="mt-0.5 text-xs text-muted-foreground">
                     {exercise.type} · {exercise.durationMinutes} min · ~
                     {exercise.caloriesBurnedEst} cal
                   </div>
+
                   {exercise.notes && (
                     <div className="mt-1 text-xs text-muted-foreground">
                       {exercise.notes}
