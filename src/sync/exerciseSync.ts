@@ -1,7 +1,7 @@
 // src/sync/exerciseSync.ts
 
 import { api } from "@/convex/_generated/api";
-import { ConvexReactClient } from "convex/react";
+import type { ConvexReactClient } from "convex/react";
 import {
   getAllLocalExercises,
   markExerciseSynced,
@@ -16,12 +16,14 @@ import {
 const SYNC_BATCH_SIZE = 10;
 
 /* ======================================================
-   EXERCISE SYNC
+   EXERCISE SYNC (FIRE-AND-FORGET, OFFLINE-SAFE)
    ====================================================== */
 
 export async function syncExercises(
-  convex: ConvexReactClient,
+  convex: ConvexReactClient | null | undefined,
 ) {
+  if (!convex) return;
+
   let pending: LocalExercise[];
 
   try {
@@ -47,9 +49,17 @@ export async function syncExercises(
         notes: exercise.notes,
       });
 
-      markExerciseSynced(exercise.id);
+      try {
+        markExerciseSynced(exercise.id);
+      } catch {
+        /* local write failure is non-fatal */
+      }
     } catch {
-      markExerciseError(exercise.id);
+      try {
+        markExerciseError(exercise.id);
+      } catch {
+        /* swallow */
+      }
     }
   }
 }
