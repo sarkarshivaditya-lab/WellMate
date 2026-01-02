@@ -39,10 +39,7 @@ function MealSkeleton() {
   return (
     <div className="space-y-2">
       {[0, 1].map((i) => (
-        <div
-          key={i}
-          className="h-16 rounded-md bg-muted/40 animate-pulse"
-        />
+        <div key={i} className="h-14 rounded-md bg-muted/40 animate-pulse" />
       ))}
     </div>
   );
@@ -143,7 +140,7 @@ export default function FoodLog() {
   );
 
   return (
-    <Card className="max-h-[520px] overflow-hidden">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -166,7 +163,7 @@ export default function FoodLog() {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3 overflow-y-auto">
+      <CardContent className="space-y-3">
         {!meals ? (
           <MealSkeleton />
         ) : meals.length === 0 ? (
@@ -181,10 +178,7 @@ export default function FoodLog() {
         ) : (
           <div className="space-y-2">
             {meals.map((meal) => (
-              <div
-                key={meal.id}
-                className="rounded-md border border-border"
-              >
+              <div key={meal.id} className="rounded-md border border-border">
                 <MealCard
                   meal={meal}
                   onDelete={() => deleteMeal(meal.id)}
@@ -226,15 +220,12 @@ export default function FoodLog() {
                 <FoodSearchInput onSelect={handleAddFromSearch} />
               </TabsContent>
 
-              <TabsContent value="detailed" className="space-y-4">
+              <TabsContent value="detailed" className="space-y-3">
                 <Input
                   placeholder="Food name"
                   value={detailedForm.name}
                   onChange={(e) =>
-                    setDetailedForm({
-                      ...detailedForm,
-                      name: e.target.value,
-                    })
+                    setDetailedForm({ ...detailedForm, name: e.target.value })
                   }
                 />
                 <Input
@@ -242,12 +233,35 @@ export default function FoodLog() {
                   placeholder="Calories"
                   value={detailedForm.calories}
                   onChange={(e) =>
-                    setDetailedForm({
-                      ...detailedForm,
-                      calories: e.target.value,
-                    })
+                    setDetailedForm({ ...detailedForm, calories: e.target.value })
                   }
                 />
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Protein (g)"
+                    value={detailedForm.protein}
+                    onChange={(e) =>
+                      setDetailedForm({ ...detailedForm, protein: e.target.value })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Fat (g)"
+                    value={detailedForm.fat}
+                    onChange={(e) =>
+                      setDetailedForm({ ...detailedForm, fat: e.target.value })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Carbs (g)"
+                    value={detailedForm.carbs}
+                    onChange={(e) =>
+                      setDetailedForm({ ...detailedForm, carbs: e.target.value })
+                    }
+                  />
+                </div>
                 <Button onClick={handleAddDetailed} className="w-full">
                   Add Item
                 </Button>

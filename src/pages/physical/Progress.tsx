@@ -1,5 +1,3 @@
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
 import {
   Card,
   CardContent,
@@ -10,6 +8,7 @@ import {
 import ChartPie from "@/components/ChartPie.tsx";
 import ChartBar from "@/components/ChartBar.tsx";
 import { useWeeklyExerciseTrend } from "@/hooks/useWeeklyExerciseTrend";
+import { useMealsByDate } from "@/hooks/useMealsByDate";
 import {
   calculateBMR,
   calculateTDEE,
@@ -17,14 +16,21 @@ import {
   calculateMacroTargets,
   calculateAge,
 } from "@/services/nutritionEngine.ts";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api.js";
 
 export default function Progress() {
   const today = new Date().toISOString().split("T")[0];
-  const meals = useQuery(api.meals.getMealsByDate, { dateIso: today });
+
+  /* =========================
+     DATA SOURCES
+     ========================= */
+
+  const { meals } = useMealsByDate(today);
   const user = useQuery(api.users.getCurrentUser);
 
   /* =========================
-     DAILY TOTALS
+     DAILY TOTALS (LOCAL)
      ========================= */
 
   type DayTotals = {
@@ -43,8 +49,8 @@ export default function Progress() {
     micros: {},
   };
 
-  const dayTotals = meals?.reduce(
-    (acc: DayTotals, meal: (typeof meals)[number]): DayTotals => ({
+  const dayTotals = meals.reduce(
+    (acc: DayTotals, meal): DayTotals => ({
       calories: acc.calories + meal.totalCalories,
       protein: acc.protein + meal.totalProteinG,
       fat: acc.fat + meal.totalFatG,
@@ -84,25 +90,26 @@ export default function Progress() {
      CHART DATA
      ========================= */
 
-  const pieData = dayTotals
-    ? [
-        {
-          label: "Protein",
-          value: dayTotals.protein,
-          color: "oklch(0.55 0.18 160)",
-        },
-        {
-          label: "Fat",
-          value: dayTotals.fat,
-          color: "oklch(0.65 0.15 200)",
-        },
-        {
-          label: "Carbs",
-          value: dayTotals.carbs,
-          color: "oklch(0.70 0.12 280)",
-        },
-      ]
-    : [];
+  const pieData =
+    meals.length > 0
+      ? [
+          {
+            label: "Protein",
+            value: dayTotals.protein,
+            color: "oklch(0.55 0.18 160)",
+          },
+          {
+            label: "Fat",
+            value: dayTotals.fat,
+            color: "oklch(0.65 0.15 200)",
+          },
+          {
+            label: "Carbs",
+            value: dayTotals.carbs,
+            color: "oklch(0.70 0.12 280)",
+          },
+        ]
+      : [];
 
   /* =========================
      WEEKLY ACTIVITY (LOCAL)
@@ -118,7 +125,7 @@ export default function Progress() {
   }));
 
   /* =========================
-     MICROS
+     MICROS (LOCAL)
      ========================= */
 
   const micronutrientTargets: Record<string, number> = {
@@ -131,7 +138,7 @@ export default function Progress() {
   };
 
   const aggregateMicros: Record<string, number> = {};
-  meals?.forEach((meal: (typeof meals)[number]) => {
+  meals.forEach((meal) => {
     if (meal.micronutrientsJson) {
       try {
         const micros = JSON.parse(meal.micronutrientsJson);
@@ -175,7 +182,7 @@ export default function Progress() {
             <div>
               <div className="text-xs text-muted-foreground">Calories</div>
               <div className="text-xl font-semibold">
-                {dayTotals?.calories || 0}
+                {dayTotals.calories}
               </div>
               <div className="text-xs text-muted-foreground">
                 of {calorieTarget}
@@ -184,7 +191,7 @@ export default function Progress() {
             <div>
               <div className="text-xs text-muted-foreground">Protein</div>
               <div className="text-xl font-semibold">
-                {dayTotals?.protein.toFixed(1) || 0}g
+                {dayTotals.protein.toFixed(1)}g
               </div>
               <div className="text-xs text-muted-foreground">
                 of {macroTargets.proteinG}g
@@ -193,7 +200,7 @@ export default function Progress() {
             <div>
               <div className="text-xs text-muted-foreground">Fat</div>
               <div className="text-xl font-semibold">
-                {dayTotals?.fat.toFixed(1) || 0}g
+                {dayTotals.fat.toFixed(1)}g
               </div>
               <div className="text-xs text-muted-foreground">
                 of {macroTargets.fatG}g
@@ -202,7 +209,7 @@ export default function Progress() {
             <div>
               <div className="text-xs text-muted-foreground">Carbs</div>
               <div className="text-xl font-semibold">
-                {dayTotals?.carbs.toFixed(1) || 0}g
+                {dayTotals.carbs.toFixed(1)}g
               </div>
               <div className="text-xs text-muted-foreground">
                 of {macroTargets.carbsG}g
