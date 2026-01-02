@@ -15,6 +15,7 @@ import {
   markSyncIdle,
   markSyncError,
 } from "./syncStatus";
+import { track } from "@/telemetry/telemetry";
 
 /* =========================
    CONFIG
@@ -36,6 +37,8 @@ export async function runOfflineSync(
   convex: ConvexReactClient | null | undefined,
 ) {
   if (!convex) return;
+
+  track("sync_start");
 
   markSyncing();
 
@@ -82,8 +85,10 @@ export async function runOfflineSync(
   }
 
   if (hadError) {
+    track("sync_error");
     markSyncError();
   } else {
+    track("sync_end");
     markSyncIdle();
   }
 }

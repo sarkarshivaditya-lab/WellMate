@@ -1,5 +1,7 @@
 // src/sync/syncQueue.ts
 
+import { track } from "@/telemetry/telemetry";
+
 export type SyncEntity = "meal" | "exercise";
 
 export type SyncAction = "create" | "update" | "delete";
@@ -197,6 +199,12 @@ export function moveTaskToDeadletter(taskId: string) {
 
   saveQueueToStorage();
   saveDeadletterToStorage();
+
+  track("deadletter_added", {
+    entity: task.entity,
+    taskId: task.id,
+  });
+
   notify();
 }
 
@@ -204,10 +212,6 @@ export function moveTaskToDeadletter(taskId: string) {
    B9 — MANUAL RECOVERY
    ========================= */
 
-/**
- * User explicitly retries a task.
- * Clears backoff & retry counters.
- */
 export function retrySyncTask(taskId: string) {
   const task = queue.find((t) => t.id === taskId);
   if (!task) return;
@@ -219,9 +223,6 @@ export function retrySyncTask(taskId: string) {
   notify();
 }
 
-/**
- * Restore a dead-letter task back into active queue.
- */
 export function restoreDeadletterTask(taskId: string) {
   const index = deadletter.findIndex((t) => t.id === taskId);
   if (index === -1) return;
@@ -234,12 +235,15 @@ export function restoreDeadletterTask(taskId: string) {
 
   saveQueueToStorage();
   saveDeadletterToStorage();
+
+  track("deadletter_restored", {
+    entity: task.entity,
+    taskId: task.id,
+  });
+
   notify();
 }
 
-/**
- * Permanently discard a dead-letter task.
- */
 export function discardDeadletterTask(taskId: string) {
   const index = deadletter.findIndex((t) => t.id === taskId);
   if (index === -1) return;

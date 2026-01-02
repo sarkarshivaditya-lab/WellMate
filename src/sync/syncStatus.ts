@@ -17,6 +17,7 @@ import {
   getSyncQueue,
   getDeadletterQueue,
 } from "@/sync/syncQueue";
+import { track } from "@/telemetry/telemetry";
 
 /* =========================
    TYPES
@@ -126,7 +127,7 @@ export function markSyncError() {
 }
 
 /* =========================
-   USER-INITIATED SIGNALS (B9)
+   USER-INITIATED SIGNALS (B9 + B10)
    ========================= */
 
 /**
@@ -135,6 +136,9 @@ export function markSyncError() {
  */
 export function requestManualRetry() {
   userRequestedRetry = true;
+
+  track("manual_retry_requested");
+
   notify();
 }
 
