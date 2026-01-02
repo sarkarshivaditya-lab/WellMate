@@ -39,7 +39,10 @@ function MealSkeleton() {
   return (
     <div className="space-y-2">
       {[0, 1].map((i) => (
-        <div key={i} className="h-14 rounded-md bg-muted/40 animate-pulse" />
+        <div
+          key={i}
+          className="h-16 rounded-md bg-muted/40 animate-pulse"
+        />
       ))}
     </div>
   );
@@ -50,11 +53,7 @@ function MealSkeleton() {
 export default function FoodLog() {
   const today = new Date().toISOString().split("T")[0];
 
-  const {
-    meals,
-    addMeal,
-    deleteMeal,
-  } = useMealsByDate(today);
+  const { meals, addMeal, deleteMeal } = useMealsByDate(today);
 
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [inputMode, setInputMode] = useState<"quick" | "detailed">("quick");
@@ -144,7 +143,7 @@ export default function FoodLog() {
   );
 
   return (
-    <Card>
+    <Card className="max-h-[520px] overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -167,7 +166,7 @@ export default function FoodLog() {
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 overflow-y-auto">
         {!meals ? (
           <MealSkeleton />
         ) : meals.length === 0 ? (
@@ -182,7 +181,10 @@ export default function FoodLog() {
         ) : (
           <div className="space-y-2">
             {meals.map((meal) => (
-              <div key={meal.id} className="rounded-md border border-border">
+              <div
+                key={meal.id}
+                className="rounded-md border border-border"
+              >
                 <MealCard
                   meal={meal}
                   onDelete={() => deleteMeal(meal.id)}
@@ -229,7 +231,10 @@ export default function FoodLog() {
                   placeholder="Food name"
                   value={detailedForm.name}
                   onChange={(e) =>
-                    setDetailedForm({ ...detailedForm, name: e.target.value })
+                    setDetailedForm({
+                      ...detailedForm,
+                      name: e.target.value,
+                    })
                   }
                 />
                 <Input
@@ -237,7 +242,10 @@ export default function FoodLog() {
                   placeholder="Calories"
                   value={detailedForm.calories}
                   onChange={(e) =>
-                    setDetailedForm({ ...detailedForm, calories: e.target.value })
+                    setDetailedForm({
+                      ...detailedForm,
+                      calories: e.target.value,
+                    })
                   }
                 />
                 <Button onClick={handleAddDetailed} className="w-full">

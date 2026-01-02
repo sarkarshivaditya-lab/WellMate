@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 
@@ -12,6 +12,11 @@ import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
+
+import {
+  getSyncStatus,
+  subscribeToSyncStatus,
+} from "@/sync/syncStatus";
 
 /* ======================================================
    LOCAL SAFE PROFILE SNAPSHOT (TEMP)
@@ -29,7 +34,7 @@ function useLocalPhysicalProfile() {
    ====================================================== */
 
 function getLast7Days() {
-  const days: { dateIso: string; label: string }[] = [];
+  const days: { dateIso: string; label: string; fullLabel: string }[] = [];
   const today = new Date();
 
   for (let i = 6; i >= 0; i--) {
@@ -38,6 +43,11 @@ function getLast7Days() {
     days.push({
       dateIso: d.toISOString().split("T")[0],
       label: d.toLocaleDateString(undefined, { weekday: "short" }),
+      fullLabel: d.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
     });
   }
 
@@ -60,6 +70,7 @@ function useWeeklyActivity() {
 
       return {
         label: day.label,
+        fullLabel: day.fullLabel,
         totalDuration,
       };
     });
@@ -130,15 +141,40 @@ function TodayActivitySummary() {
 function WeeklyActivityTrend() {
   const data = useWeeklyActivity();
 
-  const CHART_HEIGHT = 112; // px
-  const maxDuration = Math.max(1, ...data.map((d) => d.totalDuration));
+  const CHART_HEIGHT = 112;
+  const DAILY_GOAL_MIN = 30;
+
+  const goalHitDays = data.filter(
+    (d) => d.totalDuration >= DAILY_GOAL_MIN,
+  ).length;
+
+  let streak = 0;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].totalDuration >= DAILY_GOAL_MIN) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  const maxDuration = Math.max(
+    DAILY_GOAL_MIN,
+    ...data.map((d) => d.totalDuration),
+  );
+
+  const goalHeightPx = (DAILY_GOAL_MIN / maxDuration) * CHART_HEIGHT;
 
   return (
     <Card>
       <div className="p-6">
         <h3 className="mb-4 text-sm font-medium">Weekly Activity</h3>
 
-        <div className="flex items-end gap-3 h-28">
+        <div className="relative flex items-end gap-3 h-28">
+          <div
+            className="absolute left-0 right-0 border-t border-dashed border-muted-foreground/40"
+            style={{ bottom: `${goalHeightPx}px` }}
+          />
+
           {data.map((day, idx) => {
             const heightPx =
               (day.totalDuration / maxDuration) * CHART_HEIGHT;
@@ -146,15 +182,15 @@ function WeeklyActivityTrend() {
             return (
               <div
                 key={idx}
-                className="flex-1 flex flex-col items-center gap-1"
+                className="group flex-1 flex flex-col items-center gap-1"
               >
                 <div className="w-full h-28 flex items-end">
                   <div
-                    className="w-full rounded bg-primary/60 transition-all"
+                    className="w-full rounded bg-primary/60 transition-all group-hover:bg-primary"
                     style={{
                       height: `${Math.max(2, heightPx)}px`,
                     }}
-                    title={`${day.totalDuration} min`}
+                    title={`${day.fullLabel}: ${day.totalDuration} min`}
                   />
                 </div>
 
@@ -166,8 +202,23 @@ function WeeklyActivityTrend() {
           })}
         </div>
 
-        <div className="mt-3 text-xs text-muted-foreground">
-          Minutes exercised per day (last 7 days)
+        <div className="mt-3">
+          <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
+            {streak > 0 ? `${streak}-day streak` : "No active streak"}
+          </span>
+        </div>
+
+        <div className="mt-4 rounded-lg bg-muted/40 px-4 py-3">
+          <div className="text-xs text-muted-foreground">
+            Weekly Summary
+          </div>
+          <div className="mt-1 text-sm">
+            You reached your daily activity goal on{" "}
+            <span className="font-medium">
+              {goalHitDays} of the last 7 days
+            </span>
+            .
+          </div>
         </div>
       </div>
     </Card>
@@ -220,10 +271,32 @@ export default function PhysicalDashboard() {
     "overview",
   );
 
+  const syncStatus = useSyncExternalStore(
+    subscribeToSyncStatus,
+    getSyncStatus,
+    getSyncStatus,
+  );
+
+  const syncMeta =
+    syncStatus === "syncing"
+      ? { label: "Syncing…", dot: "bg-blue-500 animate-pulse" }
+      : syncStatus === "error"
+        ? { label: "Sync error", dot: "bg-red-500" }
+        : { label: "Up to date", dot: "bg-emerald-500" };
+
   return (
     <PageLayout
       title="Physical Health"
       subtitle="Today’s activity, nutrition, and progress."
+      headerRight={
+        <div
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+          title="Local changes sync automatically when you’re online."
+        >
+          <span className={`h-2 w-2 rounded-full ${syncMeta.dot}`} />
+          <span>{syncMeta.label}</span>
+        </div>
+      }
       tabs={[
         { label: "Overview", value: "overview" },
         { label: "Nutrition", value: "nutrition" },
@@ -246,13 +319,18 @@ export default function PhysicalDashboard() {
       )}
 
       {tab === "nutrition" && (
-        <div className="space-y-6">
-          <Card>
-            <Progress />
-          </Card>
-          <Card>
-            <FoodLog />
-          </Card>
+        <div className="space-y-10">
+          <div className="relative">
+            <Card>
+              <Progress />
+            </Card>
+          </div>
+
+          <div className="relative">
+            <Card>
+              <FoodLog />
+            </Card>
+          </div>
         </div>
       )}
 

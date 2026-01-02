@@ -38,8 +38,8 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
       {meal.items.length > 0 && (
         <CardContent className="pt-0">
           <div className="space-y-1">
-            {meal.items.map((item) => (
-              <div key={item._id} className="text-sm flex justify-between">
+            {meal.items.map((item, idx) => (
+              <div key={`${item.name}-${idx}`} className="text-sm flex justify-between">
                 <span className="text-muted-foreground">
                   {item.quantity > 1 && `${item.quantity}x `}
                   {item.name}

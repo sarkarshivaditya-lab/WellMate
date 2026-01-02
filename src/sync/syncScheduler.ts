@@ -3,6 +3,7 @@
 import type { ConvexReactClient } from "convex/react";
 import { syncExercises } from "./exerciseSync";
 import { syncMeals } from "./mealSync";
+import { setSyncStatus } from "./syncStatus";
 
 /**
  * Central offline → Convex sync orchestrator
@@ -19,15 +20,19 @@ export async function runOfflineSync(
 ) {
   if (!convex) return;
 
+  setSyncStatus("syncing");
+
   try {
     await syncExercises(convex);
   } catch {
-    // swallow — exercise sync must never crash app
+    setSyncStatus("error");
   }
 
   try {
     await syncMeals(convex);
   } catch {
-    // swallow — meal sync must never crash app
+    setSyncStatus("error");
   }
+
+  setSyncStatus("idle");
 }

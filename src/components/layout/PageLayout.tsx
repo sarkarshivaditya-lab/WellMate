@@ -26,31 +26,39 @@ function PageLayout({
   const hasHeader = title || subtitle || (tabs && tabs.length > 0);
 
   return (
-    <div className="relative min-h-screen">
-      {/* 🌈 PAGE BACKGROUND GRADIENT */}
+    /* 🌈 FULL-WIDTH BACKGROUND LAYER */
+    <div
+      className="
+        min-h-screen
+        w-full
+        bg-background
+        relative
+      "
+    >
       <div
-  aria-hidden
-  className="
-    pointer-events-none
-    absolute inset-x-0 top-0 h-[50vh]
-    bg-gradient-to-b
-    from-header-gradient-start
-    via-header-gradient-end/60
-    to-background
-  "
-/>
+        aria-hidden
+        className="
+          pointer-events-none
+          fixed inset-0
+          z-0
+          bg-gradient-to-b
+          from-header-gradient-start
+          via-header-gradient-end/60
+          to-background
+        "
+      />
 
-
-      {/* CONTENT */}
-      <main
-        role="main"
+      {/* 📐 CENTERED CONTENT CONTAINER */}
+      <div
         className={cn(
-          "relative z-10 w-full max-w-4xl mx-auto px-6 pb-8",
+          "relative z-10 w-full mx-auto pb-8",
+          "px-4 sm:px-6",
+          "sm:max-w-4xl",
           hasHeader ? "pt-16" : "pt-8",
         )}
       >
         {hasHeader && (
-          <header className="mb-8 space-y-4 rounded-2xl bg-background border border-border/60 px-6 py-5">
+          <header className="mb-8 space-y-4 rounded-2xl bg-background border border-border/60 px-4 sm:px-6 py-5">
             {(title || subtitle) && (
               <div>
                 {title && (
@@ -92,7 +100,7 @@ function PageLayout({
         )}
 
         {children}
-      </main>
+      </div>
     </div>
   );
 }
