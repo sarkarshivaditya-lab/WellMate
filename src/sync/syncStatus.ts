@@ -13,6 +13,11 @@
  * It reflects what the app *knows*, not what Convex *does*.
  */
 
+import {
+  getSyncQueue,
+  getDeadletterQueue,
+} from "@/sync/syncQueue";
+
 /* =========================
    TYPES
    ========================= */
@@ -24,11 +29,20 @@ export type SyncStatus =
   | "offline"    // Browser offline
   | "retrying";  // Error occurred, will retry automatically
 
+export type SyncSummary = {
+  pendingCount: number;
+  deadletterCount: number;
+  hasErrors: boolean;
+};
+
 /* =========================
    INTERNAL STATE
    ========================= */
 
 let currentStatus: SyncStatus = "idle";
+let userRequestedRetry = false;
+let userOpenedDeadletter = false;
+
 const listeners = new Set<() => void>();
 
 /* =========================
@@ -42,6 +56,38 @@ export function getSyncStatus(): SyncStatus {
   }
 
   return currentStatus;
+}
+
+/**
+ * Read-only derived visibility for UI badges / indicators
+ */
+export function getSyncSummary(): SyncSummary {
+  const queue = getSyncQueue();
+  const dead = getDeadletterQueue();
+
+  return {
+    pendingCount: queue.length,
+    deadletterCount: dead.length,
+    hasErrors: dead.length > 0,
+  };
+}
+
+/**
+ * UI can poll whether user explicitly asked for retry
+ */
+export function consumeUserRetryRequest(): boolean {
+  if (!userRequestedRetry) return false;
+  userRequestedRetry = false;
+  return true;
+}
+
+/**
+ * UI can poll whether user opened dead-letter view
+ */
+export function consumeDeadletterOpen(): boolean {
+  if (!userOpenedDeadletter) return false;
+  userOpenedDeadletter = false;
+  return true;
 }
 
 export function subscribeToSyncStatus(listener: () => void) {
@@ -59,35 +105,45 @@ function notify() {
    MUTATORS (CALLED BY SYNC)
    ========================= */
 
-/**
- * Call when a sync cycle starts
- */
 export function markSyncing() {
   currentStatus = "syncing";
   notify();
 }
 
-/**
- * Call when sync completes successfully
- */
 export function markSyncIdle() {
   currentStatus = "idle";
   notify();
 }
 
-/**
- * Call when sync fails, but will retry later
- */
 export function markSyncRetrying() {
   currentStatus = "retrying";
   notify();
 }
 
-/**
- * Call when sync fails definitively
- */
 export function markSyncError() {
   currentStatus = "error";
+  notify();
+}
+
+/* =========================
+   USER-INITIATED SIGNALS (B9)
+   ========================= */
+
+/**
+ * User explicitly requests retry.
+ * Scheduler may choose to act.
+ */
+export function requestManualRetry() {
+  userRequestedRetry = true;
+  notify();
+}
+
+/**
+ * User opens dead-letter UI.
+ * Pure visibility signal.
+ */
+export function openDeadletterView() {
+  userOpenedDeadletter = true;
   notify();
 }
 

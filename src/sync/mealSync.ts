@@ -8,6 +8,7 @@ import {
   markMealError,
   type LocalMeal,
 } from "@/data/local/mealsStore";
+import { getSyncQueue } from "@/sync/syncQueue";
 
 /* ======================================================
    CONFIG
@@ -16,51 +17,128 @@ import {
 const SYNC_BATCH_SIZE = 10;
 
 /* ======================================================
-   MEAL SYNC (FIRE-AND-FORGET, OFFLINE-SAFE)
+   FINGERPRINTING (B7.2)
+   ====================================================== */
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+  const entries = keys.map(
+    (k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`,
+  );
+  return `{${entries.join(",")}}`;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function computeMealFingerprint(meal: LocalMeal): Promise<string> {
+  const payload = stableStringify({
+    dateIso: meal.dateIso,
+    name: meal.name,
+    inputMode: meal.inputMode,
+    totalCalories: meal.totalCalories,
+    totalProteinG: meal.totalProteinG,
+    totalFatG: meal.totalFatG,
+    totalCarbsG: meal.totalCarbsG,
+    items: meal.items,
+  });
+
+  return sha256Hex(payload);
+}
+
+/* ======================================================
+   MEAL SYNC (B8 — CREATE / UPDATE / DELETE)
    ====================================================== */
 
 export async function syncMeals(
   convex: ConvexReactClient | null | undefined,
-) {
-  if (!convex) return;
+): Promise<string[]> {
+  if (!convex) return [];
 
-  let pending: LocalMeal[];
+  const queue = getSyncQueue()
+    .filter((t) => t.entity === "meal")
+    .slice(0, SYNC_BATCH_SIZE);
 
-  try {
-    pending = getPendingMeals();
-  } catch {
-    return;
-  }
+  if (queue.length === 0) return [];
 
-  if (pending.length === 0) return;
+  const mealsById = new Map(
+    getPendingMeals().map((m) => [m.id, m]),
+  );
 
-  const batch = pending.slice(0, SYNC_BATCH_SIZE);
+  const successfullySyncedIds: string[] = [];
 
-  for (const meal of batch) {
+  for (const task of queue) {
+    const meal = mealsById.get(task.localId);
+
     try {
-      await convex.mutation(api.meals.addMeal, {
-        dateIso: meal.dateIso,
-        name: meal.name,
-        inputMode: meal.inputMode,
-        totalCalories: meal.totalCalories,
-        totalProteinG: meal.totalProteinG,
-        totalFatG: meal.totalFatG,
-        totalCarbsG: meal.totalCarbsG,
-        items: meal.items,
-        sourceAdapter: meal.sourceAdapter,
-      });
+      if (task.action === "create" && meal) {
+        const fingerprint = await computeMealFingerprint(meal);
 
-      try {
+        await convex.mutation(api.meals.addMeal, {
+          dateIso: meal.dateIso,
+          name: meal.name,
+          inputMode: meal.inputMode,
+          totalCalories: meal.totalCalories,
+          totalProteinG: meal.totalProteinG,
+          totalFatG: meal.totalFatG,
+          totalCarbsG: meal.totalCarbsG,
+          items: meal.items,
+          sourceAdapter: meal.sourceAdapter,
+          fingerprint,
+        });
+
         markMealSynced(meal.id);
-      } catch {
-        // local write failure is non-fatal
+        successfullySyncedIds.push(meal.id);
+      }
+
+      if (task.action === "update" && meal) {
+        await convex.mutation(api.meals.updateMeal, {
+          mealId: meal.id as any,
+          updatedAt: meal.updatedAt,
+          dateIso: meal.dateIso,
+          name: meal.name,
+          inputMode: meal.inputMode,
+          totalCalories: meal.totalCalories,
+          totalProteinG: meal.totalProteinG,
+          totalFatG: meal.totalFatG,
+          totalCarbsG: meal.totalCarbsG,
+          sourceAdapter: meal.sourceAdapter,
+        });
+
+        markMealSynced(meal.id);
+        successfullySyncedIds.push(meal.id);
+      }
+
+      if (task.action === "delete") {
+        await convex.mutation(api.meals.deleteMeal, {
+          mealId: task.localId as any,
+          deletedAt: Date.now(),
+        });
+
+        markMealSynced(task.localId);
+        successfullySyncedIds.push(task.localId);
       }
     } catch {
       try {
-        markMealError(meal.id);
+        markMealError(task.localId);
       } catch {
         // swallow
       }
     }
   }
+
+  return successfullySyncedIds;
 }

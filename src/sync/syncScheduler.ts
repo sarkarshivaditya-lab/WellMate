@@ -3,12 +3,24 @@
 import type { ConvexReactClient } from "convex/react";
 import { syncExercises } from "./exerciseSync";
 import { syncMeals } from "./mealSync";
-import { getSyncQueue, dequeueSyncTask } from "./syncQueue";
+import {
+  getSyncQueue,
+  dequeueTasksByLocalIds,
+  markSyncTaskAttempt,
+  isTaskUnderBackoff,
+  moveTaskToDeadletter,
+} from "./syncQueue";
 import {
   markSyncing,
   markSyncIdle,
   markSyncError,
 } from "./syncStatus";
+
+/* =========================
+   CONFIG
+   ========================= */
+
+const MAX_RETRIES = 3;
 
 /**
  * Central offline → Convex sync orchestrator
@@ -36,23 +48,37 @@ export async function runOfflineSync(
   }
 
   try {
-    await syncMeals(convex);
-  } catch {
-    hadError = true;
-  }
-
-  /**
-   * Dequeue tasks that were successfully synced
-   * (workers already marked local entities as synced)
-   */
-  try {
     const queue = getSyncQueue();
 
-    for (const task of queue) {
-      dequeueSyncTask(task.id);
+    // Skip work entirely if all meal tasks are under backoff or exhausted
+    const hasRunnableMealTask = queue.some(
+      (t) =>
+        t.entity === "meal" &&
+        t.attempts < MAX_RETRIES &&
+        !isTaskUnderBackoff(t),
+    );
+
+    if (hasRunnableMealTask) {
+      const syncedMealIds = await syncMeals(convex);
+
+      // Dequeue only tasks that were positively acknowledged
+      dequeueTasksByLocalIds("meal", syncedMealIds);
     }
   } catch {
     hadError = true;
+
+    // Failure path: retry accounting + dead-letter
+    const queue = getSyncQueue();
+
+    for (const task of queue) {
+      if (task.entity !== "meal") continue;
+
+      if (task.attempts + 1 >= MAX_RETRIES) {
+        moveTaskToDeadletter(task.id);
+      } else {
+        markSyncTaskAttempt(task.id);
+      }
+    }
   }
 
   if (hadError) {
