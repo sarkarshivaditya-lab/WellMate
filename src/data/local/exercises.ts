@@ -17,6 +17,26 @@ export type LocalExercise = {
 const STORAGE_KEY = "physical.exercises";
 
 /* ======================================================
+   SNAPSHOT + SUBSCRIPTION (AUTHORITATIVE STORE)
+   ====================================================== */
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+let cachedSnapshot: LocalExercise[] = readAll();
+
+function notify() {
+  for (const l of listeners) l();
+}
+
+export function subscribeToExercises(listener: Listener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/* ======================================================
    INTERNAL HELPERS
    ====================================================== */
 
@@ -30,18 +50,24 @@ function readAll(): LocalExercise[] {
 
 function writeAll(items: LocalExercise[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+
+  // 🔥 CRITICAL: update cached snapshot ONCE
+  cachedSnapshot = items;
+
+  // 🔥 CRITICAL: notify subscribers
+  notify();
 }
 
 /* ======================================================
-   QUERIES
+   SNAPSHOT ACCESS (STABLE)
    ====================================================== */
 
-export function getExercisesByDate(dateIso: string): LocalExercise[] {
-  return readAll().filter((e) => e.dateIso === dateIso);
+export function getAllLocalExercises(): LocalExercise[] {
+  return cachedSnapshot;
 }
 
-export function getAllLocalExercises(): LocalExercise[] {
-  return readAll();
+export function getExercisesByDate(dateIso: string): LocalExercise[] {
+  return cachedSnapshot.filter((e) => e.dateIso === dateIso);
 }
 
 /* ======================================================
@@ -55,23 +81,16 @@ export function addExercise(
     ...input,
     id: crypto.randomUUID(),
     createdAt: Date.now(),
-    syncStatus: "pending", // 🔥 CRITICAL
+    syncStatus: "pending",
   };
 
-  const all = readAll();
-  writeAll([...all, next]);
+  writeAll([...cachedSnapshot, next]);
   return next;
 }
 
-/**
- * We DO NOT delete immediately.
- * This prevents data loss before server sync.
- */
 export function deleteExercise(exerciseId: string) {
-  const all = readAll();
-
   writeAll(
-    all.map((e) =>
+    cachedSnapshot.map((e) =>
       e.id === exerciseId
         ? { ...e, syncStatus: "pending" }
         : e,
@@ -80,14 +99,12 @@ export function deleteExercise(exerciseId: string) {
 }
 
 /* ======================================================
-   SYNC STATE UPDATES (CALLED BY SYNC ENGINE)
+   SYNC STATE UPDATES
    ====================================================== */
 
 export function markExerciseSynced(exerciseId: string) {
-  const all = readAll();
-
   writeAll(
-    all.map((e) =>
+    cachedSnapshot.map((e) =>
       e.id === exerciseId
         ? { ...e, syncStatus: "synced" }
         : e,
@@ -96,10 +113,8 @@ export function markExerciseSynced(exerciseId: string) {
 }
 
 export function markExerciseError(exerciseId: string) {
-  const all = readAll();
-
   writeAll(
-    all.map((e) =>
+    cachedSnapshot.map((e) =>
       e.id === exerciseId
         ? { ...e, syncStatus: "error" }
         : e,

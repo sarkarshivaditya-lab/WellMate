@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card.tsx";
 import ChartPie from "@/components/ChartPie.tsx";
 import ChartBar from "@/components/ChartBar.tsx";
+import { useWeeklyExerciseTrend } from "@/hooks/useWeeklyExerciseTrend";
 import {
   calculateBMR,
   calculateTDEE,
@@ -21,6 +22,10 @@ export default function Progress() {
   const today = new Date().toISOString().split("T")[0];
   const meals = useQuery(api.meals.getMealsByDate, { dateIso: today });
   const user = useQuery(api.users.getCurrentUser);
+
+  /* =========================
+     DAILY TOTALS
+     ========================= */
 
   type DayTotals = {
     calories: number;
@@ -49,6 +54,10 @@ export default function Progress() {
     initialTotals,
   );
 
+  /* =========================
+     TARGETS
+     ========================= */
+
   let calorieTarget = 2000;
   let macroTargets = { proteinG: 150, fatG: 67, carbsG: 200 };
 
@@ -71,6 +80,10 @@ export default function Progress() {
     );
   }
 
+  /* =========================
+     CHART DATA
+     ========================= */
+
   const pieData = dayTotals
     ? [
         {
@@ -91,6 +104,23 @@ export default function Progress() {
       ]
     : [];
 
+  /* =========================
+     WEEKLY ACTIVITY (LOCAL)
+     ========================= */
+
+  const weeklyExercise = useWeeklyExerciseTrend();
+
+  const weeklyActivityData = weeklyExercise.map((d) => ({
+    label: d.label,
+    value: Math.round(d.calories),
+    target: 0,
+    unit: "kcal",
+  }));
+
+  /* =========================
+     MICROS
+     ========================= */
+
   const micronutrientTargets: Record<string, number> = {
     vitaminA_mcg: 900,
     vitaminC_mg: 90,
@@ -110,7 +140,7 @@ export default function Progress() {
             (aggregateMicros[key] || 0) + (value as number);
         }
       } catch {
-        /* silent by design */
+        /* silent */
       }
     }
   });
@@ -128,9 +158,13 @@ export default function Progress() {
     })
     .filter((d) => d.value > 0);
 
+  /* =========================
+     RENDER
+     ========================= */
+
   return (
     <div className="space-y-4">
-      {/* SUMMARY */}
+      {/* DAILY SUMMARY */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Daily Summary</CardTitle>
@@ -203,18 +237,18 @@ export default function Progress() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
-              Micronutrient Intake
+              Weekly Activity
             </CardTitle>
             <CardDescription>
-              Progress toward daily targets
+              Calories burned over the last 7 days
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {barData.length > 0 ? (
-              <ChartBar data={barData} height={240} />
+            {weeklyActivityData.length > 0 ? (
+              <ChartBar data={weeklyActivityData} height={240} />
             ) : (
               <div className="py-10 text-sm text-muted-foreground">
-                No micronutrient data available
+                No activity logged yet
               </div>
             )}
           </CardContent>
@@ -223,4 +257,3 @@ export default function Progress() {
     </div>
   );
 }
-

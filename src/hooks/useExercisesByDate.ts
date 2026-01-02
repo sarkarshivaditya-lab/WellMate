@@ -1,29 +1,37 @@
 // src/hooks/useExercisesByDate.ts
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useAllExercises } from "@/hooks/useAllExercises";
 import {
-  getExercisesByDate,
   addExercise as addLocalExercise,
   deleteExercise as deleteLocalExercise,
   type LocalExercise,
 } from "@/data/local/exercises";
 
+/**
+ * useExercisesByDate
+ *
+ * Derived selector over the reactive exercise store.
+ * - No local state
+ * - No effects
+ * - No polling
+ * - Same-tab reactive
+ */
 export function useExercisesByDate(dateIso: string) {
-  const [exercises, setExercises] = useState<LocalExercise[] | undefined>(
-    undefined,
+  const allExercises = useAllExercises();
+
+  const exercises = useMemo(
+    () => allExercises.filter((e) => e.dateIso === dateIso),
+    [allExercises, dateIso],
   );
 
-  useEffect(() => {
-    setExercises(getExercisesByDate(dateIso));
-  }, [dateIso]);
-
-  const addExercise = (input: Omit<LocalExercise, "id" | "createdAt">) => {
-    const created = addLocalExercise(input);
-    setExercises((prev) => (prev ? [...prev, created] : [created]));
+  const addExercise = (
+    input: Omit<LocalExercise, "id" | "createdAt" | "syncStatus">,
+  ) => {
+    addLocalExercise(input);
   };
 
   const deleteExercise = (exerciseId: string) => {
     deleteLocalExercise(exerciseId);
-    setExercises((prev) => prev?.filter((e) => e.id !== exerciseId));
   };
 
   return {
@@ -32,4 +40,3 @@ export function useExercisesByDate(dateIso: string) {
     deleteExercise,
   };
 }
-

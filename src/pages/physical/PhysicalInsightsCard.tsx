@@ -30,19 +30,22 @@ type MealEntry = {
   totalFatG: number;
   totalCarbsG: number;
 };
-type ExerciseEntry = { caloriesBurnedEst?: number };
+type ExerciseEntry = {
+  caloriesBurnedEst?: number;
+};
 
 export default function PhysicalInsightsCard() {
   const today = new Date().toISOString().split("T")[0];
 
   const user = useQuery(api.users.getCurrentUser);
   const mealsToday = useQuery(api.meals.getMealsByDate, { dateIso: today });
-  const recentMeals = useQuery(api.meals.getRecentMeals, { days: 7 });
+  const meals7 = useQuery(api.meals.getRecentMeals, { days: 7 });
   const exercisesToday = useQuery(api.exercises.getExercisesByDate, {
     dateIso: today,
   });
   const sleep7 = useQuery(api.sleep.getRecentSleep, { days: 7 });
-  const meals7 = useQuery(api.meals.getRecentMeals, { days: 7 });
+
+  // 🔒 LOCAL-FIRST PLACEHOLDER (Convex-safe)
   const exercises7: DatedEntry[] = [];
 
   if (
@@ -89,14 +92,15 @@ export default function PhysicalInsightsCard() {
   const burnedCalories =
     exercisesToday.length > 0
       ? exercisesToday.reduce(
-          (sum: number, e: ExerciseEntry) => sum + (e.caloriesBurnedEst || 0),
+          (sum: number, e: ExerciseEntry) =>
+            sum + (e.caloriesBurnedEst || 0),
           0,
         )
       : null;
 
   const energyBalance = calculateEnergyBalance(intakeCalories, burnedCalories);
 
-  /* ---------- MACROS (IF PROFILE COMPLETE) ---------- */
+  /* ---------- MACROS ---------- */
 
   let macroAdherence = null;
 
@@ -130,13 +134,12 @@ export default function PhysicalInsightsCard() {
     macroAdherence = calculateMacroAdherence(macroTotals, macroTargets);
   }
 
-  /* ---------- CONSISTENCY SIGNALS ---------- */
+  /* ---------- CONSISTENCY ---------- */
 
-  const mealDays = new Set(recentMeals?.map((m: MealEntry) => m.dateIso) || [])
-    .size;
+  const mealDays = new Set(meals7.map((m) => m.dateIso)).size;
 
   const sleepDays = new Set(
-    sleep7.map((s: DatedEntry) => s.startIso?.split("T")[0] || ""),
+    sleep7.map((s: DatedEntry) => s.startIso?.split("T")[0]),
   ).size;
 
   /* ---------- CONFIDENCE ---------- */
@@ -144,11 +147,13 @@ export default function PhysicalInsightsCard() {
   const confidence = calculateConfidenceScore({
     user,
     mealsLast7: meals7,
-    exercisesLast7: exercises7,
+    exercisesLast7: exercises7, // ✅ safe placeholder
     sleepLast7: sleep7,
     mealsToday,
     exercisesToday,
-    sleepToday: sleep7.filter((s: DatedEntry) => s.startIso?.startsWith(today)),
+    sleepToday: sleep7.filter((s) =>
+      s.startIso?.startsWith(today),
+    ),
   });
 
   const decayedConfidence = applyConfidenceDecay({
@@ -167,7 +172,7 @@ export default function PhysicalInsightsCard() {
         ? "medium"
         : "low";
 
-  /* ---------- INSIGHT PIPELINE ---------- */
+  /* ---------- INSIGHTS ---------- */
 
   const rankedInsights = rankPhysicalInsights({
     insights: physicalInsights,
@@ -181,8 +186,8 @@ export default function PhysicalInsightsCard() {
   });
 
   const visibleInsights = suppressInsights(
-    rankedInsights.map((insight) => ({
-      ...insight,
+    rankedInsights.map((i) => ({
+      ...i,
       confidenceScore: confidence.confidenceScore,
     })),
   );
@@ -194,8 +199,8 @@ export default function PhysicalInsightsCard() {
   });
 
   const finalInsights = applyInsightSaturation(
-    memoryFiltered.map((insight) =>
-      modulateInsightCopy(insight, confidence.confidenceLevel),
+    memoryFiltered.map((i) =>
+      modulateInsightCopy(i, confidence.confidenceLevel),
     ),
   );
 
@@ -214,14 +219,15 @@ export default function PhysicalInsightsCard() {
             ? "unclear"
             : energyBalance > 0
               ? `slightly above maintenance (+${energyBalance} kcal)`
-              : `slightly below maintenance (${Math.abs(energyBalance)} kcal)`}
+              : `slightly below maintenance (${Math.abs(
+                  energyBalance,
+                )} kcal)`}
         </div>
 
         {macroAdherence && (
           <div className="text-muted-foreground">
-            Macronutrient intake relative to targets — Protein{" "}
-            {macroAdherence.proteinPct}%, Fat {macroAdherence.fatPct}%, Carbs{" "}
-            {macroAdherence.carbsPct}%
+            Macronutrient intake — Protein {macroAdherence.proteinPct}%, Fat{" "}
+            {macroAdherence.fatPct}%, Carbs {macroAdherence.carbsPct}%
           </div>
         )}
 
@@ -232,7 +238,9 @@ export default function PhysicalInsightsCard() {
 
         <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground space-y-1">
           {confidence.explanations.map((e, i) => (
-            <li key={i}>{applyConfidenceToExplanation(e, confidenceLevel)}</li>
+            <li key={i}>
+              {applyConfidenceToExplanation(e, confidenceLevel)}
+            </li>
           ))}
         </ul>
 
@@ -242,7 +250,9 @@ export default function PhysicalInsightsCard() {
               key={insight.id}
               className="rounded-md border border-border p-3"
             >
-              <div className="text-sm font-medium">{insight.displayTitle}</div>
+              <div className="text-sm font-medium">
+                {insight.displayTitle}
+              </div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {insight.displayBody}
               </div>
