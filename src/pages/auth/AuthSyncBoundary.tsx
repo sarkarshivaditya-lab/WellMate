@@ -9,6 +9,7 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  *
  * - Observes auth readiness
  * - Best-effort identity bootstrap
+ * - Promotes local onboarding → Convex
  * - Triggers offline → Convex sync exactly once per session
  *
  * HARD GUARANTEES:
@@ -21,7 +22,9 @@ import { runOfflineSync } from "@/sync/syncScheduler";
 export default function AuthSyncBoundary() {
   const { isAuthenticated, isLoading } = useAuth0();
   const convex = useConvex();
+
   const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const completeOnboarding = useMutation(api.users.completeOnboarding);
 
   const hasRunRef = useRef(false);
 
@@ -42,6 +45,18 @@ export default function AuthSyncBoundary() {
         // swallow — identity may already exist or backend not ready
       }
 
+      // 1.5️⃣ Promote onboarding snapshot (if present)
+      try {
+        const raw = localStorage.getItem("onboarding_profile");
+        if (raw) {
+          const profile = JSON.parse(raw);
+          await completeOnboarding(profile);
+          localStorage.removeItem("onboarding_profile");
+        }
+      } catch {
+        // swallow — onboarding promotion must never destabilize app
+      }
+
       // 2️⃣ Offline → Convex sync (fire-and-forget)
       try {
         await runOfflineSync(convex);
@@ -49,7 +64,13 @@ export default function AuthSyncBoundary() {
         // swallow — sync must never destabilize app
       }
     })();
-  }, [isLoading, isAuthenticated, convex, updateCurrentUser]);
+  }, [
+    isLoading,
+    isAuthenticated,
+    convex,
+    updateCurrentUser,
+    completeOnboarding,
+  ]);
 
   return null;
 }

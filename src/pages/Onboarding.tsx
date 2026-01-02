@@ -104,6 +104,34 @@ export default function Onboarding() {
 
   const [attemptedNext, setAttemptedNext] = useState(false);
 
+  function buildOnboardingProfile() {
+    return {
+      dob,
+      sex,
+
+      heightCm: Number(height) || null,
+      weightKg: Number(weight) || null,
+
+      activityLevel,
+      dailySteps,
+
+      weightGoal,
+      muscleGoal,
+
+      cycleLength: sex === "female" ? Number(cycleLength) || null : null,
+      lastPeriod: sex === "female" ? lastPeriod || null : null,
+
+      additionalHealth:
+        sex !== "female" && additionalHealthChoice === "yes"
+          ? additionalHealthNotes || null
+          : null,
+
+      // metadata
+      completedAt: Date.now(),
+      source: "onboarding",
+    };
+  }
+
   /* ---------- navigation ---------- */
   function isStepValid() {
     if (step === 1) return Boolean(dob && sex);
@@ -145,8 +173,16 @@ export default function Onboarding() {
     setAttemptedNext(true);
     if (!isStepValid()) return;
     setAttemptedNext(false);
+
+    const profile = buildOnboardingProfile();
+
+    // Persist onboarding snapshot (pre-auth, offline-safe)
+    localStorage.setItem("onboarding_profile", JSON.stringify(profile));
+
+    // Existing flow (unchanged)
     localStorage.setItem("onboarded", "true");
     localStorage.removeItem("postOnboardingTransitionShown");
+
     navigate("/physical");
   };
 

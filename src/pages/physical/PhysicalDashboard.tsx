@@ -19,14 +19,38 @@ import {
 } from "@/sync/syncStatus";
 
 /* ======================================================
-   LOCAL SAFE PROFILE SNAPSHOT (TEMP)
+   LOCAL SAFE PROFILE SNAPSHOT (ONBOARDING → DASHBOARD)
    ====================================================== */
 
 function useLocalPhysicalProfile() {
-  return {
-    heightCm: null as number | null,
-    weightKg: null as number | null,
-  };
+  try {
+    const raw = localStorage.getItem("onboarding_profile");
+    if (!raw) {
+      return {
+        heightCm: null as number | null,
+        weightKg: null as number | null,
+      };
+    }
+
+    const profile = JSON.parse(raw);
+
+    return {
+      heightCm:
+        typeof profile.heightCm === "number"
+          ? profile.heightCm
+          : null,
+
+      weightKg:
+        typeof profile.weightKg === "number"
+          ? profile.weightKg
+          : null,
+    };
+  } catch {
+    return {
+      heightCm: null as number | null,
+      weightKg: null as number | null,
+    };
+  }
 }
 
 /* ======================================================
