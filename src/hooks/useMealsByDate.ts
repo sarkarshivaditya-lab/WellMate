@@ -1,3 +1,6 @@
+import { enqueueSyncTask } from "@/sync/syncQueue";
+import { nanoid } from "nanoid";
+
 import { useEffect, useState } from "react";
 import type { LocalMeal } from "../data/local/mealsStore";
 import {
@@ -24,12 +27,29 @@ export function useMealsByDate(dateIso: string) {
     if (meal.dateIso === dateIso) {
       setMeals((prev) => [...prev, meal]);
     }
+
+    enqueueSyncTask({
+      id: nanoid(),
+      entity: "meal",
+      action: "create",
+      localId: meal.id,
+      createdAt: Date.now(),
+    });
+
     return meal;
   }
 
   function deleteMeal(mealId: string) {
     deleteMealFromStore(mealId);
     setMeals((prev) => prev.filter((m) => m.id !== mealId));
+
+    enqueueSyncTask({
+      id: nanoid(),
+      entity: "meal",
+      action: "delete",
+      localId: mealId,
+      createdAt: Date.now(),
+    });
   }
 
   return {

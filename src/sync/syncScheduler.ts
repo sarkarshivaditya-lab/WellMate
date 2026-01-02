@@ -3,6 +3,7 @@
 import type { ConvexReactClient } from "convex/react";
 import { syncExercises } from "./exerciseSync";
 import { syncMeals } from "./mealSync";
+import { getSyncQueue, dequeueSyncTask } from "./syncQueue";
 import {
   markSyncing,
   markSyncIdle,
@@ -14,7 +15,7 @@ import {
  *
  * GUARANTEES:
  * - Never throws
- * - Runs sequentially
+ * - Runs workers sequentially
  * - One failure never blocks others
  * - Safe to call repeatedly
  * - Safe when offline or unauthenticated
@@ -26,17 +27,37 @@ export async function runOfflineSync(
 
   markSyncing();
 
+  let hadError = false;
+
   try {
     await syncExercises(convex);
   } catch {
-    markSyncError();
+    hadError = true;
   }
 
   try {
     await syncMeals(convex);
   } catch {
-    markSyncError();
+    hadError = true;
   }
 
-  markSyncIdle();
+  /**
+   * Dequeue tasks that were successfully synced
+   * (workers already marked local entities as synced)
+   */
+  try {
+    const queue = getSyncQueue();
+
+    for (const task of queue) {
+      dequeueSyncTask(task.id);
+    }
+  } catch {
+    hadError = true;
+  }
+
+  if (hadError) {
+    markSyncError();
+  } else {
+    markSyncIdle();
+  }
 }
