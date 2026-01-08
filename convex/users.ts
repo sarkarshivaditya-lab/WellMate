@@ -67,18 +67,24 @@ export const getCurrentUser = query({
 
 export const completeOnboarding = mutation({
   args: {
-    dob: v.string(),
-    sex: v.union(v.literal("male"), v.literal("female"), v.literal("other")),
-    heightCm: v.number(),
-    weightKg: v.number(),
-    activityLevel: v.union(
-      v.literal("sedentary"),
-      v.literal("light"),
-      v.literal("moderate"),
-      v.literal("active"),
-      v.literal("veryActive"),
+    dob: v.optional(v.string()),
+    sex: v.optional(
+      v.union(v.literal("male"), v.literal("female"), v.literal("other")),
     ),
-    goal: v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")),
+    heightCm: v.optional(v.number()),
+    weightKg: v.optional(v.number()),
+    activityLevel: v.optional(
+      v.union(
+        v.literal("sedentary"),
+        v.literal("light"),
+        v.literal("moderate"),
+        v.literal("active"),
+        v.literal("veryActive"),
+      ),
+    ),
+    goal: v.optional(
+      v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")),
+    ),
     dietaryPreference: v.optional(v.string()),
     allergies: v.optional(v.array(v.string())),
     periodTrackingEnabled: v.optional(v.boolean()),
@@ -107,18 +113,30 @@ export const completeOnboarding = mutation({
       });
     }
 
-    await ctx.db.patch(user._id, {
-      dob: args.dob,
-      sex: args.sex,
-      heightCm: args.heightCm,
-      weightKg: args.weightKg,
-      activityLevel: args.activityLevel,
-      goal: args.goal,
-      dietaryPreference: args.dietaryPreference,
-      allergies: args.allergies,
-      periodTrackingEnabled: args.periodTrackingEnabled,
+    // 🔒 Idempotency: onboarding is write-once
+    if (user.hasCompletedOnboarding === true) {
+      return user._id;
+    }
+
+    // Apply only defined fields (schema-safe)
+    const patch: Record<string, unknown> = {
       hasCompletedOnboarding: true,
-    });
+    };
+
+    if (args.dob !== undefined) patch.dob = args.dob;
+    if (args.sex !== undefined) patch.sex = args.sex;
+    if (args.heightCm !== undefined) patch.heightCm = args.heightCm;
+    if (args.weightKg !== undefined) patch.weightKg = args.weightKg;
+    if (args.activityLevel !== undefined)
+      patch.activityLevel = args.activityLevel;
+    if (args.goal !== undefined) patch.goal = args.goal;
+    if (args.dietaryPreference !== undefined)
+      patch.dietaryPreference = args.dietaryPreference;
+    if (args.allergies !== undefined) patch.allergies = args.allergies;
+    if (args.periodTrackingEnabled !== undefined)
+      patch.periodTrackingEnabled = args.periodTrackingEnabled;
+
+    await ctx.db.patch(user._id, patch);
 
     return user._id;
   },

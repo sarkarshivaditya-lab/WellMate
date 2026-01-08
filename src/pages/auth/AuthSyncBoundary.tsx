@@ -34,7 +34,7 @@ export default function AuthSyncBoundary() {
     if (!navigator.onLine) return;
     if (hasRunRef.current) return;
 
-    // Lock immediately to guarantee exactly-once semantics
+    // Lock immediately to guarantee exactly-once semantics per session
     hasRunRef.current = true;
 
     (async () => {
@@ -49,8 +49,46 @@ export default function AuthSyncBoundary() {
       try {
         const raw = localStorage.getItem("onboarding_profile");
         if (raw) {
-          const profile = JSON.parse(raw);
-          await completeOnboarding(profile);
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+          // Defensive, schema-safe mapping (only pass known fields)
+          const payload: Record<string, unknown> = {};
+          if (typeof parsed.dob === "string") payload.dob = parsed.dob;
+          if (
+            parsed.sex === "male" ||
+            parsed.sex === "female" ||
+            parsed.sex === "other"
+          )
+            payload.sex = parsed.sex;
+          if (typeof parsed.heightCm === "number")
+            payload.heightCm = parsed.heightCm;
+          if (typeof parsed.weightKg === "number")
+            payload.weightKg = parsed.weightKg;
+          if (
+            parsed.activityLevel === "sedentary" ||
+            parsed.activityLevel === "light" ||
+            parsed.activityLevel === "moderate" ||
+            parsed.activityLevel === "active" ||
+            parsed.activityLevel === "veryActive"
+          )
+            payload.activityLevel = parsed.activityLevel;
+          if (
+            parsed.goal === "lose" ||
+            parsed.goal === "maintain" ||
+            parsed.goal === "gain"
+          )
+            payload.goal = parsed.goal;
+          if (typeof parsed.dietaryPreference === "string")
+            payload.dietaryPreference = parsed.dietaryPreference;
+          if (Array.isArray(parsed.allergies))
+            payload.allergies = parsed.allergies;
+          if (typeof parsed.periodTrackingEnabled === "boolean")
+            payload.periodTrackingEnabled = parsed.periodTrackingEnabled;
+
+          // Best-effort; server is idempotent
+          await completeOnboarding(payload);
+
+          // Remove only after successful mutation
           localStorage.removeItem("onboarding_profile");
         }
       } catch {
