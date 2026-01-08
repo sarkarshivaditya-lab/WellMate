@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 
@@ -19,8 +20,20 @@ import AppShell from "./components/layout/AppShell";
    ROUTE HELPERS
    ====================================================== */
 
-function RootRedirect() {
-  return <Navigate to="/physical" replace />;
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      loginWithRedirect();
+    }
+  }, [isLoading, isAuthenticated, loginWithRedirect]);
+
+  if (isLoading || !isAuthenticated) {
+    return null; // non-blocking, no UI flash
+  }
+
+  return <>{children}</>;
 }
 
 function RequireOnboarding({ children }: { children: React.ReactNode }) {
@@ -29,6 +42,18 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
     return <Navigate to="/onboarding" replace />;
   }
   return <>{children}</>;
+}
+
+function RootEntry() {
+  const { isAuthenticated, isLoading } = useAuth0();
+
+  if (isLoading) return null;
+
+  if (!isAuthenticated) {
+    return null; // RequireAuth will trigger login
+  }
+
+  return <Navigate to="/physical" replace />;
 }
 
 /* ======================================================
@@ -70,89 +95,106 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* Passive auth observation + one-time sync (safe mode) */}
+      {/* Passive auth observation + one-time sync */}
       <AuthSyncBoundary />
 
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="/" element={<RootEntry />} />
+
+        {/* Pre-auth onboarding */}
         <Route path="/onboarding" element={<Onboarding />} />
 
+        {/* Auth + onboarding protected app shell */}
         <Route
           path="/overview"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <Index />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Index />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/physical"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <TransitionGate>
-                  <PhysicalDashboard />
-                </TransitionGate>
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <TransitionGate>
+                    <PhysicalDashboard />
+                  </TransitionGate>
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/journal"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <Journal />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Journal />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/mental/coach"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <AiMentalCoach />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <AiMentalCoach />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/habits"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <Habits />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Habits />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/tools"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <Tools />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Tools />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 
         <Route
           path="/profile"
           element={
-            <RequireOnboarding>
-              <AppShell>
-                <Profile />
-              </AppShell>
-            </RequireOnboarding>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Profile />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
 

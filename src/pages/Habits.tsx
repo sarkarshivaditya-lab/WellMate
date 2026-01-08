@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -38,6 +36,12 @@ import {
   checkFeatureAccess,
   getFeatureLimit,
 } from "@/services/subscriptionUtils";
+import {
+  addHabit as addLocalHabit,
+  listHabits,
+  toggleEntry,
+  listEntriesByDate,
+} from "@/data/local/habitsStore";
 
 export default function Habits() {
   const navigate = useNavigate();
@@ -50,24 +54,19 @@ export default function Habits() {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState("09:00");
 
-  const habits = useQuery(api.habits.listHabits, { includeArchived: false });
-  const subscription = useQuery(api.subscriptions.getSubscription, {});
   const today = new Date().toISOString().split("T")[0];
-  const todayEntries = useQuery(api.habits.listHabitEntriesByDate, {
-    dateIso: today,
-  });
 
-  const addHabit = useMutation(api.habits.addHabit);
-  const toggleHabit = useMutation(api.habits.toggleHabitCompletion);
+  const habits = useMemo(() => listHabits(), []);
+  const todayEntries = useMemo(() => listEntriesByDate(today), [today]);
 
-  const handleAddHabit = async () => {
+  const handleAddHabit = () => {
     if (!title.trim()) {
       toast.error("Please enter a habit title");
       return;
     }
 
-    const limit = getFeatureLimit("habits-max", subscription || null);
-    if (limit !== null && habits && habits.length >= limit) {
+    const limit = getFeatureLimit("habits-max", null);
+    if (limit !== null && habits.length >= limit) {
       toast.error(
         `Free plan limited to ${limit} habits. Upgrade to Pro for unlimited habits.`,
       );
@@ -75,46 +74,36 @@ export default function Habits() {
       return;
     }
 
-    try {
-      await addHabit({
-        title,
-        description: description || undefined,
-        cadence,
-        remindersEnabled,
-        reminderTime: remindersEnabled ? reminderTime : undefined,
-      });
-      toast.success("Habit created!");
-      setTitle("");
-      setDescription("");
-      setShowDialog(false);
-    } catch {
-      toast.error("Failed to create habit");
-    }
+    addLocalHabit({
+      title,
+      description: description || undefined,
+      cadence,
+      remindersEnabled,
+      reminderTime: remindersEnabled ? reminderTime : undefined,
+    });
+
+    toast.success("Habit created (saved locally)");
+    setTitle("");
+    setDescription("");
+    setShowDialog(false);
   };
 
-  const handleToggle = async (habitId: string) => {
-    try {
-      await toggleHabit({ habitId: habitId as never, dateIso: today });
-    } catch {
-      toast.error("Failed to update habit");
-    }
+  const handleToggle = (localId: string) => {
+    toggleEntry(localId, today);
   };
 
-  const isCompletedToday = (habitId: string): boolean => {
-    if (!todayEntries) return false;
-    const entry = todayEntries.find(
-      (e: (typeof todayEntries)[number]) => e.habitId === habitId,
-    );
+  const isCompletedToday = (localId: string): boolean => {
+    const entry = todayEntries.find((e) => e.habitLocalId === localId);
     return entry?.completed || false;
   };
 
   const canAddMoreHabits = () => {
-    const limit = getFeatureLimit("habits-max", subscription || null);
+    const limit = getFeatureLimit("habits-max", null);
     if (limit === null) return true;
-    return !habits || habits.length < limit;
+    return habits.length < limit;
   };
 
-  if (habits === undefined || todayEntries === undefined) {
+  if (!habits) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="w-full max-w-xl space-y-4">
@@ -128,7 +117,6 @@ export default function Habits() {
 
   return (
     <div className="p-6 space-y-8">
-      {/* Hero */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Habits</h1>
@@ -210,16 +198,14 @@ export default function Habits() {
         </Dialog>
       </div>
 
-      {/* Gating */}
       {!canAddMoreHabits() && (
         <GatedFeatureBanner
           feature="Unlimited Habits"
-          description={`You've reached the free plan limit of ${getFeatureLimit("habits-max", subscription || null)} habits`}
+          description={`You've reached the free plan limit of ${getFeatureLimit("habits-max", null)} habits`}
           onUpgrade={() => navigate("/pricing")}
         />
       )}
 
-      {/* Content */}
       {habits.length === 0 ? (
         <Empty>
           <EmptyHeader>
@@ -240,13 +226,13 @@ export default function Habits() {
         </Empty>
       ) : (
         <div className="space-y-3">
-          {habits.map((habit: (typeof habits)[number]) => (
+          {habits.map((habit) => (
             <HabitCard
-              key={habit._id}
-              habit={habit}
-              isCompletedToday={isCompletedToday(habit._id)}
+              key={habit.localId}
+              habit={habit as never}
+              isCompletedToday={isCompletedToday(habit.localId)}
               streak={0}
-              onToggle={() => handleToggle(habit._id)}
+              onToggle={() => handleToggle(habit.localId)}
             />
           ))}
         </div>

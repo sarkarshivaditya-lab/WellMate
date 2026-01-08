@@ -3,6 +3,11 @@
 import type { ConvexReactClient } from "convex/react";
 import { syncExercises } from "./exerciseSync";
 import { syncMeals } from "./mealSync";
+import { syncHabits } from "./habitSync";
+import { syncMoods } from "./moodSync";
+import { syncSleep } from "./sleepSync";
+import { syncJournal } from "./journalSync";
+import { syncCycles } from "./cycleSync";
 import {
   getSyncQueue,
   dequeueTasksByLocalIds,
@@ -39,21 +44,70 @@ export async function runOfflineSync(
   if (!convex) return;
 
   track("sync_start");
-
   markSyncing();
 
   let hadError = false;
 
+  /* =========================
+     EXERCISES
+     ========================= */
   try {
     await syncExercises(convex);
   } catch {
     hadError = true;
   }
 
+  /* =========================
+     HABITS
+     ========================= */
+  try {
+    await syncHabits(convex);
+  } catch {
+    hadError = true;
+  }
+
+  /* =========================
+     MOODS
+     ========================= */
+  try {
+    await syncMoods(convex);
+  } catch {
+    hadError = true;
+  }
+
+  /* =========================
+     SLEEP
+     ========================= */
+  try {
+    await syncSleep(convex);
+  } catch {
+    hadError = true;
+  }
+
+  /* =========================
+     JOURNAL
+     ========================= */
+  try {
+    await syncJournal(convex);
+  } catch {
+    hadError = true;
+  }
+
+  /* =========================
+     CYCLE
+     ========================= */
+  try {
+    await syncCycles(convex);
+  } catch {
+    hadError = true;
+  }
+
+  /* =========================
+     MEALS (queue-based)
+     ========================= */
   try {
     const queue = getSyncQueue();
 
-    // Skip work entirely if all meal tasks are under backoff or exhausted
     const hasRunnableMealTask = queue.some(
       (t) =>
         t.entity === "meal" &&
@@ -63,14 +117,11 @@ export async function runOfflineSync(
 
     if (hasRunnableMealTask) {
       const syncedMealIds = await syncMeals(convex);
-
-      // Dequeue only tasks that were positively acknowledged
       dequeueTasksByLocalIds("meal", syncedMealIds);
     }
   } catch {
     hadError = true;
 
-    // Failure path: retry accounting + dead-letter
     const queue = getSyncQueue();
 
     for (const task of queue) {

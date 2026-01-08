@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api.js";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PlusIcon, MoonIcon } from "lucide-react";
 import { toast } from "sonner";
 import PageLayout from "@/components/layout/PageLayout";
+import {
+  addSleepLog,
+  listRecentSleep,
+} from "@/data/local/sleepStore";
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
 
@@ -28,43 +30,37 @@ export default function Sleep() {
   const [rating, setRating] = useState(3);
   const [notes, setNotes] = useState("");
 
-  const sleep = useQuery(api.sleep.getRecentSleep, { days: 7 });
-  const addSleep = useMutation(api.sleep.addSleepLog);
+  const sleep = useMemo(() => listRecentSleep(7), []);
 
-  const handleAddSleep = async () => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
+  const handleAddSleep = () => {
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .split("T")[0];
 
-      await addSleep({
-        startIso: `${yesterday}T${startTime}:00Z`,
-        endIso: `${today}T${endTime}:00Z`,
-        rating,
-        notes: notes || undefined,
-      });
-      toast.success("Sleep logged!");
-      setShowDialog(false);
-      setNotes("");
-    } catch (error) {
-      toast.error("Failed to log sleep");
-    }
+    addSleepLog({
+      startIso: `${yesterday}T${startTime}:00Z`,
+      endIso: `${today}T${endTime}:00Z`,
+      rating,
+      notes: notes || undefined,
+    });
+
+    toast.success("Sleep logged (saved locally)");
+    setShowDialog(false);
+    setNotes("");
   };
 
   const calculateAverage = () => {
-    if (!sleep || sleep.length === 0) return 0;
-    const total = sleep.reduce(
-      (sum: number, s: (typeof sleep)[number]) => sum + s.durationMin,
-      0,
-    );
+    if (sleep.length === 0) return 0;
+    const total = sleep.reduce((sum, s) => sum + s.durationMin, 0);
     return Math.round(total / sleep.length);
   };
 
-  const avgHours = Math.floor(calculateAverage() / 60);
-  const avgMins = calculateAverage() % 60;
+  const avg = calculateAverage();
+  const avgHours = Math.floor(avg / 60);
+  const avgMins = avg % 60;
 
-  if (sleep === undefined) {
+  if (!sleep) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-4xl">
@@ -94,6 +90,7 @@ export default function Sleep() {
               <DialogHeader>
                 <DialogTitle>Log Sleep</DialogTitle>
               </DialogHeader>
+
               <div className="space-y-4">
                 <div>
                   <Label>Bedtime</Label>
@@ -103,6 +100,7 @@ export default function Sleep() {
                     onChange={(e) => setStartTime(e.target.value)}
                   />
                 </div>
+
                 <div>
                   <Label>Wake Time</Label>
                   <Input
@@ -111,6 +109,7 @@ export default function Sleep() {
                     onChange={(e) => setEndTime(e.target.value)}
                   />
                 </div>
+
                 <div>
                   <Label>Sleep Quality</Label>
                   <div className="flex gap-2 mt-2">
@@ -118,13 +117,16 @@ export default function Sleep() {
                       <button
                         key={r}
                         onClick={() => setRating(r)}
-                        className={`text-3xl transition-all ${rating === r ? "scale-125" : "opacity-50"}`}
+                        className={`text-3xl transition-all ${
+                          rating === r ? "scale-125" : "opacity-50"
+                        }`}
                       >
                         {ratingEmojis[r - 1]}
                       </button>
                     ))}
                   </div>
                 </div>
+
                 <div>
                   <Label>Notes (optional)</Label>
                   <Textarea
@@ -133,6 +135,7 @@ export default function Sleep() {
                     rows={3}
                   />
                 </div>
+
                 <Button onClick={handleAddSleep} className="w-full">
                   Log Sleep
                 </Button>
@@ -141,7 +144,6 @@ export default function Sleep() {
           </Dialog>
         </div>
 
-        {/* Summary Card */}
         <Card>
           <CardHeader>
             <CardTitle>7-Day Average</CardTitle>
@@ -156,7 +158,6 @@ export default function Sleep() {
           </CardContent>
         </Card>
 
-        {/* Recent Sleep */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Sleep</CardTitle>
@@ -168,13 +169,14 @@ export default function Sleep() {
                 <p>No sleep logs yet</p>
               </div>
             ) : (
-              sleep.map((s: (typeof sleep)[number]) => {
+              sleep.map((s) => {
                 const hours = Math.floor(s.durationMin / 60);
                 const mins = s.durationMin % 60;
                 const date = new Date(s.startIso).toLocaleDateString();
+
                 return (
                   <div
-                    key={s._id}
+                    key={s.localId}
                     className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
                   >
                     <div>
