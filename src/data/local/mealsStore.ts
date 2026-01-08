@@ -11,7 +11,7 @@ export type LocalMeal = {
   totalProteinG: number;
   totalFatG: number;
   totalCarbsG: number;
-  items: any[];
+  items: Record<string, unknown>[];
 
   // 🔥 SYNC METADATA
   syncStatus: "pending" | "synced" | "error";

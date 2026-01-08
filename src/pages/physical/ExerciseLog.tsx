@@ -48,6 +48,10 @@ function ExerciseRowSkeleton() {
 
 type SyncStatus = "pending" | "synced" | "error";
 
+type ExerciseWithSyncStatus = {
+  syncStatus?: unknown;
+};
+
 function normalizeSyncStatus(value: unknown): SyncStatus {
   if (value === "synced" || value === "error" || value === "pending") {
     return value;
@@ -85,7 +89,6 @@ function SyncBadge({ status }: { status?: SyncStatus }) {
 
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
-
   const convex = useConvex();
 
   const { exercises, addExercise, deleteExercise } =
@@ -195,7 +198,7 @@ export default function ExerciseLog() {
           <div className="divide-y divide-border">
             {exercises.map((exercise) => {
               const syncStatus = normalizeSyncStatus(
-                (exercise as any).syncStatus,
+                (exercise as ExerciseWithSyncStatus).syncStatus,
               );
 
               return (

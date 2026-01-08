@@ -106,7 +106,7 @@ export async function syncMeals(
 
       if (task.action === "update" && meal) {
         await convex.mutation(api.meals.updateMeal, {
-          mealId: meal.id as any,
+          mealId: meal.id,
           updatedAt: meal.updatedAt,
           dateIso: meal.dateIso,
           name: meal.name,
@@ -114,7 +114,6 @@ export async function syncMeals(
           totalCalories: meal.totalCalories,
           totalProteinG: meal.totalProteinG,
           totalFatG: meal.totalFatG,
-          totalCarbsG: meal.totalCarbsG,
           sourceAdapter: meal.sourceAdapter,
         });
 
@@ -124,7 +123,7 @@ export async function syncMeals(
 
       if (task.action === "delete") {
         await convex.mutation(api.meals.deleteMeal, {
-          mealId: task.localId as any,
+          mealId: task.localId,
           deletedAt: Date.now(),
         });
 
@@ -135,7 +134,7 @@ export async function syncMeals(
       try {
         markMealError(task.localId);
       } catch {
-        // swallow
+        // intentionally ignored — local state must not break sync loop
       }
     }
   }

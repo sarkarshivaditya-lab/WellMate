@@ -50,12 +50,13 @@ function PageLayout({
     return subscribeToSyncStatus(() => forceRender());
   }, []);
 
+  // ✅ FIX: run once, consume one-shot signal
   React.useEffect(() => {
     if (consumeDeadletterOpen()) {
       setDeadletterOpen(true);
       setPanelOpen(false);
     }
-  });
+  }, []);
 
   React.useEffect(() => {
     function onClickOutside(e: MouseEvent) {

@@ -6,7 +6,7 @@ import { DefaultProviders } from "./components/providers/default";
 
 // auth0 domain intentionally not logged in production
 
-function Root() {
+export function Root() {
   const [, forceRender] = React.useState(0);
 
   React.useEffect(() => {

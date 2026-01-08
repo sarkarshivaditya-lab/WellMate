@@ -56,7 +56,9 @@ function loadQueueFromStorage() {
 function saveQueueToStorage() {
   try {
     localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
-  } catch {}
+  } catch {
+    // intentionally ignored — localStorage may be unavailable
+  }
 }
 
 function loadDeadletterFromStorage() {
@@ -78,7 +80,9 @@ function saveDeadletterToStorage() {
       DEADLETTER_STORAGE_KEY,
       JSON.stringify(deadletter),
     );
-  } catch {}
+  } catch {
+    // intentionally ignored — localStorage may be unavailable
+  }
 }
 
 // hydrate immediately on module load

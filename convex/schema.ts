@@ -7,7 +7,13 @@ export default defineSchema({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     dob: v.optional(v.string()),
-    sex: v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other"))),
+    sex: v.optional(
+      v.union(
+        v.literal("male"),
+        v.literal("female"),
+        v.literal("other"),
+      ),
+    ),
     heightCm: v.optional(v.number()),
     weightKg: v.optional(v.number()),
     activityLevel: v.optional(
@@ -16,10 +22,16 @@ export default defineSchema({
         v.literal("light"),
         v.literal("moderate"),
         v.literal("active"),
-        v.literal("veryActive")
-      )
+        v.literal("veryActive"),
+      ),
     ),
-    goal: v.optional(v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain"))),
+    goal: v.optional(
+      v.union(
+        v.literal("lose"),
+        v.literal("maintain"),
+        v.literal("gain"),
+      ),
+    ),
     dietaryPreference: v.optional(v.string()),
     allergies: v.optional(v.array(v.string())),
     periodTrackingEnabled: v.optional(v.boolean()),
@@ -30,29 +42,39 @@ export default defineSchema({
 
   mentalAiUsage: defineTable({
     userId: v.id("users"),
-    dateIso: v.string(),          // YYYY-MM-DD
-    count: v.number(),            // total calls today
-    lastCallTs: v.number(),       // epoch ms
+    dateIso: v.string(),
+    count: v.number(),
+    lastCallTs: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_user_and_date", ["userId", "dateIso"]),
 
-  /* ---------------- Existing Tables (UNCHANGED) ---------------- */
+  /* ---------------- Meals ---------------- */
 
   meals: defineTable({
     userId: v.id("users"),
     dateIso: v.string(),
     name: v.string(),
-    inputMode: v.union(v.literal("detailed"), v.literal("quick")),
+    inputMode: v.union(
+      v.literal("detailed"),
+      v.literal("quick"),
+    ),
     totalCalories: v.number(),
     totalProteinG: v.number(),
     totalFatG: v.number(),
     totalCarbsG: v.number(),
+
     micronutrientsJson: v.optional(v.string()),
     sourceAdapter: v.optional(v.string()),
+
+    // 🔥 OFFLINE SYNC FIELDS
+    fingerprint: v.optional(v.string()),
+    createdAt: v.optional(v.number()), // ✅ FIXED
+    updatedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
-    .index("by_user_and_date", ["userId", "dateIso"]),
+    .index("by_user_and_date", ["userId", "dateIso"])
+    .index("by_fingerprint", ["fingerprint"]),
 
   mealItems: defineTable({
     mealId: v.id("meals"),
@@ -65,6 +87,8 @@ export default defineSchema({
     quantity: v.number(),
     unit: v.string(),
   }).index("by_meal", ["mealId"]),
+
+  /* ---------------- Exercises ---------------- */
 
   exercises: defineTable({
     userId: v.id("users"),
@@ -79,6 +103,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_date", ["userId", "dateIso"]),
 
+  /* ---------------- Cycles ---------------- */
+
   cycles: defineTable({
     userId: v.id("users"),
     startDateIso: v.string(),
@@ -87,6 +113,8 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_start", ["userId", "startDateIso"]),
+
+  /* ---------------- Mood ---------------- */
 
   moods: defineTable({
     userId: v.id("users"),
@@ -97,6 +125,8 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_date", ["userId", "dateIso"]),
 
+  /* ---------------- Journal ---------------- */
+
   journalEntries: defineTable({
     userId: v.id("users"),
     dateIso: v.string(),
@@ -105,6 +135,8 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_date", ["userId", "dateIso"]),
+
+  /* ---------------- Insights ---------------- */
 
   insightsCache: defineTable({
     userId: v.id("users"),
@@ -116,11 +148,17 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_week", ["userId", "weekStart"]),
 
+  /* ---------------- Habits ---------------- */
+
   habits: defineTable({
     userId: v.id("users"),
     title: v.string(),
     description: v.optional(v.string()),
-    cadence: v.union(v.literal("daily"), v.literal("weekly"), v.literal("custom")),
+    cadence: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("custom"),
+    ),
     remindersEnabled: v.boolean(),
     reminderTime: v.optional(v.string()),
     archived: v.boolean(),
@@ -138,6 +176,8 @@ export default defineSchema({
     .index("by_user_and_date", ["userId", "dateIso"])
     .index("by_habit_and_date", ["habitId", "dateIso"]),
 
+  /* ---------------- Sleep ---------------- */
+
   sleepLogs: defineTable({
     userId: v.id("users"),
     startIso: v.string(),
@@ -149,11 +189,23 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_and_start", ["userId", "startIso"]),
 
+  /* ---------------- Subscriptions ---------------- */
+
   subscriptions: defineTable({
     userId: v.id("users"),
-    provider: v.union(v.literal("stripe"), v.literal("mock")),
-    status: v.union(v.literal("active"), v.literal("past_due"), v.literal("inactive")),
-    tier: v.union(v.literal("free"), v.literal("pro")),
+    provider: v.union(
+      v.literal("stripe"),
+      v.literal("mock"),
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("inactive"),
+    ),
+    tier: v.union(
+      v.literal("free"),
+      v.literal("pro"),
+    ),
     expiresAt: v.optional(v.string()),
     metadata: v.optional(v.string()),
   }).index("by_user", ["userId"]),
