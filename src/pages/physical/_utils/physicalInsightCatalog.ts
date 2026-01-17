@@ -1,3 +1,5 @@
+// src/pages/physical/_utils/physicalInsightCatalog.ts
+
 import type { PhysicalInsight } from "./types";
 
 export const physicalInsights: PhysicalInsight[] = [
@@ -19,6 +21,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Logging meals and activity more consistently will help clarify your energy balance.",
     impact: 2,
     requires: { meals: true, profile: true },
+    action: {
+      label: "Log meals today",
+      intent: "log",
+    },
   },
 
   /* =========================
@@ -31,6 +37,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Your protein intake appears below the recommended range for your body weight.",
     impact: 2,
     requires: { meals: true, profile: true },
+    action: {
+      label: "Review protein sources",
+      intent: "review",
+    },
   },
 
   {
@@ -39,6 +49,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Logging protein intake on more days will help assess whether you're meeting your needs.",
     impact: 1,
     requires: { meals: true },
+    action: {
+      label: "Log your next meal",
+      intent: "log",
+    },
   },
 
   /* =========================
@@ -51,6 +65,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Your sleep timing varies noticeably from day to day, which can affect recovery.",
     impact: 2,
     requires: { sleep: true },
+    action: {
+      label: "Aim for a consistent bedtime tonight",
+      intent: "adjust",
+    },
   },
 
   {
@@ -59,6 +77,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Track sleep on more nights to uncover meaningful sleep patterns.",
     impact: 1,
     requires: { sleep: true },
+    action: {
+      label: "Log last night’s sleep",
+      intent: "log",
+    },
   },
 
   /* =========================
@@ -79,6 +101,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Even partial daily logs can significantly improve insight accuracy.",
     impact: 1,
     requires: { meals: true },
+    action: {
+      label: "Log one thing today",
+      intent: "log",
+    },
   },
 
   /* =========================
@@ -91,6 +117,10 @@ export const physicalInsights: PhysicalInsight[] = [
     body: "Adding height, weight, and activity level will unlock more personalized insights.",
     impact: 3,
     requires: { profile: false },
+    action: {
+      label: "Complete profile",
+      intent: "adjust",
+    },
   },
 
   /* =========================

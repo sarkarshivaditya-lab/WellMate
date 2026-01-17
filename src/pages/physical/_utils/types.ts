@@ -1,3 +1,5 @@
+// src/pages/physical/_utils/types.ts
+
 export type PhysicalInsight = {
   id: string;
   title: string;
@@ -8,5 +10,11 @@ export type PhysicalInsight = {
     exercise?: boolean;
     sleep?: boolean;
     profile?: boolean;
+  };
+
+  // Phase 3: Action bridge (optional)
+  action?: {
+    label: string;
+    intent: "log" | "review" | "adjust";
   };
 };

@@ -1,6 +1,11 @@
+// src/pages/physical/PhysicalInsightsCard.tsx
+
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+
 import { physicalInsights } from "./_utils/physicalInsightCatalog";
 import { rankPhysicalInsights } from "./_utils/rankPhysicalInsights";
 import { suppressInsights } from "./_utils/insightSuppression";
@@ -22,6 +27,8 @@ import {
   calculateAge,
 } from "@/services/nutritionEngine";
 
+import { dispatchInsightAction } from "./_utils/insightActionDispatcher";
+
 type DatedEntry = { dateIso?: string; startIso?: string };
 type MealEntry = {
   dateIso: string;
@@ -36,6 +43,7 @@ type ExerciseEntry = {
 
 export default function PhysicalInsightsCard() {
   const today = new Date().toISOString().split("T")[0];
+  const navigate = useNavigate();
 
   const user = useQuery(api.users.getCurrentUser);
   const mealsToday = useQuery(api.meals.getMealsByDate, { dateIso: today });
@@ -45,10 +53,8 @@ export default function PhysicalInsightsCard() {
   });
   const sleep7 = useQuery(api.sleep.getRecentSleep, { days: 7 });
 
-  // 🔒 LOCAL-FIRST PLACEHOLDER (Convex-safe)
   const exercises7: DatedEntry[] = [];
 
-  // 1️⃣ Still loading Convex queries
   if (
     user === undefined ||
     mealsToday === undefined ||
@@ -65,8 +71,6 @@ export default function PhysicalInsightsCard() {
     );
   }
 
-  // 2️⃣ Authenticated route, but Convex data not hydrated yet
-  // Do NOT show auth CTA and do NOT block forever
   if (
     user === null ||
     mealsToday === null ||
@@ -77,72 +81,12 @@ export default function PhysicalInsightsCard() {
     return null;
   }
 
-  /* ---------- TODAY SNAPSHOT ---------- */
-
-  const intakeCalories = mealsToday.reduce(
-    (sum: number, m: MealEntry) => sum + m.totalCalories,
-    0,
-  );
-
-  const burnedCalories =
-    exercisesToday.length > 0
-      ? exercisesToday.reduce(
-          (sum: number, e: ExerciseEntry) =>
-            sum + (e.caloriesBurnedEst || 0),
-          0,
-        )
-      : null;
-
-  const energyBalance = calculateEnergyBalance(intakeCalories, burnedCalories);
-
-  /* ---------- MACROS ---------- */
-
-  let macroAdherence = null;
-
-  if (
-    user?.dob &&
-    user?.heightCm &&
-    user?.weightKg &&
-    user?.sex &&
-    user?.activityLevel &&
-    user?.goal
-  ) {
-    const age = calculateAge(user.dob);
-    const bmr = calculateBMR(user.weightKg, user.heightCm, age, user.sex);
-    const tdee = calculateTDEE(bmr, user.activityLevel);
-    const calorieTarget = calculateCalorieTarget(tdee, user.goal);
-    const macroTargets = calculateMacroTargets(
-      calorieTarget,
-      user.weightKg,
-      user.goal,
-    );
-
-    const macroTotals = mealsToday.reduce(
-      (acc, m: MealEntry) => ({
-        protein: acc.protein + m.totalProteinG,
-        fat: acc.fat + m.totalFatG,
-        carbs: acc.carbs + m.totalCarbsG,
-      }),
-      { protein: 0, fat: 0, carbs: 0 },
-    );
-
-    macroAdherence = calculateMacroAdherence(macroTotals, macroTargets);
-  }
-
-  /* ---------- CONSISTENCY ---------- */
-
-  const mealDays = new Set(meals7.map((m) => m.dateIso)).size;
-
-  const sleepDays = new Set(
-    sleep7.map((s: DatedEntry) => s.startIso?.split("T")[0]),
-  ).size;
-
   /* ---------- CONFIDENCE ---------- */
 
   const confidence = calculateConfidenceScore({
     user,
     mealsLast7: meals7,
-    exercisesLast7: exercises7, // ✅ safe placeholder
+    exercisesLast7: exercises7,
     sleepLast7: sleep7,
     mealsToday,
     exercisesToday,
@@ -208,52 +152,37 @@ export default function PhysicalInsightsCard() {
       </CardHeader>
 
       <CardContent className="space-y-3 text-sm">
-        <div className="text-muted-foreground">
-          Energy balance today appears{" "}
-          {energyBalance === null
-            ? "unclear"
-            : energyBalance > 0
-              ? `slightly above maintenance (+${energyBalance} kcal)`
-              : `slightly below maintenance (${Math.abs(
-                  energyBalance,
-                )} kcal)`}
-        </div>
-
-        {macroAdherence && (
-          <div className="text-muted-foreground">
-            Macronutrient intake — Protein {macroAdherence.proteinPct}%, Fat{" "}
-            {macroAdherence.fatPct}%, Carbs {macroAdherence.carbsPct}%
-          </div>
-        )}
-
-        <div className="text-muted-foreground">
-          Over the last week: meals logged on {mealDays} days, sleep tracked on{" "}
-          {sleepDays} days
-        </div>
-
-        <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground space-y-1">
-          {confidence.explanations.map((e, i) => (
-            <li key={i}>
-              {applyConfidenceToExplanation(e, confidenceLevel)}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-3 space-y-2">
+        <ul className="space-y-3">
           {finalInsights.map((insight) => (
-            <div
+            <li
               key={insight.id}
               className="rounded-md border border-border p-3"
             >
-              <div className="text-sm font-medium">
-                {insight.displayTitle}
-              </div>
+              <div className="font-medium">{insight.displayTitle}</div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {insight.displayBody}
               </div>
-            </div>
+
+              {insight.action && (
+                <div className="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() =>
+                      dispatchInsightAction({
+                        insight,
+                        navigate,
+                      })
+                    }
+                  >
+                    {insight.action.label}
+                  </Button>
+                </div>
+              )}
+            </li>
           ))}
-        </div>
+        </ul>
       </CardContent>
     </Card>
   );
