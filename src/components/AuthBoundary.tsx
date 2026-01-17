@@ -12,7 +12,7 @@ import {
  * Headless auth-aware sync boundary.
  *
  * Responsibilities:
- * - Wait for authenticated user identity (Convex)
+ * - Wait for Convex query to resolve
  * - Promote locally captured onboarding payload into Convex exactly once
  * - Never block UI
  * - Never throw
@@ -22,24 +22,25 @@ import {
  */
 export default function AuthBoundary() {
   const user = useQuery(api.users.getCurrentUser);
-  const completeOnboarding = useMutation(
-    api.users.completeOnboarding,
-  );
+  const completeOnboarding = useMutation(api.users.completeOnboarding);
 
   // Guard against double-apply during re-renders
   const appliedRef = useRef(false);
 
   useEffect(() => {
-    // Not authenticated yet or still loading
-    if (!user) return;
+    // 1️⃣ Still loading Convex auth/query
+    if (user === undefined) return;
 
-    // Already completed on server → nothing to do
+    // 2️⃣ Convex user not created yet → wait for bootstrap
+    if (user === null) return;
+
+    // 3️⃣ Already completed on server → clean up local payload
     if (user.hasCompletedOnboarding) {
       clearOnboardingPayload();
       return;
     }
 
-    // Prevent duplicate application in same session
+    // 4️⃣ Prevent duplicate application in same session
     if (appliedRef.current) return;
 
     const payload = readOnboardingPayload();
@@ -59,17 +60,13 @@ export default function AuthBoundary() {
 
           cycleLength: payload.cycleLength,
           lastPeriod: payload.lastPeriod,
-          additionalHealthNotes:
-            payload.additionalHealthNotes,
+          additionalHealthNotes: payload.additionalHealthNotes,
         });
 
         clearOnboardingPayload();
       } catch (err) {
-        // Silent failure — will retry on next auth-ready mount
-        console.error(
-          "Deferred onboarding sync failed:",
-          err,
-        );
+        // Silent failure — will retry on next auth-ready render
+        console.error("Deferred onboarding sync failed:", err);
         appliedRef.current = false;
       }
     })();

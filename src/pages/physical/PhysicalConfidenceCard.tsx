@@ -15,8 +15,11 @@ export default function PhysicalConfidenceCard() {
   });
   const sleep7 = useQuery(api.sleep.getRecentSleep, { days: 7 });
   const meals7 = useQuery(api.meals.getRecentMeals, { days: 7 });
+
+  // 🔒 LOCAL-FIRST PLACEHOLDER
   const exercises7: DatedEntry[] = [];
 
+  // 1️⃣ Still loading Convex queries
   if (
     user === undefined ||
     mealsToday === undefined ||
@@ -33,22 +36,16 @@ export default function PhysicalConfidenceCard() {
     );
   }
 
+  // 2️⃣ Authenticated route, but Convex data not hydrated yet
+  // Do NOT show auth CTA
   if (
+    user === null ||
     mealsToday === null ||
     exercisesToday === null ||
     sleep7 === null ||
     meals7 === null
   ) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Insight Confidence</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Sign in to see confidence score based on your recent logs.
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   const result = calculateConfidenceScore({
@@ -58,7 +55,9 @@ export default function PhysicalConfidenceCard() {
     sleepLast7: sleep7,
     mealsToday,
     exercisesToday,
-    sleepToday: sleep7.filter((s: DatedEntry) => s.startIso?.startsWith(today)),
+    sleepToday: sleep7.filter((s: DatedEntry) =>
+      s.startIso?.startsWith(today),
+    ),
   });
 
   return (
@@ -68,7 +67,9 @@ export default function PhysicalConfidenceCard() {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <div className="text-xl font-medium">{result.confidenceScore}%</div>
+        <div className="text-xl font-medium">
+          {result.confidenceScore}%
+        </div>
 
         <div className="text-xs text-muted-foreground">
           An estimate based on your recent logs

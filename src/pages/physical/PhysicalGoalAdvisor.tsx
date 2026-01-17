@@ -8,6 +8,7 @@ export default function PhysicalGoalAdvisor() {
   const meals = useQuery(api.meals.getRecentMeals, { days: 7 });
   const user = useQuery(api.users.getCurrentUser);
 
+  // 1️⃣ Still loading Convex queries
   if (meals === undefined || user === undefined) {
     return (
       <Card>
@@ -18,16 +19,13 @@ export default function PhysicalGoalAdvisor() {
     );
   }
 
+  // 2️⃣ Authenticated route, but Convex user not bootstrapped yet
+  // Do NOT show auth CTA and do NOT spin forever
   if (user === null) {
-    return (
-      <Card>
-        <CardContent className="text-sm text-muted-foreground">
-          Sign in to get personalized goal alignment tips.
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
+  // 3️⃣ User exists but goal missing
   if (!user.goal) {
     return (
       <Card>
@@ -54,10 +52,8 @@ export default function PhysicalGoalAdvisor() {
   return (
     <Card>
       <CardHeader>
-        {/* ✅ HORIZONTAL ROW INSIDE VERTICAL HEADER */}
         <div className="flex items-center justify-between">
           <CardTitle>Goal Alignment</CardTitle>
-
           <Button size="sm">Improve</Button>
         </div>
       </CardHeader>

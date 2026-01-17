@@ -8,6 +8,7 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  * AuthSyncBoundary
  *
  * - Observes auth readiness
+ * - Proves token readiness before Convex mutations
  * - Best-effort identity bootstrap
  * - Promotes local onboarding → Convex
  * - Triggers offline → Convex sync exactly once per session
@@ -20,7 +21,7 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  * - Safe unauthenticated
  */
 export default function AuthSyncBoundary() {
-  const { isAuthenticated, isLoading } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
   const convex = useConvex();
 
   const updateCurrentUser = useMutation(api.users.updateCurrentUser);
@@ -38,6 +39,14 @@ export default function AuthSyncBoundary() {
     hasRunRef.current = true;
 
     (async () => {
+      // 0️⃣ Prove Auth0 → Convex token readiness
+      try {
+        await getAccessTokenSilently();
+      } catch {
+        // Token not ready yet — abort silently, retry next session
+        return;
+      }
+
       // 1️⃣ Identity bootstrap — best effort only
       try {
         await updateCurrentUser();
@@ -105,6 +114,7 @@ export default function AuthSyncBoundary() {
   }, [
     isLoading,
     isAuthenticated,
+    getAccessTokenSilently,
     convex,
     updateCurrentUser,
     completeOnboarding,

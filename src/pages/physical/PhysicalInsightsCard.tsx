@@ -48,6 +48,7 @@ export default function PhysicalInsightsCard() {
   // 🔒 LOCAL-FIRST PLACEHOLDER (Convex-safe)
   const exercises7: DatedEntry[] = [];
 
+  // 1️⃣ Still loading Convex queries
   if (
     user === undefined ||
     mealsToday === undefined ||
@@ -64,22 +65,16 @@ export default function PhysicalInsightsCard() {
     );
   }
 
+  // 2️⃣ Authenticated route, but Convex data not hydrated yet
+  // Do NOT show auth CTA and do NOT block forever
   if (
+    user === null ||
     mealsToday === null ||
     exercisesToday === null ||
     sleep7 === null ||
     meals7 === null
   ) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Health Insights</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Sign in to see your personalized health insights.
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   /* ---------- TODAY SNAPSHOT ---------- */

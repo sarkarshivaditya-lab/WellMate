@@ -36,36 +36,28 @@ export default function PeriodTracker() {
     notes: "",
   });
 
+  // 1️⃣ Convex still loading
   if (user === undefined) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Period Tracking</CardTitle>
-          <CardDescription>Loading</CardDescription>
+          <CardDescription>Loading</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Loading your profile</p>
+          <p className="text-muted-foreground">Loading your profile</p>
         </CardContent>
       </Card>
     );
   }
 
+  // 2️⃣ Authenticated route, but user record not ready yet
+  // Do not show auth CTA and do not block forever
   if (user === null) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Period Tracking</CardTitle>
-          <CardDescription>Sign-in required</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Sign in to enable and use period tracking.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
+  // 3️⃣ Feature gating based on profile flag
   if (!user.periodTrackingEnabled) {
     return (
       <Card>
@@ -97,7 +89,7 @@ export default function PeriodTracker() {
       toast.success("Cycle added successfully");
       setShowAddCycle(false);
       setForm({ startDate: "", lengthDays: "", notes: "" });
-    } catch (error) {
+    } catch {
       toast.error("Failed to add cycle");
     }
   };
@@ -106,7 +98,7 @@ export default function PeriodTracker() {
     try {
       await deleteCycle({ cycleId });
       toast.success("Cycle deleted");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete cycle");
     }
   };
@@ -121,6 +113,7 @@ export default function PeriodTracker() {
 
   const predictNextPeriod = () => {
     if (!sortedCycles || sortedCycles.length < 2) return null;
+
     const cycleLengths = sortedCycles
       .slice(0, -1)
       .map((cycle, i) => {
@@ -128,7 +121,8 @@ export default function PeriodTracker() {
         const start = new Date(cycle.startDateIso);
         const nextStart = new Date(nextCycle.startDateIso);
         return Math.abs(
-          (start.getTime() - nextStart.getTime()) / (1000 * 60 * 60 * 24),
+          (start.getTime() - nextStart.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
       })
       .filter((length) => length > 0 && length < 60);
@@ -136,8 +130,10 @@ export default function PeriodTracker() {
     if (cycleLengths.length === 0) return null;
 
     const avgLength = Math.round(
-      cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length,
+      cycleLengths.reduce((a, b) => a + b, 0) /
+        cycleLengths.length,
     );
+
     const lastCycle = new Date(sortedCycles[0].startDateIso);
     const predicted = new Date(lastCycle);
     predicted.setDate(predicted.getDate() + avgLength);
@@ -152,18 +148,24 @@ export default function PeriodTracker() {
       {prediction && (
         <Card className="border-primary/50 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-lg">Next Period Prediction</CardTitle>
+            <CardTitle className="text-lg">
+              Next Period Prediction
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {new Date(prediction.date).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {new Date(prediction.date).toLocaleDateString(
+                "en-US",
+                {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                },
+              )}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Based on average cycle length of {prediction.avgLength} days
+              Based on average cycle length of{" "}
+              {prediction.avgLength} days
             </p>
           </CardContent>
         </Card>
@@ -174,7 +176,9 @@ export default function PeriodTracker() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Cycle History</CardTitle>
-              <CardDescription>Track your menstrual cycles</CardDescription>
+              <CardDescription>
+                Track your menstrual cycles
+              </CardDescription>
             </div>
             <Button onClick={() => setShowAddCycle(true)}>
               <PlusIcon className="mr-2 h-4 w-4" />
@@ -185,7 +189,7 @@ export default function PeriodTracker() {
         <CardContent className="space-y-3">
           {cycles === undefined ? (
             <div className="text-center py-8 text-muted-foreground">
-              Loading
+              Loading
             </div>
           ) : sortedCycles.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -198,14 +202,13 @@ export default function PeriodTracker() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="font-medium">
-                        {new Date(cycle.startDateIso).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )}
+                        {new Date(
+                          cycle.startDateIso,
+                        ).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
                       </div>
                       {cycle.lengthDays && (
                         <div className="text-sm text-muted-foreground mt-1">
@@ -221,7 +224,9 @@ export default function PeriodTracker() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteCycle(cycle._id)}
+                      onClick={() =>
+                        handleDeleteCycle(cycle._id)
+                      }
                       className="text-destructive"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -234,11 +239,16 @@ export default function PeriodTracker() {
         </CardContent>
       </Card>
 
-      <Dialog open={showAddCycle} onOpenChange={setShowAddCycle}>
+      <Dialog
+        open={showAddCycle}
+        onOpenChange={setShowAddCycle}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Cycle</DialogTitle>
-            <DialogDescription>Log a new menstrual cycle</DialogDescription>
+            <DialogDescription>
+              Log a new menstrual cycle
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -249,36 +259,54 @@ export default function PeriodTracker() {
                 type="date"
                 value={form.startDate}
                 onChange={(e) =>
-                  setForm({ ...form, startDate: e.target.value })
+                  setForm({
+                    ...form,
+                    startDate: e.target.value,
+                  })
                 }
               />
             </div>
 
             <div>
-              <Label htmlFor="lengthDays">Cycle Length (days, optional)</Label>
+              <Label htmlFor="lengthDays">
+                Cycle Length (days, optional)
+              </Label>
               <Input
                 id="lengthDays"
                 type="number"
                 placeholder="28"
                 value={form.lengthDays}
                 onChange={(e) =>
-                  setForm({ ...form, lengthDays: e.target.value })
+                  setForm({
+                    ...form,
+                    lengthDays: e.target.value,
+                  })
                 }
               />
             </div>
 
             <div>
-              <Label htmlFor="notes">Notes (optional)</Label>
+              <Label htmlFor="notes">
+                Notes (optional)
+              </Label>
               <Textarea
                 id="notes"
                 placeholder="Any notes about symptoms, mood, etc..."
                 value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    notes: e.target.value,
+                  })
+                }
                 rows={3}
               />
             </div>
 
-            <Button onClick={handleSaveCycle} className="w-full">
+            <Button
+              onClick={handleSaveCycle}
+              className="w-full"
+            >
               Save Cycle
             </Button>
           </div>
