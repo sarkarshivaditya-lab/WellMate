@@ -59,7 +59,7 @@ function PageLayout({
   }, []);
 
   React.useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
+    function onClickOutside(e: PointerEvent) {
       if (
         panelOpen &&
         panelRef.current &&
@@ -79,9 +79,9 @@ function PageLayout({
       }
     }
 
-    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("pointerdown", onClickOutside);
     return () =>
-      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("pointerdown", onClickOutside);
   }, [panelOpen, deadletterOpen]);
 
   const syncStatus = getSyncStatus();
@@ -270,7 +270,7 @@ function PageLayout({
         <div
           ref={deadRef}
           className="
-            fixed bottom-4 right-4 left-4 sm:left-auto sm:w-96
+            fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] right-4 left-4 sm:left-auto sm:w-96
             rounded-2xl border border-border bg-background
             shadow-xl p-4 z-50
             animate-in fade-in slide-in-from-bottom-2

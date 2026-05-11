@@ -24,6 +24,28 @@ export type LocalMeal = {
 
 const STORAGE_KEY = "nutrition.meals";
 
+/* ---------- snapshot + subscription ---------- */
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+let cachedSnapshot: LocalMeal[] = readAll();
+
+function notify() {
+  for (const l of listeners) l();
+}
+
+export function subscribeToMeals(listener: Listener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getAllLocalMeals(): LocalMeal[] {
+  return cachedSnapshot;
+}
+
 /* ---------- internals ---------- */
 
 function readAll(): LocalMeal[] {
@@ -36,18 +58,20 @@ function readAll(): LocalMeal[] {
 
 function writeAll(items: LocalMeal[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  cachedSnapshot = items;
+  notify();
 }
 
 /* ---------- queries ---------- */
 
 export function getMealsByDate(dateIso: string): LocalMeal[] {
-  return readAll().filter(
+  return cachedSnapshot.filter(
     (m) => m.dateIso === dateIso && !m.deletedAt,
   );
 }
 
 export function getPendingMeals(): LocalMeal[] {
-  return readAll().filter(
+  return cachedSnapshot.filter(
     (m) => m.syncStatus === "pending" && !m.deletedAt,
   );
 }
@@ -70,7 +94,7 @@ export function addMeal(
     syncStatus: "pending",
   };
 
-  writeAll([...readAll(), meal]);
+  writeAll([...cachedSnapshot, meal]);
 
   enqueueSyncTask({
     id: crypto.randomUUID(),
@@ -94,7 +118,7 @@ export function updateMeal(
   const now = Date.now();
 
   writeAll(
-    readAll().map((m) =>
+    cachedSnapshot.map((m) =>
       m.id === localMealId
         ? {
             ...m,
@@ -118,7 +142,7 @@ export function updateMeal(
 
 export function markMealSynced(localMealId: string) {
   writeAll(
-    readAll().map((m) =>
+    cachedSnapshot.map((m) =>
       m.id === localMealId
         ? { ...m, syncStatus: "synced" }
         : m,
@@ -128,7 +152,7 @@ export function markMealSynced(localMealId: string) {
 
 export function markMealError(localMealId: string) {
   writeAll(
-    readAll().map((m) =>
+    cachedSnapshot.map((m) =>
       m.id === localMealId
         ? { ...m, syncStatus: "error" }
         : m,
@@ -143,7 +167,7 @@ export function deleteMeal(localMealId: string) {
   const now = Date.now();
 
   writeAll(
-    readAll().map((m) =>
+    cachedSnapshot.map((m) =>
       m.id === localMealId
         ? {
             ...m,

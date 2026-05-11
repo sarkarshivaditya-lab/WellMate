@@ -31,6 +31,21 @@ export const addJournalEntry = mutation({
       });
     }
 
+    const existing = await ctx.db
+      .query("journalEntries")
+      .withIndex("by_user_and_date", (q) =>
+        q.eq("userId", user._id).eq("dateIso", args.dateIso),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        text: args.text,
+        tags: args.tags,
+      });
+      return existing._id;
+    }
+
     const entryId = await ctx.db.insert("journalEntries", {
       userId: user._id,
       dateIso: args.dateIso,

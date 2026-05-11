@@ -11,7 +11,8 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  * - Proves token readiness before Convex mutations
  * - Best-effort identity bootstrap
  * - Promotes local onboarding → Convex
- * - Triggers offline → Convex sync exactly once per session
+ * - Triggers offline → Convex sync once auth is ready and online
+ * - Resumes sync on reconnect if app started offline
  *
  * HARD GUARANTEES:
  * - NEVER redirects
@@ -29,13 +30,15 @@ export default function AuthSyncBoundary() {
 
   const hasRunRef = useRef(false);
 
-  useEffect(() => {
-    if (isLoading) return;
-    if (!isAuthenticated) return;
-    if (!navigator.onLine) return;
+  // runSyncOnce.current is reassigned every render so both the startup effect
+  // and the online event handler always close over the latest auth and convex
+  // state without stale values, while the ref object itself remains stable.
+  const runSyncOnce = useRef<() => void>(() => {});
+  runSyncOnce.current = () => {
+    if (isLoading || !isAuthenticated || !navigator.onLine) return;
     if (hasRunRef.current) return;
 
-    // Lock immediately to guarantee exactly-once semantics per session
+    // Lock immediately — prevents re-entry from concurrent triggers
     hasRunRef.current = true;
 
     (async () => {
@@ -82,11 +85,11 @@ export default function AuthSyncBoundary() {
           )
             payload.activityLevel = parsed.activityLevel;
           if (
-            parsed.goal === "lose" ||
-            parsed.goal === "maintain" ||
-            parsed.goal === "gain"
+            parsed.weightGoal === "lose" ||
+            parsed.weightGoal === "maintain" ||
+            parsed.weightGoal === "gain"
           )
-            payload.goal = parsed.goal;
+            payload.goal = parsed.weightGoal;
           if (typeof parsed.dietaryPreference === "string")
             payload.dietaryPreference = parsed.dietaryPreference;
           if (Array.isArray(parsed.allergies))
@@ -111,14 +114,20 @@ export default function AuthSyncBoundary() {
         // swallow — sync must never destabilize app
       }
     })();
-  }, [
-    isLoading,
-    isAuthenticated,
-    getAccessTokenSilently,
-    convex,
-    updateCurrentUser,
-    completeOnboarding,
-  ]);
+  };
+
+  // Startup trigger: fires when auth state settles
+  useEffect(() => {
+    runSyncOnce.current();
+  }, [isLoading, isAuthenticated]);
+
+  // Online-resume trigger: fires when connectivity is restored
+  // hasRunRef prevents re-running if startup sync already completed
+  useEffect(() => {
+    const handleOnline = () => runSyncOnce.current();
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
 
   return null;
 }

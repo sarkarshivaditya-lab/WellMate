@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Trash2, X } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel.d.ts";
 
 interface HabitCardProps {
@@ -9,6 +10,7 @@ interface HabitCardProps {
   streak: number;
   isCompletedToday: boolean;
   onToggle: () => void;
+  onArchive?: () => void;
   onClick?: () => void;
 }
 
@@ -17,8 +19,11 @@ export default function HabitCard({
   streak,
   isCompletedToday,
   onToggle,
+  onArchive,
   onClick,
 }: HabitCardProps) {
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
       <CardContent className="p-4">
@@ -48,21 +53,66 @@ export default function HabitCard({
               )}
             </div>
           </div>
-          <Button
-            size="sm"
-            variant={isCompletedToday ? "default" : "outline"}
-            className="flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-          >
-            {isCompletedToday ? (
-              <CheckCircle2 className="h-5 w-5" />
-            ) : (
-              <Circle className="h-5 w-5" />
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {onArchive && (
+              confirming ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive();
+                      setConfirming(false);
+                    }}
+                  >
+                    Remove
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirming(false);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirming(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )
             )}
-          </Button>
+
+            <Button
+              size="sm"
+              variant={isCompletedToday ? "default" : "outline"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirming(false);
+                onToggle();
+              }}
+            >
+              {isCompletedToday ? (
+                <CheckCircle2 className="h-5 w-5" />
+              ) : (
+                <Circle className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

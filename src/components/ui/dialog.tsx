@@ -90,6 +90,12 @@ function DialogContent({
             /* Layout */
             "grid gap-4 p-6",
 
+            /* Mobile keyboard safety — dvh tracks the visual viewport
+               (shrinks when iOS keyboard opens), so max-h stays within
+               what is actually visible. overflow-y-auto lets the browser
+               scroll focused inputs into view above the keyboard. */
+            "max-h-[85dvh] overflow-y-auto",
+
             /* Motion — weighted, not floaty */
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",

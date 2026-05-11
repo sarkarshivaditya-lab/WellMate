@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils.ts";
 import {
   Brain,
@@ -15,24 +15,32 @@ function NavItem({
   label,
   icon,
   primary = false,
+  activePaths = [],
 }: {
   to: string;
   label: string;
   icon: React.ReactNode;
   primary?: boolean;
+  activePaths?: string[];
 }) {
+  const { pathname } = useLocation();
+  const isParentActive = activePaths.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+
   return (
     <NavLink
       to={to}
       aria-label={label}
-      className={({ isActive }) =>
-        cn(
+      className={({ isActive }) => {
+        const active = isActive || isParentActive;
+        return cn(
           "flex flex-col items-center justify-center px-3 py-1 text-xs font-medium transition-colors",
           "text-muted-foreground",
-          isActive && "text-foreground",
-          primary && !isActive && "text-foreground/80",
-        )
-      }
+          active && "text-foreground",
+          primary && !active && "text-foreground/80",
+        );
+      }}
     >
       <span className="h-5 w-5 flex items-center justify-center">
         {icon}
@@ -44,7 +52,8 @@ function NavItem({
           "absolute inset-x-2 bottom-1 h-6 rounded-md bg-muted/60",
           "opacity-0",
           "pointer-events-none",
-          "[aria-current=page_&]:opacity-100",
+          isParentActive && "opacity-100",
+          "[[aria-current=page]_&]:opacity-100",
         )}
       />
     </NavLink>
@@ -65,6 +74,7 @@ export default function BottomNav() {
         <NavItem
           to="/overview"
           label="Overview"
+          activePaths={["/tools"]}
           icon={<LayoutGrid className="h-5 w-5" />}
         />
         <NavItem
@@ -76,6 +86,7 @@ export default function BottomNav() {
         <NavItem
           to="/journal"
           label="Mental"
+          activePaths={["/mental"]}
           icon={<Brain className="h-5 w-5" />}
         />
         <NavItem

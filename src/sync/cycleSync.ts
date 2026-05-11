@@ -9,7 +9,7 @@ export async function syncCycles(convex: ConvexReactClient) {
   const cycles = listCycles();
 
   for (const c of cycles) {
-    await convex.mutation(api.cycle.addCycle, {
+    await convex.mutation(api.cycles.addCycle, {
       startDateIso: c.startDateIso,
       lengthDays: c.lengthDays,
       notes: c.notes,

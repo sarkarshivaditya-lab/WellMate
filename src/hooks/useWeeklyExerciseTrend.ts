@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { getExercisesByDate } from "@/data/local/exercises";
+import { useMemo } from "react";
+import { useAllExercises } from "@/hooks/useAllExercises";
 
 type DayPoint = {
   dateIso: string;
@@ -26,29 +26,17 @@ function getLast7Days(): { dateIso: string; label: string }[] {
   return days;
 }
 
-export function useWeeklyExerciseTrend() {
-  const [data, setData] = useState<DayPoint[]>([]);
+export function useWeeklyExerciseTrend(): DayPoint[] {
+  const allExercises = useAllExercises();
+  const days = getLast7Days();
 
-  useEffect(() => {
-    const days = getLast7Days();
+  return useMemo(() => {
+    return days.map(({ dateIso, label }) => {
+      const calories = allExercises
+        .filter((e) => e.dateIso === dateIso)
+        .reduce((sum, e) => sum + (e.caloriesBurnedEst || 0), 0);
 
-    const points = days.map(({ dateIso, label }) => {
-      const exercises = getExercisesByDate(dateIso);
-
-      const calories = exercises.reduce(
-        (sum, e) => sum + (e.caloriesBurnedEst || 0),
-        0,
-      );
-
-      return {
-        dateIso,
-        label,
-        calories,
-      };
+      return { dateIso, label, calories };
     });
-
-    setData(points);
-  }, []);
-
-  return data;
+  }, [allExercises, days]);
 }

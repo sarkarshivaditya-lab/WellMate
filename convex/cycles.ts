@@ -28,6 +28,21 @@ export const addCycle = mutation({
         message: "User not found",
       });
     }
+    const existing = await ctx.db
+      .query("cycles")
+      .withIndex("by_user_and_start", (q) =>
+        q.eq("userId", user._id).eq("startDateIso", args.startDateIso),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        lengthDays: args.lengthDays,
+        notes: args.notes,
+      });
+      return existing._id;
+    }
+
     return await ctx.db.insert("cycles", {
       userId: user._id,
       ...args,

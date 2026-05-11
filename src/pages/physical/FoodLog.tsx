@@ -190,7 +190,7 @@ export default function FoodLog() {
       </CardContent>
 
       <Dialog open={showAddMeal} onOpenChange={setShowAddMeal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Meal</DialogTitle>
             <DialogDescription>

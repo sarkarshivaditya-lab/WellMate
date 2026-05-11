@@ -32,10 +32,27 @@ export const addSleepLog = mutation({
       });
     }
 
-    // Calculate duration in minutes
-    const start = new Date(args.startIso);
-    const end = new Date(args.endIso);
-    const durationMin = Math.round((end.getTime() - start.getTime()) / 60000);
+    const existing = await ctx.db
+      .query("sleepLogs")
+      .withIndex("by_user_and_start", (q) =>
+        q.eq("userId", user._id).eq("startIso", args.startIso),
+      )
+      .first();
+
+    const durationMin = Math.round(
+      (new Date(args.endIso).getTime() - new Date(args.startIso).getTime()) /
+        60000,
+    );
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        endIso: args.endIso,
+        durationMin,
+        rating: args.rating,
+        notes: args.notes,
+      });
+      return existing._id;
+    }
 
     const sleepId = await ctx.db.insert("sleepLogs", {
       userId: user._id,

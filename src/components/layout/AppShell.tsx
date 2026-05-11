@@ -10,7 +10,7 @@ export default function AppShell({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main scrollable content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom)+1.5rem)]">
         {children}
       </main>
 

@@ -87,6 +87,14 @@ function WellMateLauncher() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, thinking, clarify, open]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   async function handleSend(text: string) {
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -208,7 +216,8 @@ function WellMateLauncher() {
           className={cn(
             "fixed z-50 right-4",
             "bottom-[calc(env(safe-area-inset-bottom)+56px+64px)]",
-            "w-80",
+            "w-80 max-w-[calc(100vw-2rem)]",
+            "max-h-[60dvh]",
             "rounded-xl border bg-card text-card-foreground",
             "shadow-lg",
             "flex flex-col",
@@ -221,7 +230,7 @@ function WellMateLauncher() {
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3 text-sm">
             {messages.map((m) => (
               <div
                 key={m.id}

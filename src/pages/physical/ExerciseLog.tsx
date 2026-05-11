@@ -23,12 +23,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusIcon, TrashIcon, RefreshCcwIcon } from "lucide-react";
+import { PlusIcon, TrashIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
-import { runOfflineSync } from "@/sync/syncScheduler";
-import { useConvex } from "convex/react";
 
 /* ---------- Skeleton ---------- */
 
@@ -89,27 +87,18 @@ function SyncBadge({ status }: { status?: SyncStatus }) {
 
 export default function ExerciseLog() {
   const today = new Date().toISOString().split("T")[0];
-  const convex = useConvex();
 
   const { exercises, addExercise, deleteExercise } =
     useExercisesByDate(today);
 
   const [showAddExercise, setShowAddExercise] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({
     type: "cardio",
     name: "",
     durationMinutes: "",
     notes: "",
   });
-
-  const handleRetrySync = async () => {
-    try {
-      await runOfflineSync(convex);
-      toast.message("Sync triggered");
-    } catch {
-      // must never surface
-    }
-  };
 
   const handleSaveExercise = () => {
     if (!form.name || !form.durationMinutes) {
@@ -157,25 +146,14 @@ export default function ExerciseLog() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRetrySync}
-              title="Retry Sync (dev)"
-            >
-              <RefreshCcwIcon className="h-4 w-4" />
-            </Button>
-
-            <Button
-              onClick={() => setShowAddExercise(true)}
-              size="sm"
-              className="card-glow"
-            >
-              <PlusIcon className="mr-1.5 h-4 w-4" />
-              Add
-            </Button>
-          </div>
+          <Button
+            onClick={() => setShowAddExercise(true)}
+            size="sm"
+            className="card-glow"
+          >
+            <PlusIcon className="mr-1.5 h-4 w-4" />
+            Add
+          </Button>
         </div>
       </CardHeader>
 
@@ -226,13 +204,37 @@ export default function ExerciseLog() {
                     )}
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteExercise(exercise.id)}
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </Button>
+                  {confirmDeleteId === exercise.id ? (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          deleteExercise(exercise.id);
+                          setConfirmDeleteId(null);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setConfirmDeleteId(null)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setConfirmDeleteId(exercise.id)}
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               );
             })}

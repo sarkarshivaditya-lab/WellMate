@@ -3,7 +3,7 @@ import AiMentalCoach from "./AiMentalCoach";
 
 export default function Journal() {
   return (
-    <div className="p-6 space-y-8 max-w-2xl">
+    <div className="p-6 space-y-8 max-w-2xl mx-auto">
       {/* ======================================================
          Mental Header
          ====================================================== */}

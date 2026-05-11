@@ -89,13 +89,7 @@ export function addExercise(
 }
 
 export function deleteExercise(exerciseId: string) {
-  writeAll(
-    cachedSnapshot.map((e) =>
-      e.id === exerciseId
-        ? { ...e, syncStatus: "pending" }
-        : e,
-    ),
-  );
+  writeAll(cachedSnapshot.filter((e) => e.id !== exerciseId));
 }
 
 /* ======================================================

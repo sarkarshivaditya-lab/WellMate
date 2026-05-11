@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 
@@ -17,6 +18,24 @@ import Profile from "./pages/Profile";
 import AppShell from "./components/layout/AppShell";
 
 /* ======================================================
+   LOADING SCREEN
+   ====================================================== */
+
+function AppLoadingScreen() {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        WellMate
+      </p>
+      <div className="flex flex-col items-center gap-2 w-28">
+        <Skeleton className="h-1.5 w-full" />
+        <Skeleton className="h-1.5 w-2/3" />
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================
    ROUTE HELPERS
    ====================================================== */
 
@@ -30,7 +49,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
   if (isLoading || !isAuthenticated) {
-    return null; // non-blocking, no UI flash
+    return <AppLoadingScreen />;
   }
 
   return <>{children}</>;
@@ -47,10 +66,12 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 function RootEntry() {
   const { isAuthenticated, isLoading } = useAuth0();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return <AppLoadingScreen />;
+  }
 
   if (!isAuthenticated) {
-    return null; // RequireAuth will trigger login
+    return <AppLoadingScreen />;
   }
 
   return <Navigate to="/physical" replace />;
@@ -95,16 +116,12 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {/* Passive auth observation + one-time sync */}
       <AuthSyncBoundary />
 
       <Routes>
         <Route path="/" element={<RootEntry />} />
-
-        {/* Pre-auth onboarding */}
         <Route path="/onboarding" element={<Onboarding />} />
 
-        {/* Auth + onboarding protected app shell */}
         <Route
           path="/overview"
           element={

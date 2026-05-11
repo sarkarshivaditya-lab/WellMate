@@ -1,4 +1,6 @@
 import { useState, useMemo, useSyncExternalStore } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 
@@ -18,40 +20,6 @@ import {
   subscribeToSyncStatus,
 } from "@/sync/syncStatus";
 
-/* ======================================================
-   LOCAL SAFE PROFILE SNAPSHOT (ONBOARDING → DASHBOARD)
-   ====================================================== */
-
-function useLocalPhysicalProfile() {
-  try {
-    const raw = localStorage.getItem("onboarding_profile");
-    if (!raw) {
-      return {
-        heightCm: null as number | null,
-        weightKg: null as number | null,
-      };
-    }
-
-    const profile = JSON.parse(raw);
-
-    return {
-      heightCm:
-        typeof profile.heightCm === "number"
-          ? profile.heightCm
-          : null,
-
-      weightKg:
-        typeof profile.weightKg === "number"
-          ? profile.weightKg
-          : null,
-    };
-  } catch {
-    return {
-      heightCm: null as number | null,
-      weightKg: null as number | null,
-    };
-  }
-}
 
 /* ======================================================
    DATE HELPERS
@@ -254,7 +222,13 @@ function WeeklyActivityTrend() {
    ====================================================== */
 
 function PhysicalSummaryCard() {
-  const { heightCm, weightKg } = useLocalPhysicalProfile();
+  const user = useQuery(api.users.getCurrentUser);
+
+  // Still loading — render nothing to avoid flashing dashes
+  if (user === undefined) return null;
+
+  const heightCm = user?.heightCm ?? null;
+  const weightKg = user?.weightKg ?? null;
 
   let bmiDisplay = "—";
   if (heightCm && weightKg) {
@@ -291,9 +265,10 @@ function PhysicalSummaryCard() {
    ====================================================== */
 
 export default function PhysicalDashboard() {
-  const [tab, setTab] = useState<"overview" | "nutrition" | "activity">(
-    "overview",
-  );
+  const [tab, setTab] = useState<"overview" | "nutrition" | "activity">(() => {
+    const saved = sessionStorage.getItem("physical_tab");
+    return saved === "nutrition" || saved === "activity" ? saved : "overview";
+  });
 
   const syncStatus = useSyncExternalStore(
     subscribeToSyncStatus,
@@ -327,9 +302,11 @@ export default function PhysicalDashboard() {
         { label: "Activity", value: "activity" },
       ]}
       activeTab={tab}
-      onTabChange={(v) =>
-        setTab(v as "overview" | "nutrition" | "activity")
-      }
+      onTabChange={(v) => {
+        const next = v as "overview" | "nutrition" | "activity";
+        sessionStorage.setItem("physical_tab", next);
+        setTab(next);
+      }}
     >
       {tab === "overview" && (
         <div className="space-y-10">

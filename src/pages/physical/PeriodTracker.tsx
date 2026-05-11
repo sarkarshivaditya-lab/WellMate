@@ -57,6 +57,8 @@ export default function PeriodTracker() {
     return null;
   }
 
+  const setPeriodTracking = useMutation(api.users.setPeriodTracking);
+
   // 3️⃣ Feature gating based on profile flag
   if (!user.periodTrackingEnabled) {
     return (
@@ -65,11 +67,21 @@ export default function PeriodTracker() {
           <CardTitle>Period Tracking</CardTitle>
           <CardDescription>Not enabled</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Period tracking is not enabled for your account. You can enable it
-            in your profile settings.
+            Enable period tracking to log your cycles and get predictions.
           </p>
+          <Button
+            onClick={async () => {
+              try {
+                await setPeriodTracking({ enabled: true });
+              } catch {
+                toast.error("Could not enable period tracking");
+              }
+            }}
+          >
+            Enable Period Tracking
+          </Button>
         </CardContent>
       </Card>
     );

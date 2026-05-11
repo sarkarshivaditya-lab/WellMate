@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -38,6 +38,7 @@ import {
 } from "@/services/subscriptionUtils";
 import {
   addHabit as addLocalHabit,
+  archiveHabit,
   listHabits,
   toggleEntry,
   listEntriesByDate,
@@ -56,8 +57,8 @@ export default function Habits() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  const habits = useMemo(() => listHabits(), []);
-  const todayEntries = useMemo(() => listEntriesByDate(today), [today]);
+  const [habits, setHabits] = useState(() => listHabits());
+  const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));
 
   const handleAddHabit = () => {
     if (!title.trim()) {
@@ -81,6 +82,7 @@ export default function Habits() {
       remindersEnabled,
       reminderTime: remindersEnabled ? reminderTime : undefined,
     });
+    setHabits(listHabits());
 
     toast.success("Habit created (saved locally)");
     setTitle("");
@@ -90,6 +92,13 @@ export default function Habits() {
 
   const handleToggle = (localId: string) => {
     toggleEntry(localId, today);
+    setTodayEntries(listEntriesByDate(today));
+  };
+
+  const handleArchive = (localId: string) => {
+    archiveHabit(localId);
+    setHabits(listHabits());
+    toast.success("Habit removed");
   };
 
   const isCompletedToday = (localId: string): boolean => {
@@ -233,6 +242,7 @@ export default function Habits() {
               isCompletedToday={isCompletedToday(habit.localId)}
               streak={0}
               onToggle={() => handleToggle(habit.localId)}
+              onArchive={() => handleArchive(habit.localId)}
             />
           ))}
         </div>

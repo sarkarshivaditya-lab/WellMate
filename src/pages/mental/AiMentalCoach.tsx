@@ -15,9 +15,11 @@ import type { AiMentalResponse } from "@/services/aiMentalTypes";
 function isFallbackResponse(response: AiMentalResponse): boolean {
   return (
     response.confidence === "low" &&
-    response.summary.toLowerCase().includes("setting") ||
-    response.summary.toLowerCase().includes("configured") ||
-    response.summary.toLowerCase().includes("try again")
+    (
+      response.summary.toLowerCase().includes("setting") ||
+      response.summary.toLowerCase().includes("configured") ||
+      response.summary.toLowerCase().includes("try again")
+    )
   );
 }
 
@@ -90,7 +92,7 @@ export default function AiMentalCoach() {
   const fallbackMode = response ? isFallbackResponse(response) : false;
 
   return (
-    <div className="space-y-6 p-4 pb-24">
+    <div className="space-y-6 p-4">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex justify-center">

@@ -28,6 +28,8 @@ import { track } from "@/telemetry/telemetry";
 
 const MAX_RETRIES = 3;
 
+let isSyncing = false;
+
 /**
  * Central offline → Convex sync orchestrator
  *
@@ -35,13 +37,17 @@ const MAX_RETRIES = 3;
  * - Never throws
  * - Runs workers sequentially
  * - One failure never blocks others
- * - Safe to call repeatedly
+ * - Safe to call repeatedly (concurrent calls return immediately)
  * - Safe when offline or unauthenticated
  */
 export async function runOfflineSync(
   convex: ConvexReactClient | null | undefined,
 ) {
   if (!convex) return;
+  if (isSyncing) return;
+  isSyncing = true;
+
+  try {
 
   track("sync_start");
   markSyncing();
@@ -141,5 +147,9 @@ export async function runOfflineSync(
   } else {
     track("sync_end");
     markSyncIdle();
+  }
+
+  } finally {
+    isSyncing = false;
   }
 }
