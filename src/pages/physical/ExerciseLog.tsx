@@ -27,6 +27,7 @@ import { PlusIcon, TrashIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
+import { readOnboardingPayload } from "@/data/local/onboardingPayload";
 
 /* ---------- Skeleton ---------- */
 
@@ -107,7 +108,7 @@ export default function ExerciseLog() {
     }
 
     const durationMinutes = Number(form.durationMinutes);
-    const weightKg = 70;
+    const weightKg = readOnboardingPayload()?.weightKg ?? 70;
 
     const caloriesBurnedEst = estimateCaloriesFromExercise(
       form.type,

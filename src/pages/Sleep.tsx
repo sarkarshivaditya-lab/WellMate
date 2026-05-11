@@ -33,14 +33,20 @@ export default function Sleep() {
   const sleep = useMemo(() => listRecentSleep(7), []);
 
   const handleAddSleep = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date(Date.now() - 86400000)
-      .toISOString()
-      .split("T")[0];
+    const now = new Date();
+    const today = now.toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+      .toLocaleDateString("en-CA");
+
+    // Build offset string so timestamps represent local wall-clock time
+    const offsetMin = now.getTimezoneOffset();
+    const sign = offsetMin <= 0 ? "+" : "-";
+    const absMin = Math.abs(offsetMin);
+    const tzSuffix = `${sign}${String(Math.floor(absMin / 60)).padStart(2, "0")}:${String(absMin % 60).padStart(2, "0")}`;
 
     addSleepLog({
-      startIso: `${yesterday}T${startTime}:00Z`,
-      endIso: `${today}T${endTime}:00Z`,
+      startIso: `${yesterday}T${startTime}:00${tzSuffix}`,
+      endIso: `${today}T${endTime}:00${tzSuffix}`,
       rating,
       notes: notes || undefined,
     });
