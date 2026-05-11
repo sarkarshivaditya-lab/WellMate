@@ -12,21 +12,26 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Set up Node.js 18.x
         uses: actions/setup-node@v4
         with:
           node-version: '18.x'
-          cache: 'npm'
-      
+          cache: 'pnpm'
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-      
+
       - name: Install dependencies
-        run: npm ci
-      
+        run: pnpm install --frozen-lockfile
+
       - name: Build web app
-        run: npm run build:web
+        run: pnpm build
         env:
           NODE_ENV: production
       
