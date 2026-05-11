@@ -41,11 +41,8 @@ jobs:
         env:
           NODE_ENV: production
       
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Copy web assets to Capacitor
-        run: npx cap copy android
+      - name: Sync web assets to Android
+        run: npx cap sync android
       
       - name: Make gradlew executable
         run: chmod +x android/gradlew
