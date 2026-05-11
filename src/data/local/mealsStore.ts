@@ -1,6 +1,7 @@
 // src/data/local/mealsStore.ts
 
 import { enqueueSyncTask } from "@/sync/syncQueue";
+import type { MealItemData } from "@/services/mealService";
 
 export type LocalMeal = {
   id: string;
@@ -11,7 +12,9 @@ export type LocalMeal = {
   totalProteinG: number;
   totalFatG: number;
   totalCarbsG: number;
-  items: Record<string, unknown>[];
+  items: MealItemData[];
+  micronutrientsJson?: string;
+  sourceAdapter?: string;
 
   // 🔥 SYNC METADATA
   syncStatus: "pending" | "synced" | "error";

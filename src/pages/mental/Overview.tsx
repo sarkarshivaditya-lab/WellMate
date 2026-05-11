@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import MoodSelector from "@/components/MoodSelector";
 import MiniLineChart from "@/components/MiniLineChart";
-import PracticeCard from "@/components/PracticeCard";
+import PracticeCard, { type Practice } from "@/components/PracticeCard";
 import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
 import practicesData from "@/data/practices.json";
 
@@ -74,7 +74,7 @@ export default function Overview() {
   };
 
   const suggestedPractice =
-    practicesData[Math.floor(Math.random() * practicesData.length)];
+    practicesData[Math.floor(Math.random() * practicesData.length)] as Practice;
 
   return (
     <PageLayout

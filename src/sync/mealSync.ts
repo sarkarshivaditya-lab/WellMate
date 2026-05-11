@@ -2,6 +2,7 @@
 
 import type { ConvexReactClient } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import {
   getPendingMeals,
   markMealSynced,
@@ -106,7 +107,7 @@ export async function syncMeals(
 
       if (task.action === "update" && meal) {
         await convex.mutation(api.meals.updateMeal, {
-          mealId: meal.id,
+          mealId: meal.id as Id<"meals">,
           updatedAt: meal.updatedAt,
           dateIso: meal.dateIso,
           name: meal.name,
@@ -123,7 +124,7 @@ export async function syncMeals(
 
       if (task.action === "delete") {
         await convex.mutation(api.meals.deleteMeal, {
-          mealId: task.localId,
+          mealId: task.localId as Id<"meals">,
           deletedAt: Date.now(),
         });
 

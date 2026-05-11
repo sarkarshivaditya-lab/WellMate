@@ -7,7 +7,7 @@ import {
   SparklesIcon 
 } from "lucide-react";
 
-interface Practice {
+export interface Practice {
   id: string;
   title: string;
   type: "breathing" | "gratitude" | "reflection" | "grounding";

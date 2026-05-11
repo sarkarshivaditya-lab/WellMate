@@ -52,15 +52,16 @@ export default function AuthBoundary() {
       try {
         await completeOnboarding({
           dob: payload.dob,
-          sex: payload.sex,
+          sex: payload.sex || undefined,
           heightCm: payload.heightCm,
           weightKg: payload.weightKg,
           activityLevel: payload.activityLevel ?? undefined,
-          goal: payload.weightGoal,
-
-          cycleLength: payload.cycleLength,
-          lastPeriod: payload.lastPeriod,
-          additionalHealthNotes: payload.additionalHealthNotes,
+          goal:
+            payload.weightGoal === "lose" ||
+            payload.weightGoal === "maintain" ||
+            payload.weightGoal === "gain"
+              ? payload.weightGoal
+              : undefined,
         });
 
         clearOnboardingPayload();

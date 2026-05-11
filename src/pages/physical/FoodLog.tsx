@@ -108,7 +108,6 @@ export default function FoodLog() {
     const totals = calculateMealTotals(mealItems);
 
     addMeal({
-      id: crypto.randomUUID(),
       dateIso: today,
       name: mealName || "Meal",
       inputMode,

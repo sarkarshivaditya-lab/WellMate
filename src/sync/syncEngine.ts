@@ -1,6 +1,6 @@
-import type { SyncAdapter } from "./types";
+import type { SyncAdapter, SyncItem } from "./types";
 
-export async function runSync<T extends { id: string }>(
+export async function runSync<T extends SyncItem>(
   adapter: SyncAdapter<T>,
 ) {
   const pending = adapter.getPending();

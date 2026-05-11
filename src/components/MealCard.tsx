@@ -1,14 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { TrashIcon } from "lucide-react";
-import type { Doc } from "@/convex/_generated/dataModel";
 
-interface MealWithItems extends Doc<"meals"> {
-  items: Doc<"mealItems">[];
+interface DisplayMealItem {
+  name: string;
+  quantity: number;
+  calories: number;
+}
+
+interface DisplayMeal {
+  name: string;
+  totalCalories: number;
+  totalProteinG: number;
+  totalFatG: number;
+  totalCarbsG: number;
+  items: DisplayMealItem[];
 }
 
 interface MealCardProps {
-  meal: MealWithItems;
+  meal: DisplayMeal;
   onDelete?: () => void;
 }
 

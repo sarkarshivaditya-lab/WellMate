@@ -15,7 +15,7 @@ export function useMealsByDate(dateIso: string) {
   );
 
   function addMeal(
-    input: Omit<LocalMeal, "id" | "createdAt" | "syncStatus">,
+    input: Omit<LocalMeal, "id" | "createdAt" | "updatedAt" | "syncStatus" | "deletedAt">,
   ) {
     return addMealToStore(input);
   }

@@ -22,6 +22,7 @@ type PageTab = {
 type PageLayoutProps = {
   title?: string;
   subtitle?: string;
+  headerRight?: React.ReactNode;
   tabs?: PageTab[];
   activeTab?: string;
   onTabChange?: (value: string) => void;
