@@ -3,8 +3,10 @@ import { Input } from "@/components/ui/input.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
 import type { FoodSearchResult } from "@/adapters/foodAdapter.interface.ts";
-import { MockAdapter } from "@/adapters/mockAdapter.ts";
+import { NutritionApiAdapter } from "@/adapters/nutritionApiAdapter.ts";
 import { SearchIcon, Loader2Icon } from "lucide-react";
+
+const foodAdapter = new NutritionApiAdapter();
 
 interface FoodSearchInputProps {
   onSelect: (result: FoodSearchResult, quantity: number) => void;
@@ -17,13 +19,11 @@ export default function FoodSearchInput({ onSelect }: FoodSearchInputProps) {
   const [selectedResult, setSelectedResult] = useState<FoodSearchResult | null>(null);
   const [quantity, setQuantity] = useState(1);
   
-  const adapter = new MockAdapter();
-  
   const handleSearch = async () => {
     if (!query.trim()) return;
     setSearching(true);
     try {
-      const searchResults = await adapter.search(query);
+      const searchResults = await foodAdapter.search(query);
       setResults(searchResults);
     } catch (error) {
       console.error("Search error:", error);
