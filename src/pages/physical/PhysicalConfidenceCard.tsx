@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { calculateConfidenceScore } from "./_utils/confidenceScoring";
+import { useAllExercises } from "@/hooks/useAllExercises";
 
 type DatedEntry = { dateIso?: string; startIso?: string };
 
@@ -16,8 +18,13 @@ export default function PhysicalConfidenceCard() {
   const sleep7 = useQuery(api.sleep.getRecentSleep, { days: 7 });
   const meals7 = useQuery(api.meals.getRecentMeals, { days: 7 });
 
-  // 🔒 LOCAL-FIRST PLACEHOLDER
-  const exercises7: DatedEntry[] = [];
+  const allExercises = useAllExercises();
+  const exercises7 = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffIso = cutoff.toISOString().split("T")[0];
+    return allExercises.filter((e) => e.dateIso >= cutoffIso);
+  }, [allExercises]);
 
   // 1️⃣ Still loading Convex queries
   if (
