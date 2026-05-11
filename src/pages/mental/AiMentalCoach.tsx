@@ -199,15 +199,15 @@ export function CoachTabContent() {
               </p>
               <div className="space-y-1.5 text-[13px]">
                 <div>
-                  <span className="font-semibold">988</span>
+                  <span className="font-semibold">100</span>
                   {" "}— Suicide &amp; Crisis Lifeline (call or text)
                 </div>
                 <div>
-                  <span className="font-semibold">911</span>
+                  <span className="font-semibold">102</span>
                   {" "}— Emergency services
                 </div>
                 <div>
-                  <span className="font-semibold">741741</span>
+                  <span className="font-semibold">100/112</span>
                   {" "}— Crisis Text Line (text HOME)
                 </div>
               </div>

@@ -28,6 +28,8 @@ export default function PeriodTracker() {
   const cycles = useQuery(api.cycles.getCycles);
   const addCycle = useMutation(api.cycles.addCycle);
   const deleteCycle = useMutation(api.cycles.deleteCycle);
+  // Must be declared unconditionally — hooks cannot be called after early returns
+  const setPeriodTracking = useMutation(api.users.setPeriodTracking);
 
   const [showAddCycle, setShowAddCycle] = useState(false);
   const [form, setForm] = useState({
@@ -52,12 +54,9 @@ export default function PeriodTracker() {
   }
 
   // 2️⃣ Authenticated route, but user record not ready yet
-  // Do not show auth CTA and do not block forever
   if (user === null) {
     return null;
   }
-
-  const setPeriodTracking = useMutation(api.users.setPeriodTracking);
 
   // 3️⃣ Feature gating based on profile flag
   if (!user.periodTrackingEnabled) {

@@ -188,7 +188,18 @@ export default function FoodLog() {
         )}
       </CardContent>
 
-      <Dialog open={showAddMeal} onOpenChange={setShowAddMeal}>
+      <Dialog
+        open={showAddMeal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMealName("");
+            setMealItems([]);
+            setInputMode("quick");
+            setDetailedForm({ name: "", calories: "", protein: "", fat: "", carbs: "" });
+          }
+          setShowAddMeal(open);
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Meal</DialogTitle>

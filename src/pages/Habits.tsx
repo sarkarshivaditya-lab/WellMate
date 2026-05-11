@@ -109,18 +109,6 @@ export default function Habits() {
     return habits.length < limit;
   };
 
-  if (!habits) {
-    return (
-      <PageLayout title="Habits" subtitle="Build consistency through daily actions">
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-1/2" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      </PageLayout>
-    );
-  }
-
   return (
     <PageLayout
       title="Habits"
@@ -137,7 +125,13 @@ export default function Habits() {
       }
     >
       {/* Dialog is rendered here so it shares state with headerRight button */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {
+          if (!open) { setTitle(""); setDescription(""); setCadence("daily"); setRemindersEnabled(false); }
+          setShowDialog(open);
+        }}
+      >
         <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Habit</DialogTitle>

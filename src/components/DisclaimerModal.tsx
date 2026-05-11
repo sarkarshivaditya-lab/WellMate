@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { setDisclaimerAcked } from "@/data/disclaimerStore";
 import { FIRST_LAUNCH_POINTS, DISCLAIMER_SECTIONS } from "@/content/disclaimerCopy";
+
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 interface DisclaimerModalProps {
   onAck: () => void;
@@ -11,6 +13,32 @@ interface DisclaimerModalProps {
 
 export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
   const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const getFocusable = () =>
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
+
+    getFocusable()[0]?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const items = getFocusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   function handleAck() {
     setDisclaimerAcked();
@@ -19,6 +47,7 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
 
   return (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"

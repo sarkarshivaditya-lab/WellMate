@@ -37,7 +37,7 @@ export const FIRST_LAUNCH_POINTS = [
   "WellMate is a personal wellness companion, not a certified medical device.",
   "AI-generated suggestions are for general informational purposes only — not a substitute for professional medical advice, diagnosis, or treatment.",
   "Always consult a qualified healthcare provider before making health-related decisions.",
-  "If you are experiencing a medical or mental health emergency, call 911 or text 988 immediately.",
+  "If you are experiencing a medical or mental health emergency, call 102 or text 100 immediately.",
   "Your data is stored privately on this device by default.",
 ] as const;
 
@@ -56,7 +56,7 @@ export const DISCLAIMER_SECTIONS = [
   },
   {
     title: "Emergency Situations",
-    body: "WellMate is not an emergency service. If you are experiencing a medical or mental health emergency, call 911 immediately. For crisis support, call or text 988 (Suicide & Crisis Lifeline) or text HOME to 741741 (Crisis Text Line). Do not rely on this app in an emergency.",
+    body: "WellMate is not an emergency service. If you are experiencing a medical or mental health emergency, call 102 immediately. For crisis support, call or text 1066 (Suicide & Crisis Lifeline) or text HOME to 100/112 (Crisis Text Line). Do not rely on this app in an emergency.",
   },
   {
     title: "Your Responsibility",

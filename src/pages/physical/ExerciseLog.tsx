@@ -158,12 +158,7 @@ export default function ExerciseLog() {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {exercises === undefined ? (
-          <>
-            <ExerciseRowSkeleton />
-            <ExerciseRowSkeleton />
-          </>
-        ) : exercises.length === 0 ? (
+        {exercises.length === 0 ? (
           <div className="py-8 text-center space-y-1">
             <div className="text-sm text-muted-foreground">
               No exercise logged yet today
@@ -242,7 +237,13 @@ export default function ExerciseLog() {
         )}
       </CardContent>
 
-      <Dialog open={showAddExercise} onOpenChange={setShowAddExercise}>
+      <Dialog
+        open={showAddExercise}
+        onOpenChange={(open) => {
+          if (!open) setForm({ type: "cardio", name: "", durationMinutes: "", notes: "" });
+          setShowAddExercise(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Exercise</DialogTitle>

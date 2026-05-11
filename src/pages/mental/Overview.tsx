@@ -78,8 +78,10 @@ export default function Overview() {
   const todayMood = moods.find((m) => m.dateIso === today) ?? null;
   const recentMoods = moods.slice(-7);
   const moodData = recentMoods.map((m) => m.moodValue);
-  const suggestedPractice =
-    practicesData[Math.floor(Math.random() * practicesData.length)] as Practice;
+  // Stabilize with useState so it doesn't re-randomize on every render
+  const [suggestedPractice] = useState(
+    () => practicesData[Math.floor(Math.random() * practicesData.length)] as Practice,
+  );
 
   // Journal helpers
   function refreshEntries() {
@@ -163,58 +165,48 @@ export default function Overview() {
               <CardTitle className="text-lg">Today's Mood</CardTitle>
             </CardHeader>
             <CardContent>
-              {todayMood ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="text-5xl">{MOOD_EMOJIS[todayMood.moodValue - 1]}</span>
-                    <div>
-                      <p className="text-lg font-medium">{MOOD_LABELS[todayMood.moodValue - 1]}</p>
-                      {todayMood.note && (
-                        <p className="mt-1 text-sm text-muted-foreground">{todayMood.note}</p>
-                      )}
+              {/* Single Dialog instance — content adapts based on todayMood */}
+              <Dialog open={showMoodDialog} onOpenChange={setShowMoodDialog}>
+                {todayMood ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-5xl">{MOOD_EMOJIS[todayMood.moodValue - 1]}</span>
+                      <div>
+                        <p className="text-lg font-medium">{MOOD_LABELS[todayMood.moodValue - 1]}</p>
+                        {todayMood.note && (
+                          <p className="mt-1 text-sm text-muted-foreground">{todayMood.note}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <Dialog open={showMoodDialog} onOpenChange={setShowMoodDialog}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm">Update</Button>
                     </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>How are you feeling right now?</DialogTitle>
-                      </DialogHeader>
-                      <MoodSelector
-                        initialMood={todayMood.moodValue}
-                        initialNote={todayMood.note}
-                        onSave={handleSaveMood}
-                        onCancel={() => setShowMoodDialog(false)}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              ) : (
-                <div className="py-6 text-center space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    You haven't checked in with yourself today
-                  </p>
-                  <Dialog open={showMoodDialog} onOpenChange={setShowMoodDialog}>
+                  </div>
+                ) : (
+                  <div className="py-6 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      You haven't checked in with yourself today
+                    </p>
                     <DialogTrigger asChild>
                       <Button>
                         <PlusIcon className="h-4 w-4" />
                         Check in
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>How are you feeling right now?</DialogTitle>
-                      </DialogHeader>
-                      <MoodSelector
-                        onSave={handleSaveMood}
-                        onCancel={() => setShowMoodDialog(false)}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
+                  </div>
+                )}
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>How are you feeling right now?</DialogTitle>
+                  </DialogHeader>
+                  <MoodSelector
+                    initialMood={todayMood?.moodValue}
+                    initialNote={todayMood?.note}
+                    onSave={handleSaveMood}
+                    onCancel={() => setShowMoodDialog(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
 
@@ -370,7 +362,7 @@ export default function Overview() {
           JOURNAL EDITOR — always mounted, accessible from any tab
       ────────────────────────────────────────────── */}
       <Dialog open={showEditor} onOpenChange={(open) => !open && closeEditor()}>
-        <DialogContent className="max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
+        <DialogContent className="max-h-[92dvh] flex flex-col gap-0 p-0 overflow-hidden">
           <DialogHeader className="px-5 pt-5 pb-4 border-b border-border/40">
             <DialogTitle className="text-base font-semibold">
               {editingEntry ? "Edit entry" : "New entry"}

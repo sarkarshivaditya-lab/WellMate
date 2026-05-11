@@ -11,6 +11,22 @@ type Message = {
   text: string;
 };
 
+const CHAT_SESSION_KEY = "wellmate_chat_session";
+
+const DEFAULT_MESSAGES: Message[] = [
+  { id: "m1", role: "assistant", text: "Hi, I'm WellMate 👋" },
+  { id: "m2", role: "assistant", text: "I'll help you with fitness, nutrition, and wellbeing." },
+  { id: "m3", role: "assistant", text: "Ask me anything to get started." },
+];
+
+function loadChatMessages(): Message[] {
+  try {
+    const stored = sessionStorage.getItem(CHAT_SESSION_KEY);
+    if (stored) return JSON.parse(stored) as Message[];
+  } catch { /* ignore */ }
+  return DEFAULT_MESSAGES;
+}
+
 type ClarifyPayload = {
   question: string;
   options?: string[];
@@ -24,15 +40,7 @@ function detectCrisis(text: string): boolean {
 function WellMateLauncher() {
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
-  const [messages, setMessages] = React.useState<Message[]>([
-    { id: "m1", role: "assistant", text: "Hi, I'm WellMate 👋" },
-    {
-      id: "m2",
-      role: "assistant",
-      text: "I'll help you with fitness, nutrition, and wellbeing.",
-    },
-    { id: "m3", role: "assistant", text: "Ask me anything to get started." },
-  ]);
+  const [messages, setMessages] = React.useState<Message[]>(loadChatMessages);
   const [thinking, setThinking] = React.useState(false);
   const [clarify, setClarify] = React.useState<ClarifyPayload | null>(null);
   const [showSafetyNotice, setShowSafetyNotice] = React.useState(false);
@@ -102,6 +110,12 @@ function WellMateLauncher() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(messages));
+    } catch { /* ignore quota errors */ }
+  }, [messages]);
 
   async function handleSend(text: string) {
     const userMessage: Message = {
