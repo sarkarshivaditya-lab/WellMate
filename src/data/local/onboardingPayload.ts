@@ -51,7 +51,7 @@ export type OnboardingPayload = {
    STORAGE HELPERS
    ====================================================== */
 
-const STORAGE_KEY = "onboardingPayload";
+const STORAGE_KEY = "onboarding_profile";
 
 export function readOnboardingPayload():
   | OnboardingPayload
