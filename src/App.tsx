@@ -15,6 +15,7 @@ import MentalOverview from "./pages/mental/Overview";
 import Tools from "./pages/Tools";
 import AiMentalCoach from "./pages/mental/AiMentalCoach";
 import Profile from "./pages/Profile";
+import Roadmap from "./pages/Roadmap";
 
 import AppShell from "./components/layout/AppShell";
 
@@ -225,6 +226,19 @@ export default function App() {
               <RequireOnboarding>
                 <AppShell>
                   <Profile />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/roadmap"
+          element={
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Roadmap />
                 </AppShell>
               </RequireOnboarding>
             </RequireAuth>

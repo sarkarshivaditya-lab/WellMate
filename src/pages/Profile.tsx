@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageLayout from "@/components/layout/PageLayout";
@@ -11,9 +13,8 @@ import {
 import { useAuth0 } from "@auth0/auth0-react";
 import { getAllLocalExercises } from "@/data/local/exercises";
 import { getPendingMeals } from "@/data/local/mealsStore";
-import { ShieldAlert } from "lucide-react";
+import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
 import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
-import { useState } from "react";
 
 /**
  * Profile / Settings
@@ -35,6 +36,7 @@ export default function Profile() {
   } = useAuth0();
 
   const [safetySheetOpen, setSafetySheetOpen] = useState(false);
+  const navigate = useNavigate();
 
   // ---------- Sync status (best-effort, read-only) ----------
   let pendingCount = 0;
@@ -212,6 +214,30 @@ export default function Profile() {
           </p>
         </CardContent>
       </Card>
+
+      {/* =========================
+          WHAT'S NEXT
+         ========================= */}
+      <button
+        type="button"
+        onClick={() => navigate("/roadmap")}
+        className="w-full text-left"
+      >
+        <Card className="border-primary/20 hover:border-primary/40 hover:bg-primary/[0.02] transition-colors duration-150">
+          <CardContent className="pt-4 pb-4 flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">What's Next</p>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">
+                Roadmap, vision, and future integrations
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          </CardContent>
+        </Card>
+      </button>
 
       {/* =========================
           HEALTH & SAFETY
