@@ -39,6 +39,8 @@ import {
   listHabits,
   toggleEntry,
   listEntriesByDate,
+  listAllEntries,
+  computeStreak,
 } from "@/data/local/habitsStore";
 
 export default function Habits() {
@@ -56,6 +58,7 @@ export default function Habits() {
 
   const [habits, setHabits] = useState(() => listHabits());
   const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));
+  const [allEntries, setAllEntries] = useState(() => listAllEntries());
 
   const handleAddHabit = () => {
     if (!title.trim()) {
@@ -90,6 +93,7 @@ export default function Habits() {
   const handleToggle = (localId: string) => {
     toggleEntry(localId, today);
     setTodayEntries(listEntriesByDate(today));
+    setAllEntries(listAllEntries());
   };
 
   const handleArchive = (localId: string) => {
@@ -230,7 +234,7 @@ export default function Habits() {
               key={habit.localId}
               habit={habit as never}
               isCompletedToday={isCompletedToday(habit.localId)}
-              streak={0}
+              streak={computeStreak(habit.localId, allEntries)}
               onToggle={() => handleToggle(habit.localId)}
               onArchive={() => handleArchive(habit.localId)}
             />

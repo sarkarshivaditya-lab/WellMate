@@ -72,6 +72,38 @@ export function listEntriesByDate(dateIso: string): LocalHabitEntry[] {
   return entries.filter((e) => e.dateIso === dateIso);
 }
 
+export function listAllEntries(): LocalHabitEntry[] {
+  return load<LocalHabitEntry[]>(HABIT_ENTRIES_KEY, []);
+}
+
+export function computeStreak(habitLocalId: string, entries: LocalHabitEntry[]): number {
+  const completedDates = new Set(
+    entries
+      .filter((e) => e.habitLocalId === habitLocalId && e.completed)
+      .map((e) => e.dateIso),
+  );
+
+  let streak = 0;
+  const today = new Date();
+
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const iso = d.toISOString().split("T")[0];
+
+    if (completedDates.has(iso)) {
+      streak++;
+    } else if (i === 0) {
+      // today not completed — still allow streak from yesterday
+      continue;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
 export function toggleEntry(localHabitId: string, dateIso: string) {
   const entries = load<LocalHabitEntry[]>(HABIT_ENTRIES_KEY, []);
   const idx = entries.findIndex(
