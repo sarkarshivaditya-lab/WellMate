@@ -15,9 +15,12 @@ import {
   calculateCalorieTarget,
   calculateMacroTargets,
   calculateAge,
+  type ActivityLevel,
+  type Goal,
 } from "@/services/nutritionEngine.ts";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
+import { readOnboardingPayload } from "@/data/local/onboardingPayload";
 
 export default function Progress() {
   const today = new Date().toISOString().split("T")[0];
@@ -84,6 +87,31 @@ export default function Progress() {
       user.weightKg,
       user.goal,
     );
+  } else {
+    const payload = readOnboardingPayload();
+    if (
+      payload?.dob &&
+      payload?.heightCm &&
+      payload?.weightKg &&
+      payload?.sex &&
+      payload?.activityLevel &&
+      payload?.weightGoal
+    ) {
+      const age = calculateAge(payload.dob);
+      const bmr = calculateBMR(
+        payload.weightKg,
+        payload.heightCm,
+        age,
+        payload.sex as "male" | "female" | "other",
+      );
+      const tdee = calculateTDEE(bmr, payload.activityLevel as ActivityLevel);
+      calorieTarget = calculateCalorieTarget(tdee, payload.weightGoal as Goal);
+      macroTargets = calculateMacroTargets(
+        calorieTarget,
+        payload.weightKg,
+        payload.weightGoal as Goal,
+      );
+    }
   }
 
   /* =========================
