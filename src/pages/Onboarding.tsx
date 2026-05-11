@@ -210,7 +210,8 @@ export default function Onboarding() {
     sedentary: 1.2,
     light: 1.375,
     moderate: 1.55,
-    very: 1.725,
+    active: 1.725,
+    veryActive: 1.9,
   };
 
   const multiplier =
