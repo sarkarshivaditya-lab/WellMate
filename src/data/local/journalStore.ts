@@ -1,3 +1,5 @@
+import { localDateIso } from "@/services/dateUtils";
+
 export type LocalJournalEntry = {
   localId: string;
   title?: string;
@@ -42,7 +44,7 @@ export function addJournalEntry(input: {
   const now = Date.now();
   const entry: LocalJournalEntry = {
     localId: crypto.randomUUID(),
-    dateIso: new Date().toISOString().split("T")[0],
+    dateIso: localDateIso(),
     createdAt: now,
     updatedAt: now,
     tags: input.tags,

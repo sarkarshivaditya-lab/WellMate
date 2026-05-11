@@ -42,6 +42,7 @@ import {
   listAllEntries,
   computeStreak,
 } from "@/data/local/habitsStore";
+import { localDateIso } from "@/services/dateUtils";
 
 export default function Habits() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export default function Habits() {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState("09:00");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
 
   const [habits, setHabits] = useState(() => listHabits());
   const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));

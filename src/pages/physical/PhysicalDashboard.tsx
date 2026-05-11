@@ -19,6 +19,7 @@ import {
   getSyncStatus,
   subscribeToSyncStatus,
 } from "@/sync/syncStatus";
+import { localDateIso } from "@/services/dateUtils";
 
 
 /* ======================================================
@@ -33,7 +34,7 @@ function getLast7Days() {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     days.push({
-      dateIso: d.toISOString().split("T")[0],
+      dateIso: localDateIso(d),
       label: d.toLocaleDateString(undefined, { weekday: "short" }),
       fullLabel: d.toLocaleDateString(undefined, {
         weekday: "long",
@@ -74,7 +75,7 @@ function useWeeklyActivity() {
    ====================================================== */
 
 function TodayActivitySummary() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
   const { exercises } = useExercisesByDate(today);
 
   if (!exercises || exercises.length === 0) {

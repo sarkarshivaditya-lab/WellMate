@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { readOnboardingPayload } from "@/data/local/onboardingPayload";
+import { localDateIso } from "@/services/dateUtils";
 
 /* ---------- Skeleton ---------- */
 
@@ -87,7 +88,7 @@ function SyncBadge({ status }: { status?: SyncStatus }) {
 /* ---------- Component ---------- */
 
 export default function ExerciseLog() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
 
   const { exercises, addExercise, deleteExercise } =
     useExercisesByDate(today);

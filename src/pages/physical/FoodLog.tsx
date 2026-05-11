@@ -32,6 +32,7 @@ import {
 import type { MealItemData } from "@/services/mealService.ts";
 import { toast } from "sonner";
 import { useMealsByDate } from "@/hooks/useMealsByDate";
+import { localDateIso } from "@/services/dateUtils";
 
 /* ---------- Skeleton ---------- */
 
@@ -48,7 +49,7 @@ function MealSkeleton() {
 /* ---------- Component ---------- */
 
 export default function FoodLog() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
 
   const { meals, addMeal, deleteMeal } = useMealsByDate(today);
 

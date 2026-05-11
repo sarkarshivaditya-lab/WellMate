@@ -34,6 +34,7 @@ import {
 } from "@/data/local/journalStore";
 import { cn } from "@/lib/utils";
 import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
+import { localDateIso } from "@/services/dateUtils";
 import practicesData from "@/data/practices.json";
 
 /* ======================================================
@@ -73,7 +74,7 @@ export default function Overview() {
   const [editorBody, setEditorBody] = useState("");
   const [editorMood, setEditorMood] = useState<number | undefined>(undefined);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
   const moods = getLocalMoods();
   const todayMood = moods.find((m) => m.dateIso === today) ?? null;
   const recentMoods = moods.slice(-7);

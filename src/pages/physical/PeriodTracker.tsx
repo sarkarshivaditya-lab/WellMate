@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea.tsx";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
+import { localDateIso } from "@/services/dateUtils";
 
 export default function PeriodTracker() {
   const user = useQuery(api.users.getCurrentUser);
@@ -149,7 +150,7 @@ export default function PeriodTracker() {
     const predicted = new Date(lastCycle);
     predicted.setDate(predicted.getDate() + avgLength);
 
-    return { date: predicted.toISOString().split("T")[0], avgLength };
+    return { date: localDateIso(predicted), avgLength };
   };
 
   const prediction = predictNextPeriod();

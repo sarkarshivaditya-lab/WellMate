@@ -28,6 +28,7 @@ import {
 } from "@/services/nutritionEngine";
 
 import { dispatchInsightAction } from "./_utils/insightActionDispatcher";
+import { localDateIso } from "@/services/dateUtils";
 
 type DatedEntry = { dateIso?: string; startIso?: string };
 type MealEntry = {
@@ -42,7 +43,7 @@ type ExerciseEntry = {
 };
 
 export default function PhysicalInsightsCard() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
   const navigate = useNavigate();
 
   const user = useQuery(api.users.getCurrentUser);

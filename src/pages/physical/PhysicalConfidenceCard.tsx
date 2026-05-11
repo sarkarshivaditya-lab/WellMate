@@ -4,11 +4,12 @@ import { api } from "@/convex/_generated/api.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { calculateConfidenceScore } from "./_utils/confidenceScoring";
 import { useAllExercises } from "@/hooks/useAllExercises";
+import { localDateIso } from "@/services/dateUtils";
 
 type DatedEntry = { dateIso?: string; startIso?: string };
 
 export default function PhysicalConfidenceCard() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
 
   const user = useQuery(api.users.getCurrentUser);
   const mealsToday = useQuery(api.meals.getMealsByDate, { dateIso: today });
@@ -22,7 +23,7 @@ export default function PhysicalConfidenceCard() {
   const exercises7 = useMemo(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
-    const cutoffIso = cutoff.toISOString().split("T")[0];
+    const cutoffIso = localDateIso(cutoff);
     return allExercises.filter((e) => e.dateIso >= cutoffIso);
   }, [allExercises]);
 
