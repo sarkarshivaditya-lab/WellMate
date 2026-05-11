@@ -56,8 +56,8 @@ function SectionDivider({ label }: { label: string }) {
 
 function FeatureItem({ children }: { children: ReactNode }) {
   return (
-    <li className="flex items-start gap-2 text-[13px] text-foreground/80">
-      <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-primary/50" />
+    <li className="flex items-start gap-2.5 text-[13px] text-foreground/80">
+      <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 mt-[3px] text-primary/50" />
       <span className="leading-snug">{children}</span>
     </li>
   );
@@ -82,35 +82,35 @@ function RoadmapCard({
     <Card
       className={cn(
         "border-l-[3px]",
-        status === "live"
-          ? "border-l-primary"
-          : "border-l-amber-400/70",
+        status === "live" ? "border-l-primary" : "border-l-amber-400/70",
       )}
     >
-      <CardContent className="pt-4 pb-4 space-y-3">
-        {/* Title row */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-xl flex-shrink-0",
-                status === "live"
-                  ? "bg-primary/10 text-primary"
-                  : "bg-amber-100/80 text-amber-700",
-              )}
-            >
-              {icon}
-            </div>
-            <h3 className="text-[14px] font-semibold leading-snug">{title}</h3>
+      <CardContent className="px-4 pt-4 pb-5 space-y-3">
+        {/* Row 1: icon left, badge right — no title here so nothing gets squeezed */}
+        <div className="flex items-center justify-between">
+          <div
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-xl",
+              status === "live"
+                ? "bg-primary/10 text-primary"
+                : "bg-amber-100/80 text-amber-700",
+            )}
+          >
+            {icon}
           </div>
           <StatusBadge status={status} />
         </div>
 
+        {/* Row 2: title gets full width, no wrapping pressure */}
+        <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em]">
+          {title}
+        </h3>
+
         {/* Body */}
-        <p className="text-[13px] leading-relaxed text-foreground/75">{body}</p>
+        <p className="text-[13px] leading-relaxed text-foreground/72">{body}</p>
 
         {/* Feature list */}
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {features.map((f, i) => (
             <FeatureItem key={i}>{f}</FeatureItem>
           ))}
@@ -118,7 +118,7 @@ function RoadmapCard({
 
         {/* Footnote */}
         {footnote && (
-          <p className="text-[11px] text-muted-foreground leading-snug border-t border-border/40 pt-2.5 italic">
+          <p className="text-[11px] text-muted-foreground leading-relaxed border-t border-border/40 pt-3 italic">
             {footnote}
           </p>
         )}
@@ -144,32 +144,32 @@ export default function Roadmap() {
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="h-8 w-8 rounded-xl flex-shrink-0"
+            className="h-9 w-9 rounded-xl flex-shrink-0"
             aria-label="Go back"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <p className="text-sm font-semibold">What's Next</p>
-            <p className="text-[11px] text-muted-foreground leading-none mt-0.5">
+            <p className="text-sm font-semibold leading-none">What's Next</p>
+            <p className="text-[11px] text-muted-foreground leading-none mt-1">
               Roadmap &amp; Vision
             </p>
           </div>
         </div>
       </div>
 
-      <div className="px-5 py-6 space-y-5 max-w-2xl mx-auto">
+      <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
 
         {/* ── From the builder ── */}
-        <Card className="border-primary/20 bg-primary/[0.04]">
-          <CardContent className="pt-4 pb-4 space-y-2">
+        <Card className="border-l-[3px] border-l-primary border-primary/20 bg-primary/[0.035]">
+          <CardContent className="px-4 pt-4 pb-5 space-y-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">
               From the builder
             </p>
-            <p className="text-[13px] leading-relaxed text-foreground/85">
+            <p className="text-[13.5px] leading-relaxed text-foreground/85">
               WellMate was built by{" "}
-              <span className="font-semibold text-foreground">Shivaditya Sarkar</span>, a
-              self-taught developer. This project grew out of an opportunity
+              <span className="font-semibold text-foreground">Shivaditya Sarkar</span>,
+              a self-taught developer. This project grew out of an opportunity
               offered by{" "}
               <span className="font-semibold text-foreground">Dr. Anuradha Palta ma'am</span>
               {" "}— to whom I am genuinely grateful. The aim was to design and build a
@@ -186,12 +186,12 @@ export default function Roadmap() {
           icon={<Layers className="h-4 w-4" />}
           status="live"
           title="WellMate v1 — Working Prototype"
-          body="A fully functional proof of concept demonstrating the core architecture and UX approach. The technical foundations are production-grade — offline-first data persistence, modular backend, AI-ready structure. Current constraints are infrastructure scale and deployment resources, not conceptual gaps."
+          body="A fully functional proof of concept demonstrating the core architecture and UX approach. Technical foundations are production-grade — offline-first data persistence, modular backend, AI-ready structure. Current constraints are infrastructure scale and deployment resources, not conceptual gaps."
           features={[
             "Offline-first React + TypeScript frontend — fully functional without a network connection",
             "Local-first data persistence with deferred server sync via Convex",
             "Physical health tracking — exercises, nutrition logging, activity",
-            "Mental wellness hub — mood tracking, journaling, AI coach tab",
+            "Mental wellness hub — mood tracking, journaling, AI coach",
             "General wellness AI assistant with context-aware routing",
             "First-launch disclaimer system with crisis keyword detection",
             "WCAG AA-compliant Mystic Green design system",
@@ -204,8 +204,8 @@ export default function Roadmap() {
         <RoadmapCard
           icon={<Watch className="h-4 w-4" />}
           status="planned"
-          title="Wearable &amp; Platform Integration"
-          body="Deep integration with major wearable ecosystems is central to the roadmap. Each platform requires production deployment, developer program enrollment, API compliance review, and backend infrastructure to handle continuous telemetry synchronization. The integration architecture is already designed for this — these are deployment-phase requirements."
+          title="Wearable & Platform Integration"
+          body="Deep integration with major wearable ecosystems is central to the roadmap. Each platform requires production deployment, developer program enrollment, API compliance review, and backend infrastructure for continuous telemetry synchronization. The integration architecture is already designed for this — these are deployment-phase requirements."
           features={[
             "Apple Health + Apple Watch — via HealthKit integration",
             "Garmin Connect — via Garmin Health API",
@@ -222,7 +222,7 @@ export default function Roadmap() {
           icon={<Brain className="h-4 w-4" />}
           status="planned"
           title="WellMate AI — Expanded Intelligence"
-          body="AI capabilities are intentionally constrained in the prototype. Production AI inference — hosted GPU infrastructure, model runtimes, scalable orchestration, and ongoing API costs — requires funded infrastructure. The vision is a context-aware wellness companion integrated across all of the user's tracked data: not a chatbot, not a diagnostic tool, but an assistant that understands patterns over time."
+          body="AI capabilities are intentionally constrained in the prototype. Production AI inference — hosted GPU infrastructure, model runtimes, scalable orchestration, and ongoing API costs — requires funded infrastructure. The vision is a context-aware wellness companion integrated across all tracked data: not a chatbot, not a diagnostic tool, but an assistant that understands patterns over time."
           features={[
             "Personalized insights driven by the user's own health trends",
             "Pattern recognition across sleep, exercise, mood, and nutrition data",
@@ -255,7 +255,7 @@ export default function Roadmap() {
           icon={<Moon className="h-4 w-4" />}
           status="planned"
           title="Sleep Intelligence"
-          body="Sleep insight features are architecturally planned and unlock fully once wearable integrations are implemented. The data model and visualization layer are already designed for this data. Manual sleep input is the current workaround — accurate sleep intelligence requires continuous sensor data from a wearable."
+          body="Sleep insight features are architecturally planned and unlock fully once wearable integrations are in place. The data model and visualization layer are already designed for this data. Manual sleep input is the current workaround — accurate sleep intelligence requires continuous sensor data from a wearable."
           features={[
             "Sleep duration and consistency tracking",
             "Sleep stage analysis — light, deep, and REM",
@@ -270,8 +270,8 @@ export default function Roadmap() {
         {/* ── The bigger picture ── */}
         <SectionDivider label="The bigger picture" />
 
-        <Card className="bg-primary/[0.04] border-primary/15">
-          <CardContent className="pt-4 pb-4 space-y-3">
+        <Card className="bg-primary/[0.035] border-primary/15">
+          <CardContent className="px-4 pt-4 pb-5 space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary/70" />
               <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">
@@ -291,12 +291,12 @@ export default function Roadmap() {
           </CardContent>
         </Card>
 
-        {/* Quick-nav back to profile */}
+        {/* Back to Profile */}
         <button
           type="button"
           onClick={() => navigate("/profile")}
           className={cn(
-            "w-full flex items-center justify-between rounded-xl px-4 py-3",
+            "w-full flex items-center justify-between rounded-xl px-4 py-3.5",
             "border border-border/50 bg-muted/30 hover:bg-muted/60",
             "transition-colors duration-150 text-left",
           )}
