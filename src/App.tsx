@@ -11,6 +11,7 @@ import PhysicalDashboard from "./pages/physical/PhysicalDashboard";
 import Habits from "./pages/Habits";
 import Index from "./pages/Index";
 import Journal from "./pages/mental/Journal";
+import MentalOverview from "./pages/mental/Overview";
 import Tools from "./pages/Tools";
 import AiMentalCoach from "./pages/mental/AiMentalCoach";
 import Profile from "./pages/Profile";
@@ -150,6 +151,21 @@ export default function App() {
           }
         />
 
+        {/* /mental — the mental wellness hub (tabs: Overview, Journal, Tools) */}
+        <Route
+          path="/mental"
+          element={
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <MentalOverview />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
+          }
+        />
+
+        {/* /journal — legacy route, kept for backwards compat */}
         <Route
           path="/journal"
           element={

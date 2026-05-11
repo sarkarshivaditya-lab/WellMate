@@ -289,10 +289,10 @@ export default function PhysicalDashboard() {
       subtitle="Today’s activity, nutrition, and progress."
       headerRight={
         <div
-          className="flex items-center gap-2 text-xs text-muted-foreground"
+          className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground"
           title="Local changes sync automatically when you’re online."
         >
-          <span className={`h-2 w-2 rounded-full ${syncMeta.dot}`} />
+          <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${syncMeta.dot}`} />
           <span>{syncMeta.label}</span>
         </div>
       }

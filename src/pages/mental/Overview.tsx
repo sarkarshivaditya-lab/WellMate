@@ -9,25 +9,40 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from "@/components/ui/empty";
 import MoodSelector from "@/components/MoodSelector";
 import MiniLineChart from "@/components/MiniLineChart";
 import PracticeCard, { type Practice } from "@/components/PracticeCard";
+import JournalCard from "@/components/JournalCard";
+import { CoachTabContent } from "./AiMentalCoach";
+import { ToolsTabContent } from "./Tools";
+import {
+  listJournalEntries,
+  addJournalEntry,
+  updateJournalEntry,
+  deleteJournalEntry,
+  type LocalJournalEntry,
+} from "@/data/local/journalStore";
+import { cn } from "@/lib/utils";
 import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
 import practicesData from "@/data/practices.json";
 
 /* ======================================================
-   LOCAL, AUTH-SAFE MENTAL SNAPSHOT
+   LOCAL MOOD STORE — lightweight, no dependency
    ====================================================== */
 
 type LocalMood = {
   moodValue: number;
   note?: string;
-  dateIso: string;
-};
-
-type LocalJournalEntry = {
-  id: string;
-  text: string;
   dateIso: string;
 };
 
@@ -39,42 +54,90 @@ function getLocalMoods(): LocalMood[] {
   }
 }
 
-function getLocalJournalPreview(): LocalJournalEntry[] {
-  try {
-    return JSON.parse(localStorage.getItem("mental.journal.preview") || "[]");
-  } catch {
-    return [];
-  }
-}
+const MOOD_EMOJIS = ["😢", "😔", "😐", "😊", "😄"];
+const MOOD_LABELS = ["Very Low", "Low", "Okay", "Good", "Excellent"];
 
-const moodEmojis = ["😢", "😔", "😐", "😊", "😄"];
-const moodLabels = ["Very Low", "Low", "Okay", "Good", "Excellent"];
+/* ======================================================
+   OVERVIEW
+   ====================================================== */
 
 export default function Overview() {
-  const [tab, setTab] = useState<"overview" | "journal" | "tools">("overview");
+  const [tab, setTab] = useState<"overview" | "journal" | "coach" | "tools">("overview");
   const [showMoodDialog, setShowMoodDialog] = useState(false);
 
+  // Journal state
+  const [entries, setEntries] = useState<LocalJournalEntry[]>(() => listJournalEntries());
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<LocalJournalEntry | null>(null);
+  const [editorTitle, setEditorTitle] = useState("");
+  const [editorBody, setEditorBody] = useState("");
+  const [editorMood, setEditorMood] = useState<number | undefined>(undefined);
+
   const today = new Date().toISOString().split("T")[0];
-
   const moods = getLocalMoods();
-  const todayMood = moods.find((m) => m.dateIso === today) || null;
+  const todayMood = moods.find((m) => m.dateIso === today) ?? null;
   const recentMoods = moods.slice(-7);
-  const recentEntries = getLocalJournalPreview().slice(0, 3);
-
   const moodData = recentMoods.map((m) => m.moodValue);
-
-  const handleSaveMood = (moodValue: number, note: string) => {
-    const next: LocalMood = { dateIso: today, moodValue, note };
-    const filtered = moods.filter((m) => m.dateIso !== today);
-    localStorage.setItem(
-      "mental.moods",
-      JSON.stringify([...filtered, next]),
-    );
-    setShowMoodDialog(false);
-  };
-
   const suggestedPractice =
     practicesData[Math.floor(Math.random() * practicesData.length)] as Practice;
+
+  // Journal helpers
+  function refreshEntries() {
+    setEntries(listJournalEntries());
+  }
+
+  function openNewEntry() {
+    setEditingEntry(null);
+    setEditorTitle("");
+    setEditorBody("");
+    setEditorMood(undefined);
+    setShowEditor(true);
+  }
+
+  function openEditEntry(entry: LocalJournalEntry) {
+    setEditingEntry(entry);
+    setEditorTitle(entry.title ?? "");
+    setEditorBody(entry.text);
+    setEditorMood(entry.mood);
+    setShowEditor(true);
+  }
+
+  function closeEditor() {
+    setShowEditor(false);
+    setEditingEntry(null);
+  }
+
+  function handleSaveEntry() {
+    if (!editorBody.trim()) return;
+    if (editingEntry) {
+      updateJournalEntry(editingEntry.localId, {
+        title: editorTitle.trim() || undefined,
+        text: editorBody.trim(),
+        mood: editorMood,
+      });
+    } else {
+      addJournalEntry({
+        title: editorTitle.trim() || undefined,
+        text: editorBody.trim(),
+        tags: [],
+        mood: editorMood,
+      });
+    }
+    refreshEntries();
+    closeEditor();
+  }
+
+  function handleDeleteEntry(localId: string) {
+    deleteJournalEntry(localId);
+    refreshEntries();
+  }
+
+  function handleSaveMood(moodValue: number, note: string) {
+    const next: LocalMood = { dateIso: today, moodValue, note };
+    const filtered = moods.filter((m) => m.dateIso !== today);
+    localStorage.setItem("mental.moods", JSON.stringify([...filtered, next]));
+    setShowMoodDialog(false);
+  }
 
   return (
     <PageLayout
@@ -83,52 +146,41 @@ export default function Overview() {
       tabs={[
         { label: "Overview", value: "overview" },
         { label: "Journal", value: "journal" },
+        { label: "Coach", value: "coach" },
         { label: "Tools", value: "tools" },
       ]}
       activeTab={tab}
-      onTabChange={(v) => setTab(v as "overview" | "journal" | "tools")}
+      onTabChange={(v) => setTab(v as typeof tab)}
     >
-      {/* ---------- OVERVIEW TAB ---------- */}
+      {/* ──────────────────────────────────────────────
+          OVERVIEW TAB
+      ────────────────────────────────────────────── */}
       {tab === "overview" && (
         <div className="space-y-6">
           {/* Today's Mood */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Today’s Mood</CardTitle>
+              <CardTitle className="text-lg">Today's Mood</CardTitle>
             </CardHeader>
             <CardContent>
               {todayMood ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <span className="text-5xl">
-                      {moodEmojis[todayMood.moodValue - 1]}
-                    </span>
+                    <span className="text-5xl">{MOOD_EMOJIS[todayMood.moodValue - 1]}</span>
                     <div>
-                      <p className="text-lg font-medium">
-                        {moodLabels[todayMood.moodValue - 1]}
-                      </p>
+                      <p className="text-lg font-medium">{MOOD_LABELS[todayMood.moodValue - 1]}</p>
                       {todayMood.note && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {todayMood.note}
-                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">{todayMood.note}</p>
                       )}
                     </div>
                   </div>
-
-                  <Dialog
-                    open={showMoodDialog}
-                    onOpenChange={setShowMoodDialog}
-                  >
+                  <Dialog open={showMoodDialog} onOpenChange={setShowMoodDialog}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        Update
-                      </Button>
+                      <Button variant="outline" size="sm">Update</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>
-                          How are you feeling right now?
-                        </DialogTitle>
+                        <DialogTitle>How are you feeling right now?</DialogTitle>
                       </DialogHeader>
                       <MoodSelector
                         initialMood={todayMood.moodValue}
@@ -140,25 +192,20 @@ export default function Overview() {
                   </Dialog>
                 </div>
               ) : (
-                <div className="py-6 text-center space-y-2">
+                <div className="py-6 text-center space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    You haven’t checked in with yourself today
+                    You haven't checked in with yourself today
                   </p>
-                  <Dialog
-                    open={showMoodDialog}
-                    onOpenChange={setShowMoodDialog}
-                  >
+                  <Dialog open={showMoodDialog} onOpenChange={setShowMoodDialog}>
                     <DialogTrigger asChild>
                       <Button>
-                        <PlusIcon className="mr-2 h-4 w-4" />
+                        <PlusIcon className="h-4 w-4" />
                         Check in
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>
-                          How are you feeling right now?
-                        </DialogTitle>
+                        <DialogTitle>How are you feeling right now?</DialogTitle>
                       </DialogHeader>
                       <MoodSelector
                         onSave={handleSaveMood}
@@ -171,21 +218,14 @@ export default function Overview() {
             </CardContent>
           </Card>
 
-          {/* 7-Day Trend */}
+          {/* 7-Day Mood Trend */}
           {moodData.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">
-                  Mood over the past week
-                </CardTitle>
+                <CardTitle className="text-lg">Mood over the past week</CardTitle>
               </CardHeader>
               <CardContent className="flex justify-center">
-                <MiniLineChart
-                  data={moodData}
-                  width={320}
-                  height={100}
-                  color="#10b981"
-                />
+                <MiniLineChart data={moodData} width={320} height={100} color="#10b981" />
               </CardContent>
             </Card>
           )}
@@ -199,41 +239,65 @@ export default function Overview() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <PracticeCard practice={suggestedPractice} />
+              <PracticeCard
+                practice={suggestedPractice}
+                onClick={() => setTab("tools")}
+              />
             </CardContent>
           </Card>
 
-          {/* Journal Preview */}
+          {/* Recent Journal Reflections */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BookOpenIcon className="h-5 w-5" />
-                Recent reflections
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <BookOpenIcon className="h-5 w-5" />
+                  Recent reflections
+                </CardTitle>
+                {entries.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTab("journal")}
+                    className="text-xs text-muted-foreground"
+                  >
+                    View all
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              {recentEntries.length > 0 ? (
-                <div className="space-y-2">
-                  {recentEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-lg bg-secondary/50 p-3"
+              {entries.length > 0 ? (
+                <div className="space-y-3">
+                  {entries.slice(0, 3).map((entry) => (
+                    <button
+                      key={entry.localId}
+                      onClick={() => { setTab("journal"); openEditEntry(entry); }}
+                      className="w-full text-left rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors duration-150"
                     >
-                      <p className="line-clamp-2 text-sm">{entry.text}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {new Date(entry.dateIso).toLocaleDateString()}
+                      {entry.title && (
+                        <p className="text-xs font-semibold mb-0.5 text-foreground/90">{entry.title}</p>
+                      )}
+                      <p className="line-clamp-2 text-[13px] text-foreground/80">{entry.text}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {new Date(entry.createdAt).toLocaleDateString("en-US", {
+                          weekday: "short", month: "short", day: "numeric",
+                        })}
                       </p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
-                <div className="py-6 text-center space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    No reflections yet
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Writing can help clarify thoughts — when you’re ready
-                  </p>
+                <div className="py-6 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">No reflections yet</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setTab("journal"); openNewEntry(); }}
+                    className="text-xs"
+                  >
+                    Write your first entry
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -241,19 +305,139 @@ export default function Overview() {
         </div>
       )}
 
-      {/* ---------- JOURNAL TAB ---------- */}
+      {/* ──────────────────────────────────────────────
+          JOURNAL TAB
+      ────────────────────────────────────────────── */}
       {tab === "journal" && (
-        <div className="py-12 text-center text-sm text-muted-foreground">
-          Visit the Journal section to write or revisit reflections.
+        <div className="space-y-4">
+          {/* Top bar */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {entries.length === 0
+                ? "No entries yet"
+                : `${entries.length} ${entries.length === 1 ? "entry" : "entries"}`}
+            </p>
+            <Button size="sm" onClick={openNewEntry}>
+              <PlusIcon className="h-4 w-4" />
+              New Entry
+            </Button>
+          </div>
+
+          {entries.length === 0 ? (
+            <Empty className="min-h-[320px]">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <BookOpenIcon />
+                </EmptyMedia>
+                <EmptyTitle>Your journal is empty</EmptyTitle>
+                <EmptyDescription>
+                  A private space for thoughts, feelings, and reflections — without judgment.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button size="sm" onClick={openNewEntry}>
+                  <PlusIcon className="h-4 w-4" />
+                  Write your first entry
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <div className="space-y-3">
+              {entries.map((entry) => (
+                <JournalCard
+                  key={entry.localId}
+                  entry={entry}
+                  onEdit={() => openEditEntry(entry)}
+                  onDelete={() => handleDeleteEntry(entry.localId)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* ---------- TOOLS TAB ---------- */}
-      {tab === "tools" && (
-        <div className="py-12 text-center text-sm text-muted-foreground">
-          Visit the Tools section to explore calming practices.
-        </div>
-      )}
+      {/* ──────────────────────────────────────────────
+          COACH TAB
+      ────────────────────────────────────────────── */}
+      {tab === "coach" && <CoachTabContent />}
+
+      {/* ──────────────────────────────────────────────
+          TOOLS TAB
+      ────────────────────────────────────────────── */}
+      {tab === "tools" && <ToolsTabContent />}
+
+      {/* ──────────────────────────────────────────────
+          JOURNAL EDITOR — always mounted, accessible from any tab
+      ────────────────────────────────────────────── */}
+      <Dialog open={showEditor} onOpenChange={(open) => !open && closeEditor()}>
+        <DialogContent className="max-h-[92vh] flex flex-col gap-0 p-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border/40">
+            <DialogTitle className="text-base font-semibold">
+              {editingEntry ? "Edit entry" : "New entry"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Optional title */}
+            <Input
+              placeholder="Title (optional)"
+              value={editorTitle}
+              onChange={(e) => setEditorTitle(e.target.value)}
+              className="border-border/50 bg-transparent text-sm font-medium placeholder:text-muted-foreground/60"
+            />
+
+            {/* Mood chips */}
+            <div>
+              <p className="text-[11px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
+                How are you feeling?
+              </p>
+              <div className="flex gap-2">
+                {MOOD_EMOJIS.map((emoji, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setEditorMood(editorMood === i + 1 ? undefined : i + 1)}
+                    aria-label={MOOD_LABELS[i]}
+                    className={cn(
+                      "flex-1 rounded-xl py-2.5 text-xl transition-all duration-150",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                      editorMood === i + 1
+                        ? "bg-primary/12 ring-1 ring-primary/40 scale-[1.06]"
+                        : "bg-muted/60 hover:bg-muted",
+                    )}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Writing surface */}
+            <Textarea
+              placeholder="What's on your mind…"
+              value={editorBody}
+              onChange={(e) => setEditorBody(e.target.value)}
+              rows={10}
+              className={cn(
+                "resize-none border-border/40 bg-transparent",
+                "text-[15px] leading-[1.7] tracking-[0.01em]",
+                "placeholder:text-muted-foreground/40",
+                "focus-visible:ring-1 focus-visible:ring-primary/30",
+              )}
+            />
+          </div>
+
+          <div className="px-5 py-4 border-t border-border/40">
+            <Button
+              className="w-full"
+              disabled={!editorBody.trim()}
+              onClick={handleSaveEntry}
+            >
+              {editingEntry ? "Save changes" : "Save entry"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }

@@ -4,161 +4,162 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98.5%;
-    --foreground: 222 20% 14%;
+    /* ===============================
+       SURFACE SYSTEM — MYSTIC GREEN
+       Warm green-gray base. Near-white tinted cards.
+       Clear layering: background → card → elevated.
+       =============================== */
+    --background: 165 10% 96%;
+    --foreground: 170 20% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 20% 14%;
+    --card: 166 18% 98.5%;
+    --card-foreground: 170 20% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 20% 14%;
+    --popover-foreground: 170 20% 12%;
 
-    --border: 214 18% 90%;
-    --input: 214 18% 90%;
+    /* ===============================
+       BORDERS & INPUTS
+       Teal-tinted — visible separation without hard lines.
+       =============================== */
+    --border: 166 16% 87%;
+    --input:  166 16% 87%;
 
-    --primary: 214 88% 52%;
-    --primary-foreground: 0 0% 100%;
+    /* ===============================
+       SEMANTIC PALETTE — MYSTIC GREEN
+       Anchor: #9FC2BA = HSL(166, 22%, 69%).
+       Primary derived to deep end for WCAG AA on white (≥ 4.5:1).
+       Tonal ramp: 35% (active) → 48% (hover) → 69% (base) → 88% (tint) → 93% (surface).
+       =============================== */
+    --primary:            166 38% 35%;
+    --primary-foreground: 0   0%  100%;
 
-    --secondary: 210 30% 96%;
-    --secondary-foreground: 222 20% 14%;
+    --secondary:            166 20% 91%;
+    --secondary-foreground: 166 38% 22%;
 
-    --muted: 210 30% 96%;
-    --muted-foreground: 215 14% 45%;
+    --muted:            166 12% 93%;
+    --muted-foreground: 166 10% 40%;
 
-    --accent: 210 30% 96%;
-    --accent-foreground: 222 20% 14%;
+    --accent:            166 25% 90%;
+    --accent-foreground: 166 38% 25%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive:            0  84% 60%;
+    --destructive-foreground: 0   0% 100%;
 
-    --ring: 214 88% 52%;
+    --ring: 166 38% 35%;
 
-    --action-primary: var(--primary);
+    /* ===============================
+       ALIAS TOKENS
+       =============================== */
+    --action-primary:    var(--primary);
     --action-primary-fg: var(--primary-foreground);
-    --action-pressed: var(--primary);
+    --action-pressed:    var(--primary);
 
-    --control-fill: var(--background);
+    --control-fill:   var(--background);
     --control-border: var(--border);
 
-    --text-primary: var(--foreground);
+    --text-primary:   var(--foreground);
     --text-secondary: var(--muted-foreground);
-    --text-meta: var(--muted-foreground);
-    --text-disabled: var(--muted);
+    --text-meta:      var(--muted-foreground);
+    --text-disabled:  var(--muted);
 
     /* ===============================
-       MULTICOLOUR HEADER GRADIENT PALETTE
-       (Employer-specified colours)
+       PAGE HEADER GRADIENT
+       Perceptible teal warmth at top, fades to background.
+       6-stop lightness gap (90% → 96%) — clearly visible.
        =============================== */
+    --header-gradient-start: 166 32% 90%;
+    --header-gradient-end:   165 10% 96%;
 
-    /* #FDF5E6 */
-    --header-gradient-cream: 39 82% 95%;
-
-    /* #F0A500 */
+    /* Legacy palette tokens — preserved for reference */
+    --header-gradient-cream: 39  82% 95%;
     --header-gradient-amber: 41 100% 47%;
-
-    /* #77C9D4 */
-    --header-gradient-sky: 187 54% 65%;
-
-    /* #57A99A */
-    --header-gradient-teal: 167 32% 50%;
-
-    /* #1C3D5A */
-    --header-gradient-navy: 208 52% 23%;
+    --header-gradient-sky:  187  54% 65%;
+    --header-gradient-teal: 167  32% 50%;
+    --header-gradient-navy: 208  52% 23%;
 
     /* ===============================
-       PAGE HEADER GRADIENT (ACTIVE)
-       =============================== */
-    --header-gradient-start: var(--header-gradient-cream);
-    --header-gradient-end: var(--header-gradient-navy);
-
-    /* ===============================
-       CARD BLUE UNDERGLOW (LIGHT)
-       =============================== */
-    --card-glow-color: 214 90% 70%;
-
-    /* ===============================
-       CARD SHADOW TOKENS (LIGHT)
+       CARD SHADOWS — TEAL-TINTED DEPTH
+       rgba(20,60,50) ≈ deep teal-green shadow base.
+       1.5× stronger than previous — cards lift visibly off background.
        =============================== */
     --card-shadow-rest:
-      0 6px 16px hsl(var(--card-glow-color) / 0.18);
+      0 1px 2px  rgba(20, 60, 50, 0.05),
+      0 4px 12px rgba(20, 60, 50, 0.09);
 
     --card-shadow-hover:
-      0 14px 40px hsl(var(--card-glow-color) / 0.35),
-      0 36px 70px hsl(var(--card-glow-color) / 0.25);
+      0 4px  16px rgba(20, 60, 50, 0.10),
+      0 12px 36px rgba(20, 60, 50, 0.11);
 
     --card-shadow-pressed:
-      0 10px 30px hsl(var(--card-glow-color) / 0.45),
-      0 4px 12px hsl(var(--card-glow-color) / 0.35);
+      0 2px 8px rgba(20, 60, 50, 0.13),
+      0 1px 3px rgba(20, 60, 50, 0.11);
   }
 
   /*
   =====================================================
   DARK MODE — TEMPORARILY DISABLED
   Reason: force light theme during redesign
+  Updated to Mystic Green family — ready for re-enable.
   =====================================================
 
   .dark {
-    --background: 222 60% 3%;
-    --foreground: 210 40% 98%;
+    --background: 168 15% 8%;
+    --foreground: 165 15% 92%;
 
-    --card: 222 45% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 168 14% 12%;
+    --card-foreground: 165 15% 92%;
 
-    --popover: 222 45% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 168 14% 12%;
+    --popover-foreground: 165 15% 92%;
 
-    --border: 220 12% 18%;
-    --input: 222 40% 15%;
+    --border: 166 12% 20%;
+    --input:  166 14% 16%;
 
-    --primary: 217 92% 60%;
-    --primary-foreground: 222 84% 5%;
+    --primary:            166 38% 58%;
+    --primary-foreground: 168 30% 8%;
 
-    --secondary: 222 40% 15%;
-    --secondary-foreground: 215 18% 80%;
+    --secondary:            166 14% 18%;
+    --secondary-foreground: 165 15% 80%;
 
-    --muted: 222 40% 15%;
-    --muted-foreground: 215 12% 60%;
+    --muted:            166 12% 18%;
+    --muted-foreground: 166 10% 55%;
 
-    --accent: 222 40% 15%;
-    --accent-foreground: 210 40% 98%;
+    --accent:            166 20% 20%;
+    --accent-foreground: 165 15% 92%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive:            0  84% 60%;
+    --destructive-foreground: 165 15% 92%;
 
-    --ring: 224 76% 48%;
+    --ring: 166 38% 58%;
 
-    --action-primary: var(--primary);
-    --action-primary-fg: var(--primary-foreground);
-    --action-pressed: var(--primary);
-
-    --control-fill: var(--background);
-    --control-border: var(--border);
-
-    --text-primary: var(--foreground);
-    --text-secondary: var(--muted-foreground);
-    --text-meta: var(--muted-foreground);
-    --text-disabled: var(--muted);
-
-    --header-gradient-start: 222 45% 11%;
-    --header-gradient-end: 222 60% 3%;
+    --header-gradient-start: 166 22% 13%;
+    --header-gradient-end:   168 15% 8%;
   }
   */
 
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer utilities {
+  /* ===============================
+     PREMIUM MOTION — 200ms spring easing
+     iOS-caliber: fast start, soft land.
+     =============================== */
   .transition-premium {
-    transition-property: opacity, transform, width, box-shadow;
-    transition-duration: 180ms;
+    transition-property: opacity, transform, width, box-shadow, background-color, color, border-color;
+    transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   /* ===============================
-     CARD SHADOW UTILITIES (BYPASS TAILWIND SHADOWS)
+     CARD SHADOW UTILITIES
+     (Bypass Tailwind — use CSS custom properties)
      =============================== */
   .card-shadow-rest {
     box-shadow: var(--card-shadow-rest);

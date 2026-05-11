@@ -1,12 +1,18 @@
 import React from "react";
 import BottomNav from "./BottomNav";
 import { WellMateLauncher } from "@/components/ai/WellMateLauncher";
+import { DisclaimerModal } from "@/components/DisclaimerModal";
+import { hasAckedDisclaimer } from "@/data/disclaimerStore";
 
 export default function AppShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [showDisclaimer, setShowDisclaimer] = React.useState(
+    () => !hasAckedDisclaimer(),
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main scrollable content */}
@@ -19,6 +25,11 @@ export default function AppShell({
 
       {/* Persistent WellMate launcher */}
       <WellMateLauncher />
+
+      {/* First-launch disclaimer — non-dismissable until acknowledged */}
+      {showDisclaimer && (
+        <DisclaimerModal onAck={() => setShowDisclaimer(false)} />
+      )}
     </div>
   );
 }

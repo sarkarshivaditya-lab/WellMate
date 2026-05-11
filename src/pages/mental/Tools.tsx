@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import PracticeCard from "@/components/PracticeCard";
 import practicesData from "@/data/practices.json";
 import { CheckCircle2Icon } from "lucide-react";
@@ -18,7 +18,19 @@ interface Practice {
   steps: string[];
 }
 
-export default function Tools() {
+const FILTERS = [
+  { value: null, label: "All" },
+  { value: "breathing", label: "Breathing" },
+  { value: "gratitude", label: "Gratitude" },
+  { value: "reflection", label: "Reflection" },
+  { value: "grounding", label: "Grounding" },
+] as const;
+
+/* ======================================================
+   TOOLS CONTENT — embeddable inside a tab or full page
+   ====================================================== */
+
+export function ToolsTabContent() {
   const [selectedPractice, setSelectedPractice] = useState<Practice | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [filter, setFilter] = useState<string | null>(null);
@@ -28,21 +40,9 @@ export default function Tools() {
     ? practices.filter((p) => p.type === filter)
     : practices;
 
-  const handleStartPractice = (practice: Practice) => {
+  const handleStart = (practice: Practice) => {
     setSelectedPractice(practice);
     setCurrentStep(0);
-  };
-
-  const handleNextStep = () => {
-    if (selectedPractice && currentStep < selectedPractice.steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
   };
 
   const handleClose = () => {
@@ -50,55 +50,41 @@ export default function Tools() {
     setCurrentStep(0);
   };
 
-  const filters = [
-    { value: null, label: "All" },
-    { value: "breathing", label: "Breathing" },
-    { value: "gratitude", label: "Gratitude" },
-    { value: "reflection", label: "Reflection" },
-    { value: "grounding", label: "Grounding" },
-  ];
-
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Wellbeing Tools</h1>
-        <p className="text-sm text-muted-foreground">
-          A collection of guided practices you can use anytime.
-        </p>
-      </div>
-
-      {/* Filters (secondary) */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {filters.map((f) => (
-          <Badge
+    <div className="space-y-4">
+      {/* Filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {FILTERS.map((f) => (
+          <button
             key={f.label}
-            variant={filter === f.value ? "default" : "outline"}
-            className="cursor-pointer whitespace-nowrap"
             onClick={() => setFilter(f.value)}
+            className={cn(
+              "flex-shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium",
+              "transition-all duration-150",
+              filter === f.value
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+            )}
           >
             {f.label}
-          </Badge>
+          </button>
         ))}
       </div>
 
-      {/* Practices */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* Practice grid */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {filteredPractices.map((practice) => (
           <PracticeCard
             key={practice.id}
             practice={practice}
-            onClick={() => handleStartPractice(practice)}
+            onClick={() => handleStart(practice)}
           />
         ))}
       </div>
 
-      {/* Practice Dialog */}
-      <Dialog
-        open={selectedPractice !== null}
-        onOpenChange={(open) => !open && handleClose()}
-      >
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+      {/* Active practice dialog */}
+      <Dialog open={selectedPractice !== null} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           {selectedPractice && (
             <>
               <DialogHeader>
@@ -106,54 +92,43 @@ export default function Tools() {
               </DialogHeader>
 
               <div className="space-y-6">
-                {/* Progress */}
+                {/* Progress bar */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Step {currentStep + 1} of{" "}
-                      {selectedPractice.steps.length}
+                      Step {currentStep + 1} of {selectedPractice.steps.length}
                     </span>
                     <span className="text-muted-foreground">
-                      {Math.round(
-                        ((currentStep + 1) /
-                          selectedPractice.steps.length) *
-                          100,
-                      )}
-                      %
+                      {Math.round(((currentStep + 1) / selectedPractice.steps.length) * 100)}%
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-all"
-                      style={{
-                        width: `${
-                          ((currentStep + 1) /
-                            selectedPractice.steps.length) *
-                          100
-                        }%`,
-                      }}
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${((currentStep + 1) / selectedPractice.steps.length) * 100}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Current Step */}
+                {/* Current step */}
                 <div className="py-8 text-center">
                   <p className="text-lg leading-relaxed">
                     {selectedPractice.steps[currentStep]}
                   </p>
                 </div>
 
-                {/* All Steps */}
+                {/* All steps */}
                 <div className="space-y-2 pt-4 border-t">
-                  <p className="text-sm font-medium text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     All steps
                   </p>
                   {selectedPractice.steps.map((step, index) => (
                     <div
                       key={index}
-                      className={`flex items-start gap-2 rounded p-2 ${
-                        index === currentStep ? "bg-primary/10" : ""
-                      }`}
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg p-2 transition-colors",
+                        index === currentStep && "bg-primary/8",
+                      )}
                     >
                       {index <= currentStep ? (
                         <CheckCircle2Icon className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
@@ -168,16 +143,18 @@ export default function Tools() {
                 {/* Navigation */}
                 <div className="flex gap-2">
                   <Button
-                    onClick={handlePrevStep}
+                    onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
                     disabled={currentStep === 0}
                     variant="outline"
                     className="flex-1"
                   >
                     Previous
                   </Button>
-                  {currentStep <
-                  selectedPractice.steps.length - 1 ? (
-                    <Button onClick={handleNextStep} className="flex-1">
+                  {currentStep < selectedPractice.steps.length - 1 ? (
+                    <Button
+                      onClick={() => setCurrentStep((s) => s + 1)}
+                      className="flex-1"
+                    >
                       Next
                     </Button>
                   ) : (
@@ -191,6 +168,24 @@ export default function Tools() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ======================================================
+   STANDALONE PAGE — routed directly
+   ====================================================== */
+
+export default function Tools() {
+  return (
+    <div className="p-6 space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold">Wellbeing Tools</h1>
+        <p className="text-sm text-muted-foreground">
+          A collection of guided practices you can use anytime.
+        </p>
+      </div>
+      <ToolsTabContent />
     </div>
   );
 }

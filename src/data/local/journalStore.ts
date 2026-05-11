@@ -1,8 +1,11 @@
 export type LocalJournalEntry = {
   localId: string;
+  title?: string;
   dateIso: string;
   text: string;
   tags: string[];
+  mood?: number; // 1–5
+  createdAt: number;
   updatedAt: number;
 };
 
@@ -25,44 +28,45 @@ export function listJournalEntries(limit = 50): LocalJournalEntry[] {
   const entries = load<LocalJournalEntry[]>(JOURNAL_KEY, []);
   return entries
     .slice()
-    .sort((a, b) => b.dateIso.localeCompare(a.dateIso))
+    .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, limit);
 }
 
-export function upsertJournalEntry(input: {
-  dateIso: string;
+export function addJournalEntry(input: {
+  title?: string;
   text: string;
   tags: string[];
-}) {
+  mood?: number;
+}): LocalJournalEntry {
   const entries = load<LocalJournalEntry[]>(JOURNAL_KEY, []);
   const now = Date.now();
+  const entry: LocalJournalEntry = {
+    localId: crypto.randomUUID(),
+    dateIso: new Date().toISOString().split("T")[0],
+    createdAt: now,
+    updatedAt: now,
+    tags: input.tags,
+    text: input.text,
+    title: input.title,
+    mood: input.mood,
+  };
+  entries.push(entry);
+  save(JOURNAL_KEY, entries);
+  return entry;
+}
 
-  const idx = entries.findIndex((e) => e.dateIso === input.dateIso);
-
-  if (idx !== -1) {
-    entries[idx] = {
-      ...entries[idx],
-      text: input.text,
-      tags: input.tags,
-      updatedAt: now,
-    };
-  } else {
-    entries.push({
-      localId: crypto.randomUUID(),
-      dateIso: input.dateIso,
-      text: input.text,
-      tags: input.tags,
-      updatedAt: now,
-    });
-  }
-
+export function updateJournalEntry(
+  localId: string,
+  patch: Partial<Pick<LocalJournalEntry, "title" | "text" | "tags" | "mood">>,
+) {
+  const entries = load<LocalJournalEntry[]>(JOURNAL_KEY, []);
+  const idx = entries.findIndex((e) => e.localId === localId);
+  if (idx === -1) return;
+  entries[idx] = { ...entries[idx], ...patch, updatedAt: Date.now() };
   save(JOURNAL_KEY, entries);
 }
 
-export function deleteJournalEntryByDate(dateIso: string) {
+export function deleteJournalEntry(localId: string) {
   const entries = load<LocalJournalEntry[]>(JOURNAL_KEY, []);
-  save(
-    JOURNAL_KEY,
-    entries.filter((e) => e.dateIso !== dateIso),
-  );
+  save(JOURNAL_KEY, entries.filter((e) => e.localId !== localId));
 }

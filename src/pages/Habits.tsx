@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import PageLayout from "@/components/layout/PageLayout";
 import {
   Empty,
   EmptyHeader,
@@ -14,7 +15,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,10 +32,7 @@ import GatedFeatureBanner from "@/components/GatedFeatureBanner";
 import { PlusIcon, Target } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import {
-  checkFeatureAccess,
-  getFeatureLimit,
-} from "@/services/subscriptionUtils";
+import { getFeatureLimit } from "@/services/subscriptionUtils";
 import {
   addHabit as addLocalHabit,
   archiveHabit,
@@ -114,34 +111,34 @@ export default function Habits() {
 
   if (!habits) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <div className="w-full max-w-xl space-y-4">
+      <PageLayout title="Habits" subtitle="Build consistency through daily actions">
+        <div className="space-y-4">
           <Skeleton className="h-10 w-1/2" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Habits</h1>
-          <p className="text-sm text-muted-foreground">
-            Build consistency through daily actions
-          </p>
-        </div>
-
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogTrigger asChild>
-            <Button disabled={!canAddMoreHabits()}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              New Habit
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+    <PageLayout
+      title="Habits"
+      subtitle="Build consistency through daily actions"
+      headerRight={
+        <Button
+          size="sm"
+          disabled={!canAddMoreHabits()}
+          onClick={() => setShowDialog(true)}
+        >
+          <PlusIcon className="h-4 w-4" />
+          New Habit
+        </Button>
+      }
+    >
+      {/* Dialog is rendered here so it shares state with headerRight button */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Habit</DialogTitle>
             </DialogHeader>
@@ -204,8 +201,7 @@ export default function Habits() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
 
       {!canAddMoreHabits() && (
         <GatedFeatureBanner
@@ -228,7 +224,7 @@ export default function Habits() {
           </EmptyHeader>
           <EmptyContent>
             <Button size="sm" onClick={() => setShowDialog(true)}>
-              <PlusIcon className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4" />
               Create Habit
             </Button>
           </EmptyContent>
@@ -247,6 +243,6 @@ export default function Habits() {
           ))}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

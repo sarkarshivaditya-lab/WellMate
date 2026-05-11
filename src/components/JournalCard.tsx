@@ -1,53 +1,96 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2Icon } from "lucide-react";
-import type { Doc } from "@/convex/_generated/dataModel.d.ts";
+import { PencilIcon, Trash2Icon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { LocalJournalEntry } from "@/data/local/journalStore";
+
+const MOOD_EMOJIS = ["😢", "😔", "😐", "😊", "😄"];
 
 interface JournalCardProps {
-  entry: Doc<"journalEntries">;
+  entry: LocalJournalEntry;
+  onEdit?: () => void;
   onDelete?: () => void;
-  onClick?: () => void;
 }
 
-export default function JournalCard({ entry, onDelete, onClick }: JournalCardProps) {
-  const date = new Date(entry.dateIso);
+export default function JournalCard({ entry, onEdit, onDelete }: JournalCardProps) {
+  const date = new Date(entry.createdAt);
   const formattedDate = date.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
+  const formattedTime = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
   return (
-    <Card className={onClick ? "cursor-pointer hover:bg-accent" : ""}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {formattedDate}
-          </CardTitle>
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2Icon className="h-4 w-4" />
-            </Button>
-          )}
+    <Card
+      className={cn(
+        "group transition-premium",
+        onEdit && "cursor-pointer hover:bg-accent/30",
+      )}
+      onClick={onEdit}
+    >
+      <CardContent className="p-4">
+        {/* Meta row: mood + date + action buttons */}
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            {entry.mood !== undefined && (
+              <span className="text-base leading-none flex-shrink-0" aria-label={MOOD_EMOJIS[entry.mood - 1]}>
+                {MOOD_EMOJIS[entry.mood - 1]}
+              </span>
+            )}
+            <span className="text-[11px] text-muted-foreground truncate">
+              {formattedDate} · {formattedTime}
+            </span>
+          </div>
+
+          <div
+            className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                aria-label="Edit entry"
+              >
+                <PencilIcon className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                aria-label="Delete entry"
+              >
+                <Trash2Icon className="h-3.5 w-3.5 text-destructive/70" />
+              </Button>
+            )}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent onClick={onClick}>
-        <p className="text-sm mb-3 line-clamp-3">{entry.text}</p>
+
+        {/* Title */}
+        {entry.title && (
+          <p className="text-sm font-semibold leading-snug mb-1">{entry.title}</p>
+        )}
+
+        {/* Body preview */}
+        <p className="text-[13px] text-foreground/80 leading-relaxed line-clamp-3">{entry.text}</p>
+
+        {/* Tags */}
         {entry.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 mt-2.5">
             {entry.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
+              <span
+                key={tag}
+                className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+              >
                 {tag}
-              </Badge>
+              </span>
             ))}
           </div>
         )}

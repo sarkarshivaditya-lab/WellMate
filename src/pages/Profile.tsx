@@ -1,8 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import PageLayout from "@/components/layout/PageLayout";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { useAuth0 } from "@auth0/auth0-react";
 import { getAllLocalExercises } from "@/data/local/exercises";
 import { getPendingMeals } from "@/data/local/mealsStore";
+import { ShieldAlert } from "lucide-react";
+import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
+import { useState } from "react";
 
 /**
  * Profile / Settings
@@ -22,6 +33,8 @@ export default function Profile() {
     logout,
     user,
   } = useAuth0();
+
+  const [safetySheetOpen, setSafetySheetOpen] = useState(false);
 
   // ---------- Sync status (best-effort, read-only) ----------
   let pendingCount = 0;
@@ -62,7 +75,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <PageLayout title="Profile" subtitle="Account and preferences">
+    <div className="space-y-6">
       {/* =========================
           ACCOUNT
          ========================= */}
@@ -72,7 +86,7 @@ export default function Profile() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* 🔵 AUTH RESTORING */}
+          {/* AUTH RESTORING */}
           {isLoading && (
             <>
               <div className="text-sm text-muted-foreground">
@@ -85,11 +99,11 @@ export default function Profile() {
             </>
           )}
 
-          {/* 🔴 SIGNED OUT */}
+          {/* SIGNED OUT */}
           {!isLoading && !isAuthenticated && (
             <>
               <div className="text-sm text-muted-foreground">
-                You’re currently using WellMate without an account.
+                You're currently using WellMate without an account.
               </div>
 
               <div className="rounded-lg border p-4 space-y-2">
@@ -111,11 +125,11 @@ export default function Profile() {
             </>
           )}
 
-          {/* 🟢 SIGNED IN */}
+          {/* SIGNED IN */}
           {!isLoading && isAuthenticated && (
             <>
               <div className="text-sm text-muted-foreground">
-                You’re signed in{user?.email ? ` as ${user.email}` : ""}.
+                You're signed in{user?.email ? ` as ${user.email}` : ""}.
               </div>
 
               <div className="rounded-lg border p-4 space-y-2">
@@ -174,7 +188,7 @@ export default function Profile() {
             </div>
 
             <div className="text-xs text-muted-foreground">
-              Sync runs automatically when you’re online and signed in.
+              Sync runs automatically when you're online and signed in.
             </div>
           </CardContent>
         </Card>
@@ -198,6 +212,75 @@ export default function Profile() {
           </p>
         </CardContent>
       </Card>
+
+      {/* =========================
+          HEALTH & SAFETY
+         ========================= */}
+      <Card className="border-amber-200/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-amber-600" />
+            <span>Health &amp; Safety</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            WellMate is a wellness companion, not a medical device. AI content is for
+            general informational purposes only and is not medical advice.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setSafetySheetOpen(true)}
+          >
+            Read health disclaimer
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Health & Safety bottom sheet */}
+      <Sheet open={safetySheetOpen} onOpenChange={setSafetySheetOpen}>
+        <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col rounded-t-2xl">
+          <SheetHeader className="flex-shrink-0 pb-2">
+            <SheetTitle>Health &amp; Safety</SheetTitle>
+            <SheetDescription>
+              Please read before making any health decisions.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex-1 min-h-0 overflow-y-auto py-4 space-y-5">
+            {/* Emergency resources — always at the top */}
+            <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                {EMERGENCY_COPY.title}
+              </p>
+              <p className="text-[12px] text-amber-800/80">{EMERGENCY_COPY.body}</p>
+              <div className="space-y-1.5 mt-2">
+                {EMERGENCY_COPY.resources.map((r) => (
+                  <div key={r.label} className="text-[13px]">
+                    <span className="font-semibold">{r.label}</span>
+                    {" "}— {r.description}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Full disclaimer sections */}
+            {DISCLAIMER_SECTIONS.map((section, i) => (
+              <div key={i} className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {section.title}
+                </p>
+                <p className="text-[13px] leading-relaxed text-foreground/80">
+                  {section.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
+    </PageLayout>
   );
 }
