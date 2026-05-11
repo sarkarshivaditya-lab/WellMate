@@ -35,6 +35,9 @@ jobs:
         env:
           NODE_ENV: production
       
+      - name: Add Android platform
+        run: npx cap add android
+
       - name: Copy web assets to Capacitor
         run: npx cap copy android
       
