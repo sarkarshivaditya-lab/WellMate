@@ -172,4 +172,39 @@
   .card-shadow-pressed {
     box-shadow: var(--card-shadow-pressed);
   }
+
+  /* ===============================
+     ONBOARDING COMPLETION ANIMATIONS
+     Wellness-caliber: soft spring entrance + gentle float loops.
+     =============================== */
+  @keyframes wm-scale-in {
+    0%   { opacity: 0; transform: scale(0.6); }
+    65%  { transform: scale(1.07); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes wm-fade-up {
+    0%   { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes wm-float {
+    0%, 100% { transform: translateY(0px)   rotate(0deg); }
+    50%       { transform: translateY(-11px) rotate(5deg); }
+  }
+  @keyframes wm-float-alt {
+    0%, 100% { transform: translateY(0px)   rotate(0deg); }
+    50%       { transform: translateY(-8px)  rotate(-5deg); }
+  }
+  @keyframes wm-pulse-glow {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50%       { opacity: 0.6;  transform: scale(1.07); }
+  }
+
+  .animate-wm-icon-in  { animation: wm-scale-in  0.65s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-wm-fade-1   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+  .animate-wm-fade-2   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.4s  both; }
+  .animate-wm-fade-3   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.55s both; }
+  .animate-wm-fade-4   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.7s  both; }
+  .animate-wm-float    { animation: wm-float      6s    ease-in-out infinite; }
+  .animate-wm-float-alt{ animation: wm-float-alt  7.5s  ease-in-out infinite 0.8s; }
+  .animate-wm-glow     { animation: wm-pulse-glow 3.5s  ease-in-out infinite; }
 }
