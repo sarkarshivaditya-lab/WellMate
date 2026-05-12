@@ -21,10 +21,44 @@ import Sleep from "./pages/Sleep";
 import AppShell from "./components/layout/AppShell";
 
 /* ======================================================
-   LOADING SCREEN
+   LOADING SCREEN — with timeout guard
+   Never stays loading forever: after AUTH_TIMEOUT_MS with no
+   resolution it shows a recovery button so the user isn't frozen.
    ====================================================== */
 
-function AppLoadingScreen() {
+const AUTH_TIMEOUT_MS = 8000;
+
+function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
+  const [timedOut, setTimedOut] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!onTimeout) return;
+    const t = setTimeout(() => {
+      setTimedOut(true);
+      onTimeout();
+    }, AUTH_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [onTimeout]);
+
+  if (timedOut) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          WellMate
+        </p>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Taking longer than expected. Check your connection or continue offline.
+        </p>
+        <button
+          className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
+          onClick={() => window.location.replace("/onboarding")}
+        >
+          Continue offline
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
       <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
@@ -44,15 +78,22 @@ function AppLoadingScreen() {
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+  const [timedOut, setTimedOut] = React.useState(false);
 
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      loginWithRedirect();
+      // loginWithRedirect works in the browser but not in Capacitor without
+      // a registered deep-link callback. We fire it anyway and rely on the
+      // timeout as the safety net for environments where it doesn't return.
+      loginWithRedirect().catch(() => {});
     }
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
+  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
+
+  if (timedOut) return <Navigate to="/onboarding" replace />;
   if (isLoading || !isAuthenticated) {
-    return <AppLoadingScreen />;
+    return <AppLoadingScreen onTimeout={handleTimeout} />;
   }
 
   return <>{children}</>;
@@ -68,13 +109,17 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 
 function RootEntry() {
   const { isAuthenticated, isLoading } = useAuth0();
+  const [timedOut, setTimedOut] = React.useState(false);
+  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
 
-  if (isLoading) {
-    return <AppLoadingScreen />;
+  if (isLoading && !timedOut) {
+    return <AppLoadingScreen onTimeout={handleTimeout} />;
   }
 
+  // Not authenticated (or auth timed out) → go to onboarding.
+  // Onboarding has no auth requirement; the full flow works offline.
   if (!isAuthenticated) {
-    return <AppLoadingScreen />;
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <Navigate to="/physical" replace />;

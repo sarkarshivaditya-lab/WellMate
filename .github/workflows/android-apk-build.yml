@@ -40,6 +40,16 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
+          # Auth0 — add these as repository secrets in GitHub → Settings → Secrets
+          VITE_AUTH0_DOMAIN: ${{ secrets.VITE_AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID: ${{ secrets.VITE_AUTH0_CLIENT_ID }}
+          VITE_AUTH0_AUDIENCE: ${{ secrets.VITE_AUTH0_AUDIENCE }}
+          # For Capacitor Android (androidScheme: "https") the origin is https://localhost.
+          # Add https://localhost to "Allowed Callback URLs" in your Auth0 application dashboard.
+          VITE_AUTH0_REDIRECT_URI: https://localhost
+          # Convex — add your production deployment URL as a repository secret.
+          # Format: https://<deployment-name>.convex.cloud
+          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
       
       - name: Sync web assets to Android
         run: npx cap sync android
