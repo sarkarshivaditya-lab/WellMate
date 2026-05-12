@@ -2,8 +2,11 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Browser } from "@capacitor/browser";
 
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
+import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
+import { isCapacitorNative } from "./components/providers/auth";
 
 import Onboarding from "./pages/Onboarding";
 import TransitionGate from "./pages/Transition";
@@ -82,10 +85,16 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // loginWithRedirect works in the browser but not in Capacitor without
-      // a registered deep-link callback. We fire it anyway and rely on the
-      // timeout as the safety net for environments where it doesn't return.
-      loginWithRedirect().catch(() => {});
+      if (isCapacitorNative) {
+        // On Capacitor, open Auth0 in the system browser so the OS can intercept
+        // the com.wellmate.app:// callback and route it back to the app.
+        // CapacitorAuthHandler listens for appUrlOpen and completes the exchange.
+        loginWithRedirect({
+          openUrl: (url) => Browser.open({ url, presentationStyle: "popover" }),
+        }).catch(() => {});
+      } else {
+        loginWithRedirect().catch(() => {});
+      }
     }
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
@@ -165,6 +174,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthSyncBoundary />
+      <CapacitorAuthHandler />
 
       <Routes>
         <Route path="/" element={<RootEntry />} />
