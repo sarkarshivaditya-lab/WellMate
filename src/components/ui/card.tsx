@@ -5,11 +5,9 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
-      role="button"
-      tabIndex={0}
       className={cn(
         /* Surface */
-        "bg-card text-card-foreground rounded-2xl cursor-pointer",
+        "bg-card text-card-foreground rounded-2xl",
 
         /* Separation — hairline ring, no hard border */
         "ring-1 ring-black/[0.05]",
@@ -22,9 +20,6 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
 
         /* Hover */
         "hover:-translate-y-0.5 hover:card-shadow-hover",
-
-        /* Focus (keyboard navigation) */
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:-translate-y-0.5",
 
         /* Pressed */
         "active:translate-y-0 active:card-shadow-pressed",

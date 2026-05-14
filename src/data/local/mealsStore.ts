@@ -5,6 +5,7 @@ import type { MealItemData } from "@/services/mealService";
 
 export type LocalMeal = {
   id: string;
+  convexId?: string;   // Convex _id, set after first successful create sync
   dateIso: string;
   name: string;
   inputMode: "quick" | "detailed";
@@ -143,11 +144,15 @@ export function updateMeal(
   });
 }
 
-export function markMealSynced(localMealId: string) {
+export function getMealByLocalId(localId: string): LocalMeal | undefined {
+  return cachedSnapshot.find((m) => m.id === localId);
+}
+
+export function markMealSynced(localMealId: string, convexId?: string) {
   writeAll(
     cachedSnapshot.map((m) =>
       m.id === localMealId
-        ? { ...m, syncStatus: "synced" }
+        ? { ...m, syncStatus: "synced", ...(convexId ? { convexId } : {}) }
         : m,
     ),
   );

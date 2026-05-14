@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -66,8 +67,13 @@ export default function PhysicalInsightsCard() {
   ) {
     return (
       <Card>
-        <CardContent className="text-sm text-muted-foreground">
-          Gathering recent patterns…
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-28 rounded-md" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-14 w-3/4 rounded-xl" />
         </CardContent>
       </Card>
     );
@@ -168,7 +174,7 @@ export default function PhysicalInsightsCard() {
           {finalInsights.map((insight) => (
             <li
               key={insight.id}
-              className="rounded-md border border-border p-3"
+              className="rounded-xl bg-muted/40 px-4 py-3"
             >
               <div className="font-medium">{insight.displayTitle}</div>
               <div className="mt-1 text-xs text-muted-foreground">

@@ -6,13 +6,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PlusIcon, MoonIcon } from "lucide-react";
 import { toast } from "sonner";
 import PageLayout from "@/components/layout/PageLayout";
@@ -51,7 +49,7 @@ export default function Sleep() {
       notes: notes || undefined,
     });
 
-    toast.success("Sleep logged (saved locally)");
+    toast.success("Sleep logged");
     setShowDialog(false);
     setNotes("");
   };
@@ -67,89 +65,98 @@ export default function Sleep() {
   const avgMins = avg % 60;
 
   return (
-    <PageLayout>
-      <div className="w-full space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Sleep Tracking</h1>
-            <p className="text-muted-foreground">Monitor your rest quality</p>
-          </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Log Sleep
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Log Sleep</DialogTitle>
-              </DialogHeader>
+    <PageLayout
+      title="Sleep"
+      subtitle="Monitor your rest quality"
+      headerRight={
+        <Button size="sm" onClick={() => setShowDialog(true)}>
+          <PlusIcon className="h-4 w-4" />
+          Log Sleep
+        </Button>
+      }
+    >
+      {/* Dialog controlled by headerRight button */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log Sleep</DialogTitle>
+          </DialogHeader>
 
-              <div className="space-y-4">
-                <div>
-                  <Label>Bedtime</Label>
-                  <Input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Bedtime</Label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
 
-                <div>
-                  <Label>Wake Time</Label>
-                  <Input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
+            <div className="space-y-1.5">
+              <Label>Wake Time</Label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
 
-                <div>
-                  <Label>Sleep Quality</Label>
-                  <div className="flex gap-2 mt-2">
-                    {[1, 2, 3, 4, 5].map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => setRating(r)}
-                        className={`text-3xl transition-all ${
-                          rating === r ? "scale-125" : "opacity-50"
-                        }`}
-                      >
-                        {ratingEmojis[r - 1]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Notes (optional)</Label>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <Button onClick={handleAddSleep} className="w-full">
-                  Log Sleep
-                </Button>
+            <div className="space-y-2">
+              <Label>Sleep Quality</Label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRating(r)}
+                    className={`flex-1 text-3xl rounded-xl py-2 transition-all duration-150 ${
+                      rating === r
+                        ? "scale-110 bg-primary/10 ring-1 ring-primary/30"
+                        : "opacity-50 hover:opacity-75"
+                    }`}
+                  >
+                    {ratingEmojis[r - 1]}
+                  </button>
+                ))}
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
 
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <Button onClick={handleAddSleep} className="w-full">
+              Log Sleep
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>7-Day Average</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {avgHours}h {avgMins}m
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Based on {sleep.length} night{sleep.length !== 1 ? "s" : ""}
-            </p>
+            {sleep.length === 0 ? (
+              <div className="text-muted-foreground">
+                <div className="text-3xl font-bold text-foreground/25">—</div>
+                <p className="mt-1 text-sm">No sleep logged yet</p>
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold tabular-nums">
+                  {avgHours}h {avgMins}m
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Based on {sleep.length} night{sleep.length !== 1 ? "s" : ""}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -159,9 +166,10 @@ export default function Sleep() {
           </CardHeader>
           <CardContent className="space-y-3">
             {sleep.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MoonIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No sleep logs yet</p>
+              <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+                <MoonIcon className="h-8 w-8 opacity-30" />
+                <p className="text-sm">No sleep logged yet</p>
+                <p className="text-xs text-muted-foreground/70">Tap "Log Sleep" to add your first entry</p>
               </div>
             ) : (
               sleep.map((s) => {
@@ -172,19 +180,19 @@ export default function Sleep() {
                 return (
                   <div
                     key={s.localId}
-                    className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
+                    className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3 transition-colors duration-150 hover:bg-muted/70"
                   >
                     <div>
-                      <div className="font-medium">{date}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm font-medium">{date}</div>
+                      <div className="text-xs text-muted-foreground">
                         {hours}h {mins}m
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">
+                      <span className="text-xl">
                         {ratingEmojis[s.rating - 1]}
                       </span>
-                      <Badge variant="secondary">{s.rating}/5</Badge>
+                      <Badge variant="secondary" className="text-xs">{s.rating}/5</Badge>
                     </div>
                   </div>
                 );

@@ -4,7 +4,7 @@ import type { ConvexReactClient } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  getPendingMeals,
+  getMealByLocalId,
   markMealSynced,
   markMealError,
   type LocalMeal,
@@ -75,20 +75,16 @@ export async function syncMeals(
 
   if (queue.length === 0) return [];
 
-  const mealsById = new Map(
-    getPendingMeals().map((m) => [m.id, m]),
-  );
-
   const successfullySyncedIds: string[] = [];
 
   for (const task of queue) {
-    const meal = mealsById.get(task.localId);
+    const meal = getMealByLocalId(task.localId);
 
     try {
-      if (task.action === "create" && meal) {
+      if (task.action === "create" && meal && !meal.deletedAt) {
         const fingerprint = await computeMealFingerprint(meal);
 
-        await convex.mutation(api.meals.addMeal, {
+        const convexId = await convex.mutation(api.meals.addMeal, {
           dateIso: meal.dateIso,
           name: meal.name,
           inputMode: meal.inputMode,
@@ -101,35 +97,45 @@ export async function syncMeals(
           fingerprint,
         });
 
-        markMealSynced(meal.id);
+        markMealSynced(meal.id, convexId as string);
         successfullySyncedIds.push(meal.id);
       }
 
       if (task.action === "update" && meal) {
-        await convex.mutation(api.meals.updateMeal, {
-          mealId: meal.id as Id<"meals">,
-          updatedAt: meal.updatedAt,
-          dateIso: meal.dateIso,
-          name: meal.name,
-          inputMode: meal.inputMode,
-          totalCalories: meal.totalCalories,
-          totalProteinG: meal.totalProteinG,
-          totalFatG: meal.totalFatG,
-          sourceAdapter: meal.sourceAdapter,
-        });
+        if (!meal.convexId) {
+          // meal was never synced to Convex — skip remote update
+          markMealSynced(meal.id);
+          successfullySyncedIds.push(meal.id);
+        } else {
+          await convex.mutation(api.meals.updateMeal, {
+            mealId: meal.convexId as Id<"meals">,
+            updatedAt: meal.updatedAt,
+            dateIso: meal.dateIso,
+            name: meal.name,
+            inputMode: meal.inputMode,
+            totalCalories: meal.totalCalories,
+            totalProteinG: meal.totalProteinG,
+            totalFatG: meal.totalFatG,
+            sourceAdapter: meal.sourceAdapter,
+          });
 
-        markMealSynced(meal.id);
-        successfullySyncedIds.push(meal.id);
+          markMealSynced(meal.id);
+          successfullySyncedIds.push(meal.id);
+        }
       }
 
       if (task.action === "delete") {
-        await convex.mutation(api.meals.deleteMeal, {
-          mealId: task.localId as Id<"meals">,
-          deletedAt: Date.now(),
-        });
+        if (!meal?.convexId) {
+          // local-only meal — no Convex record to delete
+          successfullySyncedIds.push(task.localId);
+        } else {
+          await convex.mutation(api.meals.deleteMeal, {
+            mealId: meal.convexId as Id<"meals">,
+            deletedAt: Date.now(),
+          });
 
-        markMealSynced(task.localId);
-        successfullySyncedIds.push(task.localId);
+          successfullySyncedIds.push(task.localId);
+        }
       }
     } catch {
       try {

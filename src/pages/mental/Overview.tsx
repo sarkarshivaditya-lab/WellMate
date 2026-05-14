@@ -159,11 +159,11 @@ export default function Overview() {
           OVERVIEW TAB
       ────────────────────────────────────────────── */}
       {tab === "overview" && (
-        <div className="space-y-6">
+        <div key="overview" className="space-y-6 animate-wm-tab-in">
           {/* Today's Mood */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Today's Mood</CardTitle>
+              <CardTitle>Today's Mood</CardTitle>
             </CardHeader>
             <CardContent>
               {/* Single Dialog instance — content adapts based on todayMood */}
@@ -215,7 +215,7 @@ export default function Overview() {
           {moodData.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Mood over the past week</CardTitle>
+                <CardTitle>Mood over the past week</CardTitle>
               </CardHeader>
               <CardContent className="flex justify-center">
                 <MiniLineChart data={moodData} width={320} height={100} color="#10b981" />
@@ -226,8 +226,8 @@ export default function Overview() {
           {/* Suggested Practice */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <SparklesIcon className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <SparklesIcon className="h-4 w-4 text-primary/70" />
                 A gentle practice for today
               </CardTitle>
             </CardHeader>
@@ -243,8 +243,8 @@ export default function Overview() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <BookOpenIcon className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpenIcon className="h-4 w-4 text-primary/70" />
                   Recent reflections
                 </CardTitle>
                 {entries.length > 0 && (
@@ -266,7 +266,7 @@ export default function Overview() {
                     <button
                       key={entry.localId}
                       onClick={() => { setTab("journal"); openEditEntry(entry); }}
-                      className="w-full text-left rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-colors duration-150"
+                      className="w-full text-left rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-premium"
                     >
                       {entry.title && (
                         <p className="text-xs font-semibold mb-0.5 text-foreground/90">{entry.title}</p>
@@ -287,7 +287,6 @@ export default function Overview() {
                     variant="ghost"
                     size="sm"
                     onClick={() => { setTab("journal"); openNewEntry(); }}
-                    className="text-xs"
                   >
                     Write your first entry
                   </Button>
@@ -302,7 +301,7 @@ export default function Overview() {
           JOURNAL TAB
       ────────────────────────────────────────────── */}
       {tab === "journal" && (
-        <div className="space-y-4">
+        <div key="journal" className="space-y-4 animate-wm-tab-in">
           {/* Top bar */}
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
@@ -352,12 +351,20 @@ export default function Overview() {
       {/* ──────────────────────────────────────────────
           COACH TAB
       ────────────────────────────────────────────── */}
-      {tab === "coach" && <CoachTabContent />}
+      {tab === "coach" && (
+        <div key="coach" className="animate-wm-tab-in">
+          <CoachTabContent />
+        </div>
+      )}
 
       {/* ──────────────────────────────────────────────
           TOOLS TAB
       ────────────────────────────────────────────── */}
-      {tab === "tools" && <ToolsTabContent />}
+      {tab === "tools" && (
+        <div key="tools" className="animate-wm-tab-in">
+          <ToolsTabContent />
+        </div>
+      )}
 
       {/* ──────────────────────────────────────────────
           JOURNAL EDITOR — always mounted, accessible from any tab

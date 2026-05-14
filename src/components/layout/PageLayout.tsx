@@ -235,7 +235,7 @@ function PageLayout({
                       key={tab.value}
                       onClick={() => onTabChange?.(tab.value)}
                       className={cn(
-                        "px-4 py-2 text-[13px] font-medium rounded-full",
+                        "px-4 py-2.5 text-[13px] font-medium rounded-full min-h-[36px]",
                         "transition-all duration-150",
                         isActive
                           ? "bg-card text-foreground shadow-[0_1px_3px_rgba(20,60,50,0.12),_0_0_0_1px_rgba(20,60,50,0.05)]"

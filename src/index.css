@@ -219,4 +219,52 @@
   .animate-wm-float    { animation: wm-float      6s    ease-in-out infinite; }
   .animate-wm-float-alt{ animation: wm-float-alt  7.5s  ease-in-out infinite 0.8s; }
   .animate-wm-glow     { animation: wm-pulse-glow 3.5s  ease-in-out infinite; }
+
+  /* ===============================
+     TAB PANEL ENTRANCE
+     Soft fade + 5px rise — feels intentional, not flashy.
+     Fires whenever a tab panel mounts.
+     =============================== */
+  @keyframes wm-tab-in {
+    0%   { opacity: 0; transform: translateY(5px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-wm-tab-in {
+    animation: wm-tab-in 0.18s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  /* ===============================
+     ROUTE ENTRANCE
+     Pure fade — no Y movement for full-page transitions.
+     Keeps perceived navigation instant while smoothing hard cuts.
+     =============================== */
+  @keyframes wm-route-in {
+    0%   { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  .animate-wm-route-in {
+    animation: wm-route-in 0.22s ease-out both;
+  }
+
+  /* ===============================
+     SKELETON SHIMMER
+     Gradient sweep instead of flat pulse — reads as loading, not broken.
+     =============================== */
+  @keyframes wm-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted-foreground) / 0.07) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: wm-shimmer 1.6s ease-in-out infinite;
+  }
 }

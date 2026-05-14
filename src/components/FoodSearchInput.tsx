@@ -53,6 +53,7 @@ export default function FoodSearchInput({ onSelect }: FoodSearchInputProps) {
         <Input
           placeholder="Search for food..."
           value={query}
+          inputMode="search"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
@@ -66,7 +67,7 @@ export default function FoodSearchInput({ onSelect }: FoodSearchInputProps) {
           {results.map((result) => (
             <Card
               key={result.id}
-              className="p-3 cursor-pointer hover:bg-accent transition-colors"
+              className="p-3 cursor-pointer hover:bg-accent transition-premium active:scale-[0.98]"
               onClick={() => handleSelectResult(result)}
             >
               <div className="font-medium">{result.name}</div>
@@ -110,6 +111,7 @@ export default function FoodSearchInput({ onSelect }: FoodSearchInputProps) {
             <Input
               id="quantity"
               type="number"
+              inputMode="decimal"
               min="0.1"
               step="0.1"
               value={quantity}

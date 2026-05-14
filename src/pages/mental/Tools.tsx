@@ -59,8 +59,8 @@ export function ToolsTabContent() {
             key={f.label}
             onClick={() => setFilter(f.value)}
             className={cn(
-              "flex-shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium",
-              "transition-all duration-150",
+              "flex-shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium min-h-[36px]",
+              "transition-premium",
               filter === f.value
                 ? "bg-primary text-primary-foreground border-transparent"
                 : "border-border text-muted-foreground hover:text-foreground hover:border-border/80",
@@ -118,7 +118,7 @@ export function ToolsTabContent() {
                 </div>
 
                 {/* All steps */}
-                <div className="space-y-2 pt-4 border-t">
+                <div className="space-y-2 pt-4 border-t border-border/40">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     All steps
                   </p>
@@ -126,7 +126,7 @@ export function ToolsTabContent() {
                     <div
                       key={index}
                       className={cn(
-                        "flex items-start gap-2 rounded-lg p-2 transition-colors",
+                        "flex items-start gap-2 rounded-xl p-2 transition-premium",
                         index === currentStep && "bg-primary/8",
                       )}
                     >

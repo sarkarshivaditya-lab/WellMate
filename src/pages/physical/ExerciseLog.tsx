@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusIcon, TrashIcon, X } from "lucide-react";
+import { PlusIcon, TrashIcon, X, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
@@ -34,12 +34,12 @@ import { localDateIso } from "@/services/dateUtils";
 
 function ExerciseRowSkeleton() {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 animate-pulse">
+    <div className="flex items-start justify-between gap-4 py-3">
       <div className="flex-1 space-y-2">
-        <div className="h-4 w-40 rounded bg-muted" />
-        <div className="h-3 w-56 rounded bg-muted" />
+        <div className="h-4 w-40 rounded skeleton-shimmer" />
+        <div className="h-3 w-56 rounded skeleton-shimmer" />
       </div>
-      <div className="h-8 w-8 rounded bg-muted" />
+      <div className="h-8 w-8 rounded skeleton-shimmer" />
     </div>
   );
 }
@@ -143,9 +143,11 @@ export default function ExerciseLog() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Today’s Exercise</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {totalDuration} min · {totalCaloriesBurned} cal burned
-            </p>
+            {exercises.length > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {totalDuration} min · {totalCaloriesBurned} cal burned
+              </p>
+            )}
           </div>
 
           <Button
@@ -161,11 +163,10 @@ export default function ExerciseLog() {
 
       <CardContent className="space-y-2">
         {exercises.length === 0 ? (
-          <div className="py-8 text-center space-y-1">
-            <div className="text-sm text-muted-foreground">
-              No exercise logged yet today
-            </div>
-            <div className="text-xs text-muted-foreground">
+          <div className="py-8 text-center space-y-2">
+            <Dumbbell className="mx-auto h-8 w-8 text-muted-foreground/40" />
+            <div className="text-sm text-muted-foreground">No exercise logged today</div>
+            <div className="text-xs text-muted-foreground/70">
               Even a short walk or stretch can be helpful — totally optional.
             </div>
           </div>
@@ -206,7 +207,7 @@ export default function ExerciseLog() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="h-7 px-2 text-xs"
+                        className="h-9 px-3 text-xs"
                         onClick={() => {
                           deleteExercise(exercise.id);
                           setConfirmDeleteId(null);
@@ -217,10 +218,10 @@ export default function ExerciseLog() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-9 w-9"
                         onClick={() => setConfirmDeleteId(null)}
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   ) : (
@@ -255,7 +256,7 @@ export default function ExerciseLog() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>Exercise Type</Label>
               <Select
                 value={form.type}
@@ -281,7 +282,7 @@ export default function ExerciseLog() {
               </Select>
             </div>
 
-            <div>
+            <div className="space-y-1.5">
               <Label>Exercise Name</Label>
               <Input
                 value={form.name}
@@ -291,10 +292,11 @@ export default function ExerciseLog() {
               />
             </div>
 
-            <div>
+            <div className="space-y-1.5">
               <Label>Duration (minutes)</Label>
               <Input
                 type="number"
+                inputMode="numeric"
                 value={form.durationMinutes}
                 onChange={(e) =>
                   setForm({
@@ -305,7 +307,7 @@ export default function ExerciseLog() {
               />
             </div>
 
-            <div>
+            <div className="space-y-1.5">
               <Label>Notes (optional)</Label>
               <Textarea
                 value={form.notes}

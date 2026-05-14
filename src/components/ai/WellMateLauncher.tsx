@@ -292,7 +292,7 @@ function WellMateLauncher() {
                     key={opt}
                     type="button"
                     onClick={() => handleSend(opt)}
-                    className="rounded-full border border-border px-3 py-1 text-sm bg-background hover:bg-muted transition-colors duration-150"
+                    className="rounded-full border border-border px-3 py-1.5 text-sm bg-background hover:bg-muted transition-colors duration-150 min-h-[36px]"
                   >
                     {opt}
                   </button>
@@ -302,7 +302,7 @@ function WellMateLauncher() {
 
             {thinking && (
               <div className="flex justify-start">
-                <div className="rounded-2xl px-3 py-2 bg-muted text-muted-foreground text-sm">
+                <div className="rounded-2xl px-3 py-2 bg-muted text-muted-foreground text-sm animate-pulse">
                   Thinking…
                 </div>
               </div>

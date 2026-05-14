@@ -299,9 +299,9 @@ export function CoachTabContent() {
                 key={p}
                 onClick={() => setMessage(p)}
                 className={cn(
-                  "text-left text-[13px] px-3 py-2.5 rounded-xl",
+                  "text-left text-[13px] px-3 py-2.5 rounded-xl min-h-[36px]",
                   "bg-secondary/50 hover:bg-secondary",
-                  "transition-colors duration-150",
+                  "transition-premium",
                 )}
               >
                 "{p}"

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { calculateConfidenceScore } from "./_utils/confidenceScoring";
 import { useAllExercises } from "@/hooks/useAllExercises";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
@@ -37,8 +38,13 @@ export default function PhysicalConfidenceCard() {
   ) {
     return (
       <Card>
-        <CardContent className="text-sm text-muted-foreground">
-          Estimating today’s confidence…
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-36 rounded-md" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-7 w-16 rounded-md" />
+          <Skeleton className="h-3 w-44 rounded-md" />
+          <Skeleton className="h-3 w-52 rounded-md" />
         </CardContent>
       </Card>
     );
@@ -82,20 +88,25 @@ export default function PhysicalConfidenceCard() {
         <CardTitle className="text-base">Insight Confidence</CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-2">
-        <div className="text-xl font-medium">
+      <CardContent className="space-y-3">
+        <div className="text-2xl font-semibold tabular-nums">
           {result.confidenceScore}%
         </div>
 
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground leading-relaxed">
           An estimate based on your recent logs
         </div>
 
-        <ul className="mt-2 list-disc pl-4 text-xs text-muted-foreground space-y-1">
-          {result.explanations.map((e, i) => (
-            <li key={i}>{e}</li>
-          ))}
-        </ul>
+        {result.explanations.length > 0 && (
+          <ul className="space-y-1.5">
+            {result.explanations.map((e, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <span className="mt-1.5 h-1 w-1 rounded-full bg-muted-foreground/40 flex-shrink-0" />
+                {e}
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );

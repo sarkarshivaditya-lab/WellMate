@@ -25,7 +25,7 @@ export default function HabitCard({
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+    <Card className="cursor-pointer hover:bg-accent/30 transition-premium">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1" onClick={onClick}>
@@ -61,7 +61,7 @@ export default function HabitCard({
                   <Button
                     size="sm"
                     variant="destructive"
-                    className="h-8 px-2 text-xs"
+                    className="h-9 px-3 text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       onArchive();
@@ -73,7 +73,7 @@ export default function HabitCard({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8"
+                    className="h-9 w-9"
                     onClick={(e) => {
                       e.stopPropagation();
                       setConfirming(false);
@@ -86,7 +86,7 @@ export default function HabitCard({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
                     setConfirming(true);

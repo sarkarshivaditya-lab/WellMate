@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { TrashIcon } from "lucide-react";
 
@@ -24,42 +23,38 @@ interface MealCardProps {
 
 export default function MealCard({ meal, onDelete }: MealCardProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{meal.name}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {meal.totalCalories} cal · P: {meal.totalProteinG}g · F: {meal.totalFatG}g · C: {meal.totalCarbsG}g
-            </p>
+    <div className="rounded-xl bg-muted/40 px-4 py-3 transition-premium hover:bg-muted/60">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold leading-snug">{meal.name}</div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {meal.totalCalories} cal · P: {meal.totalProteinG}g · F: {meal.totalFatG}g · C: {meal.totalCarbsG}g
           </div>
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              className="text-destructive"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-          )}
         </div>
-      </CardHeader>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-destructive"
+          >
+            <TrashIcon className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
       {meal.items.length > 0 && (
-        <CardContent className="pt-0">
-          <div className="space-y-1">
-            {meal.items.map((item, idx) => (
-              <div key={`${item.name}-${idx}`} className="text-sm flex justify-between">
-                <span className="text-muted-foreground">
-                  {item.quantity > 1 && `${item.quantity}x `}
-                  {item.name}
-                </span>
-                <span>{Math.round(item.calories * item.quantity)} cal</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
+        <div className="mt-2 space-y-0.5">
+          {meal.items.map((item, idx) => (
+            <div key={`${item.name}-${idx}`} className="flex justify-between text-xs text-muted-foreground">
+              <span>
+                {item.quantity > 1 && `${item.quantity}× `}
+                {item.name}
+              </span>
+              <span>{Math.round(item.calories * item.quantity)} cal</span>
+            </div>
+          ))}
+        </div>
       )}
-    </Card>
+    </div>
   );
 }

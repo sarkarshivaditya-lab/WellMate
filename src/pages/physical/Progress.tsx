@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card.tsx";
 import ChartPie from "@/components/ChartPie.tsx";
 import ChartBar from "@/components/ChartBar.tsx";
+import { UtensilsCrossed, Activity } from "lucide-react";
 import { useWeeklyExerciseTrend } from "@/hooks/useWeeklyExerciseTrend";
 import { useMealsByDate } from "@/hooks/useMealsByDate";
 import {
@@ -262,8 +263,9 @@ export default function Progress() {
             {pieData.length > 0 ? (
               <ChartPie data={pieData} size={220} />
             ) : (
-              <div className="py-10 text-sm text-muted-foreground">
-                No meals logged today
+              <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
+                <UtensilsCrossed className="h-8 w-8 opacity-30" />
+                <p className="text-sm">No meals logged today</p>
               </div>
             )}
           </CardContent>
@@ -282,8 +284,9 @@ export default function Progress() {
             {weeklyActivityData.length > 0 ? (
               <ChartBar data={weeklyActivityData} height={240} />
             ) : (
-              <div className="py-10 text-sm text-muted-foreground">
-                No activity logged yet
+              <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
+                <Activity className="h-8 w-8 opacity-30" />
+                <p className="text-sm">No activity logged yet</p>
               </div>
             )}
           </CardContent>

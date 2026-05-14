@@ -45,10 +45,9 @@ export default function PeriodTracker() {
       <Card>
         <CardHeader>
           <CardTitle>Period Tracking</CardTitle>
-          <CardDescription>Loading</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">Loading your profile</p>
+          <p className="text-sm text-muted-foreground">Loading your profile…</p>
         </CardContent>
       </Card>
     );
@@ -76,7 +75,7 @@ export default function PeriodTracker() {
               try {
                 await setPeriodTracking({ enabled: true });
               } catch {
-                toast.error("Could not enable period tracking");
+                toast.error("Couldn't enable period tracking");
               }
             }}
           >
@@ -98,20 +97,20 @@ export default function PeriodTracker() {
         lengthDays: form.lengthDays ? parseFloat(form.lengthDays) : undefined,
         notes: form.notes || undefined,
       });
-      toast.success("Cycle added successfully");
+      toast.success("Cycle logged");
       setShowAddCycle(false);
       setForm({ startDate: "", lengthDays: "", notes: "" });
     } catch {
-      toast.error("Failed to add cycle");
+      toast.error("Couldn't save this cycle — please try again");
     }
   };
 
   const handleDeleteCycle = async (cycleId: Id<"cycles">) => {
     try {
       await deleteCycle({ cycleId });
-      toast.success("Cycle deleted");
+      toast.success("Cycle removed");
     } catch {
-      toast.error("Failed to delete cycle");
+      toast.error("Couldn't remove this cycle");
     }
   };
 
@@ -160,9 +159,7 @@ export default function PeriodTracker() {
       {prediction && (
         <Card className="border-primary/50 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-lg">
-              Next Period Prediction
-            </CardTitle>
+            <CardTitle>Next Period Prediction</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
@@ -200,52 +197,48 @@ export default function PeriodTracker() {
         </CardHeader>
         <CardContent className="space-y-3">
           {cycles === undefined ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading
+            <div className="py-8 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground">Loading…</p>
             </div>
           ) : sortedCycles.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No cycles logged yet
+            <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
+              <p className="text-sm">No cycles logged yet</p>
+              <p className="text-xs text-muted-foreground/70">Tap "Add Cycle" to get started</p>
             </div>
           ) : (
             sortedCycles.map((cycle) => (
-              <Card key={cycle._id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">
-                        {new Date(
-                          cycle.startDateIso,
-                        ).toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </div>
-                      {cycle.lengthDays && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {cycle.lengthDays} days
-                        </div>
-                      )}
-                      {cycle.notes && (
-                        <div className="text-sm text-muted-foreground mt-2">
-                          {cycle.notes}
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        handleDeleteCycle(cycle._id)
-                      }
-                      className="text-destructive"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
+              <div
+                key={cycle._id}
+                className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 px-4 py-3 transition-premium hover:bg-muted/60"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">
+                    {new Date(cycle.startDateIso).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
-                </CardContent>
-              </Card>
+                  {cycle.lengthDays && (
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {cycle.lengthDays} days
+                    </div>
+                  )}
+                  {cycle.notes && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {cycle.notes}
+                    </div>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteCycle(cycle._id)}
+                  className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </div>
             ))
           )}
         </CardContent>
@@ -264,52 +257,39 @@ export default function PeriodTracker() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="startDate">Start Date</Label>
               <Input
                 id="startDate"
                 type="date"
                 value={form.startDate}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    startDate: e.target.value,
-                  })
+                  setForm({ ...form, startDate: e.target.value })
                 }
               />
             </div>
 
-            <div>
-              <Label htmlFor="lengthDays">
-                Cycle Length (days, optional)
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="lengthDays">Cycle Length (days, optional)</Label>
               <Input
                 id="lengthDays"
                 type="number"
                 placeholder="28"
                 value={form.lengthDays}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    lengthDays: e.target.value,
-                  })
+                  setForm({ ...form, lengthDays: e.target.value })
                 }
               />
             </div>
 
-            <div>
-              <Label htmlFor="notes">
-                Notes (optional)
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes (optional)</Label>
               <Textarea
                 id="notes"
-                placeholder="Any notes about symptoms, mood, etc..."
+                placeholder="Any notes about symptoms, mood, etc."
                 value={form.notes}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    notes: e.target.value,
-                  })
+                  setForm({ ...form, notes: e.target.value })
                 }
                 rows={3}
               />

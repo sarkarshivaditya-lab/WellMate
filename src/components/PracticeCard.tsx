@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  WindIcon, 
-  HeartIcon, 
-  BrainIcon, 
-  SparklesIcon 
+import { cn } from "@/lib/utils";
+import {
+  WindIcon,
+  HeartIcon,
+  BrainIcon,
+  SparklesIcon
 } from "lucide-react";
 
 export interface Practice {
@@ -32,7 +33,7 @@ export default function PracticeCard({ practice, onClick }: PracticeCardProps) {
 
   return (
     <Card
-      className={`${onClick ? "cursor-pointer hover:bg-accent" : ""}`}
+      className={cn(onClick && "cursor-pointer hover:bg-accent/60 transition-premium")}
       onClick={onClick}
     >
       <CardHeader className="pb-3">

@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
 import BottomNav from "./BottomNav";
 import { WellMateLauncher } from "@/components/ai/WellMateLauncher";
 import { DisclaimerModal } from "@/components/DisclaimerModal";
@@ -9,6 +10,7 @@ export default function AppShell({
 }: {
   children: React.ReactNode;
 }) {
+  const location = useLocation();
   const [showDisclaimer, setShowDisclaimer] = React.useState(
     () => !hasAckedDisclaimer(),
   );
@@ -17,7 +19,9 @@ export default function AppShell({
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main scrollable content */}
       <main className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom)+1.5rem)]">
-        {children}
+        <div key={location.pathname} className="animate-wm-route-in">
+          {children}
+        </div>
       </main>
 
       {/* Persistent bottom navigation */}

@@ -306,7 +306,7 @@ export default function PhysicalDashboard() {
       }}
     >
       {tab === "overview" && (
-        <div className="space-y-10">
+        <div key="overview" className="space-y-6 animate-wm-tab-in">
           <PhysicalConfidenceCard />
           <TodayActivitySummary />
           <WeeklyActivityTrend />
@@ -317,23 +317,14 @@ export default function PhysicalDashboard() {
       )}
 
       {tab === "nutrition" && (
-        <div className="space-y-10">
-          <div className="relative">
-            <Card>
-              <Progress />
-            </Card>
-          </div>
-
-          <div className="relative">
-            <Card>
-              <FoodLog />
-            </Card>
-          </div>
+        <div key="nutrition" className="space-y-6 animate-wm-tab-in">
+          <Progress />
+          <FoodLog />
         </div>
       )}
 
       {tab === "activity" && (
-        <div className="space-y-6">
+        <div key="activity" className="space-y-6 animate-wm-tab-in">
           <ExerciseLog />
           <PeriodTracker />
         </div>

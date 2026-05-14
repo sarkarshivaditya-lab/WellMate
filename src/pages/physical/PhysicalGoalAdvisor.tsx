@@ -1,7 +1,9 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 import { generateGoalAdvice } from "./_utils/goalAdvisor";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 
@@ -13,8 +15,13 @@ export default function PhysicalGoalAdvisor() {
   if (meals === undefined) {
     return (
       <Card>
-        <CardContent className="text-sm text-muted-foreground">
-          Loading goal analysis…
+        <CardHeader>
+          <Skeleton className="h-4 w-28 rounded-md" />
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          <Skeleton className="h-3 w-full rounded-md" />
+          <Skeleton className="h-3 w-4/5 rounded-md" />
+          <Skeleton className="h-3 w-2/3 rounded-md" />
         </CardContent>
       </Card>
     );
@@ -57,9 +64,12 @@ export default function PhysicalGoalAdvisor() {
       </CardHeader>
 
       <CardContent>
-        <ul className="list-disc ml-4 text-sm space-y-1">
+        <ul className="space-y-2">
           {advice.map((a, i) => (
-            <li key={i}>{a}</li>
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-primary/70 mt-0.5" />
+              <span>{a}</span>
+            </li>
           ))}
         </ul>
       </CardContent>

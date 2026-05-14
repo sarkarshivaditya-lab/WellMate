@@ -108,7 +108,7 @@ export default function Profile() {
                 You're currently using WellMate without an account.
               </div>
 
-              <div className="rounded-lg border p-4 space-y-2">
+              <div className="rounded-xl border border-border/60 p-4 space-y-2">
                 <div className="text-sm font-medium">
                   Sign in to enable sync & backup
                 </div>
@@ -134,7 +134,7 @@ export default function Profile() {
                 You're signed in{user?.email ? ` as ${user.email}` : ""}.
               </div>
 
-              <div className="rounded-lg border p-4 space-y-2">
+              <div className="rounded-xl border border-border/60 p-4 space-y-2">
                 <div className="text-sm font-medium">
                   Account connected
                 </div>
@@ -223,7 +223,7 @@ export default function Profile() {
         onClick={() => navigate("/roadmap")}
         className="w-full text-left"
       >
-        <Card className="border-primary/20 hover:border-primary/40 hover:bg-primary/[0.02] transition-colors duration-150">
+        <Card className="border-primary/20 hover:border-primary/40 hover:bg-primary/[0.02] transition-premium">
           <CardContent className="pt-4 pb-4 flex items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">

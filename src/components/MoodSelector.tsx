@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface MoodSelectorProps {
   initialMood?: number;
@@ -36,17 +37,17 @@ export default function MoodSelector({
   return (
     <div className="space-y-6">
       <div>
-        <Label className="text-base font-medium mb-3 block">How are you feeling today?</Label>
         <div className="flex justify-between gap-2">
           {moodEmojis.map((mood) => (
             <button
               key={mood.value}
               onClick={() => setSelectedMood(mood.value)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all ${
+              className={cn(
+                "flex flex-col items-center gap-1 p-3 rounded-xl transition-premium",
                 selectedMood === mood.value
                   ? "bg-primary/10 ring-2 ring-primary"
                   : "bg-secondary hover:bg-secondary/80"
-              }`}
+              )}
             >
               <span className="text-3xl">{mood.emoji}</span>
               <span className="text-xs text-muted-foreground">{mood.label}</span>
@@ -55,10 +56,8 @@ export default function MoodSelector({
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="note" className="text-base font-medium mb-2 block">
-          Add a note (optional)
-        </Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="note">Add a note (optional)</Label>
         <Textarea
           id="note"
           value={note}

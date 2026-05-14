@@ -58,9 +58,9 @@ export default function AuthSyncBoundary() {
         // swallow — identity may already exist or backend not ready
       }
 
-      // 2️⃣ Offline → Convex sync (fire-and-forget)
+      // 2️⃣ Offline → Convex sync (fire-and-forget, only when authenticated)
       try {
-        await runOfflineSync(convex);
+        await runOfflineSync(convex, isAuthenticated);
       } catch {
         // swallow — sync must never destabilize app
       }

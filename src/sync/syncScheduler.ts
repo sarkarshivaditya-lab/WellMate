@@ -42,8 +42,10 @@ let isSyncing = false;
  */
 export async function runOfflineSync(
   convex: ConvexReactClient | null | undefined,
+  isAuthenticated = false,
 ) {
   if (!convex) return;
+  if (!isAuthenticated) return;
   if (isSyncing) return;
   isSyncing = true;
 

@@ -42,7 +42,7 @@ function NavItem({
         // Touch target — 44px minimum (iOS HIG)
         "min-h-[44px]",
         // Shape + motion
-        "rounded-2xl transition-colors duration-150",
+        "rounded-2xl transition-premium",
         active
           ? "text-primary"
           : "text-muted-foreground hover:text-foreground",
@@ -54,7 +54,7 @@ function NavItem({
         className={cn(
           "absolute inset-x-1 top-1 bottom-1 rounded-xl",
           "bg-primary/10",
-          "transition-opacity duration-150",
+          "transition-premium",
           active ? "opacity-100" : "opacity-0",
         )}
       />

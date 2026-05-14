@@ -85,7 +85,7 @@ export default function Habits() {
     });
     setHabits(listHabits());
 
-    toast.success("Habit created (saved locally)");
+    toast.success("Habit created");
     setTitle("");
     setDescription("");
     setShowDialog(false);
@@ -143,7 +143,7 @@ export default function Habits() {
             </DialogHeader>
 
             <div className="space-y-4">
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
@@ -152,7 +152,7 @@ export default function Habits() {
                 />
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -162,7 +162,7 @@ export default function Habits() {
                 />
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <Label>Frequency</Label>
                 <Select
                   value={cadence}

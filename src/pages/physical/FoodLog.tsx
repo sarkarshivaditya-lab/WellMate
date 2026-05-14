@@ -21,7 +21,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, UtensilsCrossed } from "lucide-react";
 import FoodSearchInput from "@/components/FoodSearchInput.tsx";
 import MealCard from "@/components/MealCard.tsx";
 import type { FoodSearchResult } from "@/adapters/foodAdapter.interface.ts";
@@ -38,9 +38,9 @@ import { localDateIso } from "@/services/dateUtils";
 
 function MealSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {[0, 1].map((i) => (
-        <div key={i} className="h-14 rounded-md bg-muted/40 animate-pulse" />
+        <div key={i} className="h-14 rounded-xl skeleton-shimmer" />
       ))}
     </div>
   );
@@ -167,23 +167,21 @@ export default function FoodLog() {
         {!meals ? (
           <MealSkeleton />
         ) : meals.length === 0 ? (
-          <div className="py-6 text-center space-y-1">
-            <div className="text-sm text-muted-foreground">
-              No meals logged yet today
-            </div>
-            <div className="text-xs text-muted-foreground">
+          <div className="py-8 text-center space-y-2">
+            <UtensilsCrossed className="mx-auto h-8 w-8 text-muted-foreground/40" />
+            <div className="text-sm text-muted-foreground">No meals logged today</div>
+            <div className="text-xs text-muted-foreground/70">
               Logging even one meal can be helpful — optional.
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {meals.map((meal) => (
-              <div key={meal.id} className="rounded-md border border-border">
-                <MealCard
-                  meal={meal}
-                  onDelete={() => deleteMeal(meal.id)}
-                />
-              </div>
+              <MealCard
+                key={meal.id}
+                meal={meal}
+                onDelete={() => deleteMeal(meal.id)}
+              />
             ))}
           </div>
         )}
@@ -210,7 +208,7 @@ export default function FoodLog() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>Meal Name</Label>
               <Input
                 value={mealName}
@@ -241,6 +239,7 @@ export default function FoodLog() {
                 />
                 <Input
                   type="number"
+                  inputMode="numeric"
                   placeholder="Calories"
                   value={detailedForm.calories}
                   onChange={(e) =>
@@ -250,6 +249,7 @@ export default function FoodLog() {
                 <div className="grid grid-cols-3 gap-2">
                   <Input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Protein (g)"
                     value={detailedForm.protein}
                     onChange={(e) =>
@@ -258,6 +258,7 @@ export default function FoodLog() {
                   />
                   <Input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Fat (g)"
                     value={detailedForm.fat}
                     onChange={(e) =>
@@ -266,6 +267,7 @@ export default function FoodLog() {
                   />
                   <Input
                     type="number"
+                    inputMode="decimal"
                     placeholder="Carbs (g)"
                     value={detailedForm.carbs}
                     onChange={(e) =>
