@@ -1,5 +1,6 @@
 import type { FoodAdapter, FoodSearchResult } from "./foodAdapter.interface.ts";
 import { MockAdapter } from "./mockAdapter.ts";
+import { IndianLocalAdapter } from "./indianLocalAdapter.ts";
 
 const BASE = "https://world.openfoodfacts.org/api/v2/search";
 const FIELDS = "code,product_name,serving_size,serving_quantity,nutriments";
@@ -77,21 +78,36 @@ function normalize(product: OFFProduct): FoodSearchResult | null {
 
 export class NutritionApiAdapter implements FoodAdapter {
   private mockFallback = new MockAdapter();
+  private indianLocal = new IndianLocalAdapter();
 
   async search(query: string): Promise<FoodSearchResult[]> {
+    const indianResults = await this.indianLocal.search(query);
+
     try {
       const url = `${BASE}?search_terms=${encodeURIComponent(query)}&page_size=10&fields=${FIELDS}&json=1`;
       const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
       if (!res.ok) throw new Error(`OFF ${res.status}`);
 
       const data: OFFResponse = await res.json();
-      const results = (data.products ?? [])
+      const apiResults = (data.products ?? [])
         .map(normalize)
-        .filter((r): r is FoodSearchResult => r !== null)
-        .slice(0, 8);
+        .filter((r): r is FoodSearchResult => r !== null);
 
-      return results.length > 0 ? results : this.mockFallback.search(query);
+      // Indian-first: local curated results lead, API results fill remaining slots.
+      // Quality filter: OFF supplemental results must contain the query in their name
+      // and have a reasonable name length — prevents branded junk from dominating.
+      const queryLower = query.toLowerCase().trim();
+      const indianIds = new Set(indianResults.map((r) => r.id));
+      const supplemental = apiResults
+        .filter((r) => !indianIds.has(r.id))
+        .filter((r) => r.name.toLowerCase().includes(queryLower) && r.name.length < 100)
+        .slice(0, 8 - indianResults.length);
+      const merged = [...indianResults, ...supplemental];
+
+      return merged.length > 0 ? merged : this.mockFallback.search(query);
     } catch {
+      // Offline path: Indian local results + mock fallback
+      if (indianResults.length > 0) return indianResults;
       return this.mockFallback.search(query);
     }
   }
