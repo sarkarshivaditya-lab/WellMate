@@ -72,3 +72,57 @@ export function clearOnboardingPayload() {
     // ignore
   }
 }
+
+/* ======================================================
+   ONBOARDING DRAFT — IN-PROGRESS FORM STATE
+   Persists the user's work-in-progress across reloads,
+   auth redirects, and app-backgrounding so no data is
+   lost before finish() is called.
+   ====================================================== */
+
+export type OnboardingDraft = {
+  step: number;
+  dob: string;
+  sex: string;
+  height: string;
+  heightUnit: "cm" | "ftin";
+  heightFt: string;
+  heightIn: string;
+  weight: string;
+  activityLevel: string | null;
+  dailySteps: string;
+  weightGoal: string;
+  muscleGoal: string;
+  cycleLength: string;
+  lastPeriod: string;
+  additionalHealthChoice: string;
+  additionalHealthNotes: string;
+};
+
+const DRAFT_KEY = "onboarding_draft";
+
+export function readOnboardingDraft(): OnboardingDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as OnboardingDraft;
+  } catch {
+    return null;
+  }
+}
+
+export function saveOnboardingDraft(draft: OnboardingDraft): void {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function clearOnboardingDraft(): void {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}

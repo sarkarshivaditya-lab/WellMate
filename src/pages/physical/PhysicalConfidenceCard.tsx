@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { calculateConfidenceScore } from "./_utils/confidenceScoring";
 import { useAllExercises } from "@/hooks/useAllExercises";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { localDateIso } from "@/services/dateUtils";
 
 type DatedEntry = { dateIso?: string; startIso?: string };
@@ -11,7 +12,7 @@ type DatedEntry = { dateIso?: string; startIso?: string };
 export default function PhysicalConfidenceCard() {
   const today = localDateIso();
 
-  const user = useQuery(api.users.getCurrentUser);
+  const profile = useLocalProfile();
   const mealsToday = useQuery(api.meals.getMealsByDate, { dateIso: today });
   const exercisesToday = useQuery(api.exercises.getExercisesByDate, {
     dateIso: today,
@@ -27,9 +28,8 @@ export default function PhysicalConfidenceCard() {
     return allExercises.filter((e) => e.dateIso >= cutoffIso);
   }, [allExercises]);
 
-  // 1️⃣ Still loading Convex queries
+  // Block only on data queries — profile is local/immediate
   if (
-    user === undefined ||
     mealsToday === undefined ||
     exercisesToday === undefined ||
     sleep7 === undefined ||
@@ -44,10 +44,7 @@ export default function PhysicalConfidenceCard() {
     );
   }
 
-  // 2️⃣ Authenticated route, but Convex data not hydrated yet
-  // Do NOT show auth CTA
   if (
-    user === null ||
     mealsToday === null ||
     exercisesToday === null ||
     sleep7 === null ||
@@ -56,8 +53,19 @@ export default function PhysicalConfidenceCard() {
     return null;
   }
 
+  const userForScoring = profile
+    ? {
+        dob: profile.dob,
+        sex: profile.sex,
+        heightCm: profile.heightCm,
+        weightKg: profile.weightKg,
+        activityLevel: profile.activityLevel ?? undefined,
+        goal: profile.goal ?? undefined,
+      }
+    : null;
+
   const result = calculateConfidenceScore({
-    user,
+    user: userForScoring,
     mealsLast7: meals7,
     exercisesLast7: exercises7,
     sleepLast7: sleep7,

@@ -125,9 +125,14 @@ function RootEntry() {
     return <AppLoadingScreen onTimeout={handleTimeout} />;
   }
 
-  // Not authenticated (or auth timed out) → go to onboarding.
-  // Onboarding has no auth requirement; the full flow works offline.
   if (!isAuthenticated) {
+    // Auth is slow or timed out. If the user already completed onboarding
+    // in a prior session, send them to /physical — RequireAuth there will
+    // re-prompt login if the session is genuinely expired. This prevents
+    // an auth-timeout race from silently resetting a completed onboarding.
+    if (localStorage.getItem("onboarded") === "true") {
+      return <Navigate to="/physical" replace />;
+    }
     return <Navigate to="/onboarding" replace />;
   }
 

@@ -1,6 +1,4 @@
 import { useState, useMemo, useSyncExternalStore } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 
@@ -14,6 +12,7 @@ import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
 
 import {
   getSyncStatus,
@@ -223,13 +222,10 @@ function WeeklyActivityTrend() {
    ====================================================== */
 
 function PhysicalSummaryCard() {
-  const user = useQuery(api.users.getCurrentUser);
+  const profile = useLocalProfile();
 
-  // Still loading — render nothing to avoid flashing dashes
-  if (user === undefined) return null;
-
-  const heightCm = user?.heightCm ?? null;
-  const weightKg = user?.weightKg ?? null;
+  const heightCm = profile?.heightCm ?? null;
+  const weightKg = profile?.weightKg ?? null;
 
   let bmiDisplay = "—";
   if (heightCm && weightKg) {

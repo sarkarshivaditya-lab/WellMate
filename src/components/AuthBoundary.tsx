@@ -1,77 +1,16 @@
-import { useEffect, useRef } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import {
-  readOnboardingPayload,
-  clearOnboardingPayload,
-} from "@/data/local/onboardingPayload";
-
 /**
- * AuthBoundary
+ * AuthBoundary — INACTIVE
  *
- * Headless auth-aware sync boundary.
+ * Previously responsible for promoting the local onboarding snapshot
+ * into Convex once auth was ready.
  *
- * Responsibilities:
- * - Wait for Convex query to resolve
- * - Promote locally captured onboarding payload into Convex exactly once
- * - Never block UI
- * - Never throw
- * - Idempotent across reloads
+ * Onboarding profile promotion has been removed. The onboarding_profile
+ * localStorage key is now the permanent device-resident source of truth.
+ * All health calculations read from useLocalProfile() instead of Convex.
  *
- * Renders nothing.
+ * This component is not currently mounted anywhere. It is kept as a
+ * placeholder for future optional cloud sync if that feature is added.
  */
 export default function AuthBoundary() {
-  const user = useQuery(api.users.getCurrentUser);
-  const completeOnboarding = useMutation(api.users.completeOnboarding);
-
-  // Guard against double-apply during re-renders
-  const appliedRef = useRef(false);
-
-  useEffect(() => {
-    // 1️⃣ Still loading Convex auth/query
-    if (user === undefined) return;
-
-    // 2️⃣ Convex user not created yet → wait for bootstrap
-    if (user === null) return;
-
-    // 3️⃣ Already completed on server → clean up local payload
-    if (user.hasCompletedOnboarding) {
-      clearOnboardingPayload();
-      return;
-    }
-
-    // 4️⃣ Prevent duplicate application in same session
-    if (appliedRef.current) return;
-
-    const payload = readOnboardingPayload();
-    if (!payload) return;
-
-    appliedRef.current = true;
-
-    (async () => {
-      try {
-        await completeOnboarding({
-          dob: payload.dob,
-          sex: payload.sex || undefined,
-          heightCm: payload.heightCm,
-          weightKg: payload.weightKg,
-          activityLevel: payload.activityLevel ?? undefined,
-          goal:
-            payload.weightGoal === "lose" ||
-            payload.weightGoal === "maintain" ||
-            payload.weightGoal === "gain"
-              ? payload.weightGoal
-              : undefined,
-        });
-
-        clearOnboardingPayload();
-      } catch (err) {
-        // Silent failure — will retry on next auth-ready render
-        console.error("Deferred onboarding sync failed:", err);
-        appliedRef.current = false;
-      }
-    })();
-  }, [user, completeOnboarding]);
-
   return null;
 }

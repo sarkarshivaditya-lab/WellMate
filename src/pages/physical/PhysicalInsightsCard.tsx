@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -46,7 +47,7 @@ export default function PhysicalInsightsCard() {
   const today = localDateIso();
   const navigate = useNavigate();
 
-  const user = useQuery(api.users.getCurrentUser);
+  const profile = useLocalProfile();
   const mealsToday = useQuery(api.meals.getMealsByDate, { dateIso: today });
   const meals7 = useQuery(api.meals.getRecentMeals, { days: 7 });
   const exercisesToday = useQuery(api.exercises.getExercisesByDate, {
@@ -56,8 +57,8 @@ export default function PhysicalInsightsCard() {
 
   const exercises7: DatedEntry[] = [];
 
+  // Block only on data queries — profile is local/immediate
   if (
-    user === undefined ||
     mealsToday === undefined ||
     exercisesToday === undefined ||
     sleep7 === undefined ||
@@ -73,7 +74,6 @@ export default function PhysicalInsightsCard() {
   }
 
   if (
-    user === null ||
     mealsToday === null ||
     exercisesToday === null ||
     sleep7 === null ||
@@ -82,10 +82,21 @@ export default function PhysicalInsightsCard() {
     return null;
   }
 
+  const userForScoring = profile
+    ? {
+        dob: profile.dob,
+        sex: profile.sex,
+        heightCm: profile.heightCm,
+        weightKg: profile.weightKg,
+        activityLevel: profile.activityLevel ?? undefined,
+        goal: profile.goal ?? undefined,
+      }
+    : null;
+
   /* ---------- CONFIDENCE ---------- */
 
   const confidence = calculateConfidenceScore({
-    user,
+    user: userForScoring,
     mealsLast7: meals7,
     exercisesLast7: exercises7,
     sleepLast7: sleep7,
@@ -121,7 +132,7 @@ export default function PhysicalInsightsCard() {
     hasExercise: exercisesToday.length > 0,
     hasSleep: sleep7.length > 0,
     hasProfile: Boolean(
-      user?.heightCm && user?.weightKg && user?.activityLevel && user?.goal,
+      profile?.heightCm && profile?.weightKg && profile?.activityLevel && profile?.goal,
     ),
   });
 

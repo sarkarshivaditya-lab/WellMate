@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  readOnboardingDraft,
+  saveOnboardingDraft,
+  clearOnboardingDraft,
+} from "@/data/local/onboardingPayload";
 
 /* ======================================================
    ONBOARDING — FULL 8 STEP FLOW
@@ -14,6 +19,14 @@ type ActivityLevel =
 
 export default function Onboarding() {
   const navigate = useNavigate();
+
+  // Redirect users who already completed onboarding — they should never
+  // land here again. RequireAuth on /physical handles re-login if needed.
+  useEffect(() => {
+    if (localStorage.getItem("onboarded") === "true") {
+      navigate("/physical", { replace: true });
+    }
+  }, [navigate]);
 
   /* ---------- NO AUTH GUARD DURING ONBOARDING ---------- */
 
@@ -49,18 +62,26 @@ export default function Onboarding() {
   };
 
   /* ---------- core step ---------- */
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => readOnboardingDraft()?.step ?? 1);
 
   /* ---------- identity ---------- */
-  const [dob, setDob] = useState("");
-  const [sex, setSex] = useState("");
+  const [dob, setDob] = useState(() => readOnboardingDraft()?.dob ?? "");
+  const [sex, setSex] = useState(() => readOnboardingDraft()?.sex ?? "");
 
   /* ---------- body metrics ---------- */
-  const [height, setHeight] = useState("");
-  const [heightUnit, setHeightUnit] = useState<"cm" | "ftin">("cm");
-  const [heightFt, setHeightFt] = useState("");
-  const [heightIn, setHeightIn] = useState("");
-  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState(
+    () => readOnboardingDraft()?.height ?? "",
+  );
+  const [heightUnit, setHeightUnit] = useState<"cm" | "ftin">(
+    () => readOnboardingDraft()?.heightUnit ?? "cm",
+  );
+  const [heightFt, setHeightFt] = useState(
+    () => readOnboardingDraft()?.heightFt ?? "",
+  );
+  const [heightIn, setHeightIn] = useState(
+    () => readOnboardingDraft()?.heightIn ?? "",
+  );
+  const [weight, setWeight] = useState(() => readOnboardingDraft()?.weight ?? "");
 
   /* ---------- height unit conversion (step 2) ---------- */
   useEffect(() => {
@@ -87,22 +108,75 @@ export default function Onboarding() {
 
   /* ---------- activity ---------- */
   const [activityLevel, setActivityLevel] = useState<ActivityLevel | null>(
-    null,
+    () => (readOnboardingDraft()?.activityLevel as ActivityLevel | null) ?? null,
   );
-  const [dailySteps, setDailySteps] = useState("");
+  const [dailySteps, setDailySteps] = useState(
+    () => readOnboardingDraft()?.dailySteps ?? "",
+  );
 
   /* ---------- goals ---------- */
-  const [weightGoal, setWeightGoal] = useState("");
-  const [muscleGoal, setMuscleGoal] = useState("");
+  const [weightGoal, setWeightGoal] = useState(
+    () => readOnboardingDraft()?.weightGoal ?? "",
+  );
+  const [muscleGoal, setMuscleGoal] = useState(
+    () => readOnboardingDraft()?.muscleGoal ?? "",
+  );
 
   /* ---------- female health ---------- */
-  const [cycleLength, setCycleLength] = useState("");
-  const [lastPeriod, setLastPeriod] = useState("");
+  const [cycleLength, setCycleLength] = useState(
+    () => readOnboardingDraft()?.cycleLength ?? "",
+  );
+  const [lastPeriod, setLastPeriod] = useState(
+    () => readOnboardingDraft()?.lastPeriod ?? "",
+  );
 
-  const [additionalHealthChoice, setAdditionalHealthChoice] = useState("");
-  const [additionalHealthNotes, setAdditionalHealthNotes] = useState("");
+  const [additionalHealthChoice, setAdditionalHealthChoice] = useState(
+    () => readOnboardingDraft()?.additionalHealthChoice ?? "",
+  );
+  const [additionalHealthNotes, setAdditionalHealthNotes] = useState(
+    () => readOnboardingDraft()?.additionalHealthNotes ?? "",
+  );
 
   const [attemptedNext, setAttemptedNext] = useState(false);
+
+  /* ---------- persist draft on every field change ---------- */
+  useEffect(() => {
+    saveOnboardingDraft({
+      step,
+      dob,
+      sex,
+      height,
+      heightUnit,
+      heightFt,
+      heightIn,
+      weight,
+      activityLevel,
+      dailySteps,
+      weightGoal,
+      muscleGoal,
+      cycleLength,
+      lastPeriod,
+      additionalHealthChoice,
+      additionalHealthNotes,
+    });
+  }, [
+    step,
+    dob,
+    sex,
+    height,
+    heightUnit,
+    heightFt,
+    heightIn,
+    weight,
+    activityLevel,
+    dailySteps,
+    weightGoal,
+    muscleGoal,
+    cycleLength,
+    lastPeriod,
+    additionalHealthChoice,
+    additionalHealthNotes,
+  ]);
 
   function buildOnboardingProfile() {
     return {
@@ -179,9 +253,10 @@ export default function Onboarding() {
     // Persist onboarding snapshot (pre-auth, offline-safe)
     localStorage.setItem("onboarding_profile", JSON.stringify(profile));
 
-    // Existing flow (unchanged)
+    // Mark onboarding complete and clear in-progress draft
     localStorage.setItem("onboarded", "true");
     localStorage.removeItem("postOnboardingTransitionShown");
+    clearOnboardingDraft();
 
     navigate("/physical");
   };

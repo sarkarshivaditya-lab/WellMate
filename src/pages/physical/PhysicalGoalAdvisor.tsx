@@ -3,13 +3,14 @@ import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { generateGoalAdvice } from "./_utils/goalAdvisor";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
 
 export default function PhysicalGoalAdvisor() {
   const meals = useQuery(api.meals.getRecentMeals, { days: 7 });
-  const user = useQuery(api.users.getCurrentUser);
+  const profile = useLocalProfile();
 
-  // 1️⃣ Still loading Convex queries
-  if (meals === undefined || user === undefined) {
+  // 1️⃣ Still loading meal history from Convex
+  if (meals === undefined) {
     return (
       <Card>
         <CardContent className="text-sm text-muted-foreground">
@@ -19,14 +20,11 @@ export default function PhysicalGoalAdvisor() {
     );
   }
 
-  // 2️⃣ Authenticated route, but Convex user not bootstrapped yet
-  // Do NOT show auth CTA and do NOT spin forever
-  if (user === null) {
-    return null;
-  }
+  if (meals === null) return null;
 
-  // 3️⃣ User exists but goal missing
-  if (!user.goal) {
+  // 2️⃣ No goal set in local profile
+  const goal = profile?.goal;
+  if (!goal) {
     return (
       <Card>
         <CardContent className="text-sm text-muted-foreground">
@@ -42,7 +40,7 @@ export default function PhysicalGoalAdvisor() {
   });
 
   const advice = generateGoalAdvice({
-    goal: user.goal,
+    goal,
     surplusDays: 0,
     deficitDays: 0,
     avgProteinPct: null,
