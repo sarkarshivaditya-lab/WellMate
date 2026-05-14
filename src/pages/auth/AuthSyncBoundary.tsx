@@ -1,20 +1,104 @@
 import { useEffect, useRef } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useConvex, useMutation } from "convex/react";
+import { Authenticated, useConvex, useConvexAuth, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { runOfflineSync } from "@/sync/syncScheduler";
 
 /**
+ * SyncWorker — only mounts when Convex confirms auth.
+ *
+ * Three-layer auth safety:
+ *
+ * 1. <Authenticated> (outer component) — structurally prevents this component
+ *    from mounting until useConvexAuth().isAuthenticated is true. Convex's own
+ *    implementation: returns null until the backend confirms the token.
+ *
+ * 2. cancelledRef — set to true in the startup useEffect cleanup (runs on
+ *    unmount). Any async sync closure that outlives the component reads this
+ *    before every worker call and stops immediately. Prevents the orphaned-
+ *    async problem where auth drops while sync is mid-flight.
+ *
+ * 3. checkAuth passed to runOfflineSync — tested before each sync worker so
+ *    auth loss mid-sync stops further mutations without waiting for React.
+ */
+function SyncWorker() {
+  const convex = useConvex();
+  const { isAuthenticated } = useConvexAuth();
+  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+
+  // Render-time assignment keeps this current across re-renders. Inside
+  // <Authenticated> this is always true while mounted, but it participates
+  // in checkAuth() so orphaned closures get the correct value post-unmount.
+  const isAuthRef = useRef(false);
+  isAuthRef.current = isAuthenticated;
+
+  // Set to true in the startup effect cleanup — signals orphaned async work
+  // to abort. Separate from hasRunRef: cancelled=true means "tear down",
+  // hasRun=true means "already ran, don't run again".
+  const cancelledRef = useRef(false);
+  const hasRunRef = useRef(false);
+
+  // Reassigned on every render so online handler always closes over fresh
+  // refs without needing them as deps (the ref object itself is stable).
+  const runSyncOnce = useRef<() => void>(() => {});
+  runSyncOnce.current = () => {
+    if (cancelledRef.current) return;
+    if (!navigator.onLine) return;
+    if (!isAuthRef.current) return;
+    if (hasRunRef.current) return;
+    hasRunRef.current = true;
+
+    // checkAuth is a live predicate: returns false the moment the component
+    // unmounts (cancelledRef) or auth drops (isAuthRef). Passed to the
+    // orchestrator so it can abort between workers without relying on React.
+    const checkAuth = () => isAuthRef.current && !cancelledRef.current;
+
+    (async () => {
+      // 1. Identity bootstrap — best effort only
+      try {
+        await updateCurrentUser();
+      } catch {
+        // swallow — identity may already exist
+      }
+
+      // 2. Offline → Convex sync
+      try {
+        await runOfflineSync(convex, checkAuth);
+      } catch {
+        // swallow — sync must never destabilize app
+      }
+    })();
+  };
+
+  // Startup trigger — fires on mount, which requires <Authenticated> to have
+  // rendered this component, guaranteeing Convex auth is confirmed.
+  useEffect(() => {
+    cancelledRef.current = false;
+    runSyncOnce.current();
+
+    return () => {
+      // Signal all in-flight async work to stop. Any pending mutation loops
+      // will see checkAuth() = false and return before their next mutation.
+      cancelledRef.current = true;
+    };
+  }, []);
+
+  // Online-resume trigger. hasRunRef prevents re-running if startup ran.
+  useEffect(() => {
+    const handleOnline = () => runSyncOnce.current();
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
+  return null;
+}
+
+/**
  * AuthSyncBoundary
  *
- * - Observes auth readiness
- * - Proves token readiness before Convex mutations
- * - Best-effort identity bootstrap (account record creation only)
- * - Triggers offline → Convex sync once auth is ready and online
- * - Resumes sync on reconnect if app started offline
- *
- * Onboarding profile data is intentionally NOT promoted to Convex here.
- * onboarding_profile is the permanent device-resident source of truth.
+ * Renders SyncWorker exclusively inside <Authenticated>. Convex's
+ * <Authenticated> returns null until useConvexAuth().isAuthenticated is true
+ * (backend-confirmed, not Auth0 optimistic state). SyncWorker cannot mount,
+ * register effects, or fire mutations until that guarantee holds.
  *
  * HARD GUARANTEES:
  * - NEVER redirects
@@ -24,61 +108,9 @@ import { runOfflineSync } from "@/sync/syncScheduler";
  * - Safe unauthenticated
  */
 export default function AuthSyncBoundary() {
-  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
-  const convex = useConvex();
-
-  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
-
-  const hasRunRef = useRef(false);
-
-  // runSyncOnce.current is reassigned every render so both the startup effect
-  // and the online event handler always close over the latest auth and convex
-  // state without stale values, while the ref object itself remains stable.
-  const runSyncOnce = useRef<() => void>(() => {});
-  runSyncOnce.current = () => {
-    if (isLoading || !isAuthenticated || !navigator.onLine) return;
-    if (hasRunRef.current) return;
-
-    // Lock immediately — prevents re-entry from concurrent triggers
-    hasRunRef.current = true;
-
-    (async () => {
-      // 0️⃣ Prove Auth0 → Convex token readiness
-      try {
-        await getAccessTokenSilently();
-      } catch {
-        // Token not ready yet — abort silently, retry next session
-        return;
-      }
-
-      // 1️⃣ Identity bootstrap — best effort only
-      try {
-        await updateCurrentUser();
-      } catch {
-        // swallow — identity may already exist or backend not ready
-      }
-
-      // 2️⃣ Offline → Convex sync (fire-and-forget, only when authenticated)
-      try {
-        await runOfflineSync(convex, isAuthenticated);
-      } catch {
-        // swallow — sync must never destabilize app
-      }
-    })();
-  };
-
-  // Startup trigger: fires when auth state settles
-  useEffect(() => {
-    runSyncOnce.current();
-  }, [isLoading, isAuthenticated]);
-
-  // Online-resume trigger: fires when connectivity is restored
-  // hasRunRef prevents re-running if startup sync already completed
-  useEffect(() => {
-    const handleOnline = () => runSyncOnce.current();
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
-  }, []);
-
-  return null;
+  return (
+    <Authenticated>
+      <SyncWorker />
+    </Authenticated>
+  );
 }

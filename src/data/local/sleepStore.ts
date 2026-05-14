@@ -6,6 +6,7 @@ export type LocalSleepLog = {
   rating: number;
   notes?: string;
   updatedAt: number;
+  syncStatus: "pending" | "synced";
 };
 
 const SLEEP_KEY = "local_sleep_logs";
@@ -57,7 +58,16 @@ export function addSleepLog(input: {
     rating: input.rating,
     notes: input.notes,
     updatedAt: now,
+    syncStatus: "pending",
   });
 
+  save(SLEEP_KEY, logs);
+}
+
+export function markSleepLogSynced(localId: string) {
+  const logs = load<LocalSleepLog[]>(SLEEP_KEY, []);
+  const idx = logs.findIndex((s) => s.localId === localId);
+  if (idx === -1) return;
+  logs[idx].syncStatus = "synced";
   save(SLEEP_KEY, logs);
 }

@@ -31,21 +31,27 @@ const MAX_RETRIES = 3;
 let isSyncing = false;
 
 /**
- * Central offline → Convex sync orchestrator
+ * Central offline → Convex sync orchestrator.
+ *
+ * checkAuth is a live predicate supplied by the caller (SyncWorker). It
+ * returns false the moment the caller unmounts or loses auth — tested at
+ * the orchestrator entry AND before every individual worker call. This means
+ * auth loss mid-sync stops further mutations immediately without waiting
+ * for React to re-render.
  *
  * GUARANTEES:
  * - Never throws
  * - Runs workers sequentially
- * - One failure never blocks others
- * - Safe to call repeatedly (concurrent calls return immediately)
- * - Safe when offline or unauthenticated
+ * - One worker failure never blocks others
+ * - Safe to call concurrently (isSyncing flag gates re-entry)
+ * - Aborts cleanly if checkAuth() returns false at any point
  */
 export async function runOfflineSync(
   convex: ConvexReactClient | null | undefined,
-  isAuthenticated = false,
+  checkAuth: () => boolean,
 ) {
   if (!convex) return;
-  if (!isAuthenticated) return;
+  if (!checkAuth()) return;
   if (isSyncing) return;
   isSyncing = true;
 
@@ -59,86 +65,100 @@ export async function runOfflineSync(
   /* =========================
      EXERCISES
      ========================= */
-  try {
-    await syncExercises(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncExercises(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      HABITS
      ========================= */
-  try {
-    await syncHabits(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncHabits(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      MOODS
      ========================= */
-  try {
-    await syncMoods(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncMoods(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      SLEEP
      ========================= */
-  try {
-    await syncSleep(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncSleep(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      JOURNAL
      ========================= */
-  try {
-    await syncJournal(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncJournal(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      CYCLE
      ========================= */
-  try {
-    await syncCycles(convex);
-  } catch {
-    hadError = true;
+  if (checkAuth()) {
+    try {
+      await syncCycles(convex);
+    } catch {
+      hadError = true;
+    }
   }
 
   /* =========================
      MEALS (queue-based)
      ========================= */
-  try {
-    const queue = getSyncQueue();
+  if (checkAuth()) {
+    try {
+      const queue = getSyncQueue();
 
-    const hasRunnableMealTask = queue.some(
-      (t) =>
-        t.entity === "meal" &&
-        t.attempts < MAX_RETRIES &&
-        !isTaskUnderBackoff(t),
-    );
+      const hasRunnableMealTask = queue.some(
+        (t) =>
+          t.entity === "meal" &&
+          t.attempts < MAX_RETRIES &&
+          !isTaskUnderBackoff(t),
+      );
 
-    if (hasRunnableMealTask) {
-      const syncedMealIds = await syncMeals(convex);
-      dequeueTasksByLocalIds("meal", syncedMealIds);
-    }
-  } catch {
-    hadError = true;
+      if (hasRunnableMealTask) {
+        const syncedMealIds = await syncMeals(convex);
+        dequeueTasksByLocalIds("meal", syncedMealIds);
+      }
+    } catch {
+      hadError = true;
 
-    const queue = getSyncQueue();
+      const queue = getSyncQueue();
 
-    for (const task of queue) {
-      if (task.entity !== "meal") continue;
+      for (const task of queue) {
+        if (task.entity !== "meal") continue;
 
-      if (task.attempts + 1 >= MAX_RETRIES) {
-        moveTaskToDeadletter(task.id);
-      } else {
-        markSyncTaskAttempt(task.id);
+        if (task.attempts + 1 >= MAX_RETRIES) {
+          moveTaskToDeadletter(task.id);
+        } else {
+          markSyncTaskAttempt(task.id);
+        }
       }
     }
   }

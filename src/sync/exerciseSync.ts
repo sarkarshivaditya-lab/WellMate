@@ -15,6 +15,14 @@ import {
 
 const SYNC_BATCH_SIZE = 10;
 
+function isUnauthError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const msg = String((err as { message?: unknown }).message ?? "");
+  if (msg.includes("UNAUTHENTICATED") || msg.includes("User not logged in")) return true;
+  const data = (err as { data?: { code?: unknown } }).data;
+  return String(data?.code ?? "") === "UNAUTHENTICATED";
+}
+
 /* ======================================================
    EXERCISE SYNC (FIRE-AND-FORGET, OFFLINE-SAFE)
    ====================================================== */
@@ -54,7 +62,11 @@ export async function syncExercises(
       } catch {
         // local write failure is non-fatal
       }
-    } catch {
+    } catch (err) {
+      if (isUnauthError(err)) {
+        // Auth invalid — abort loop, leave exercises as pending for next cycle
+        return;
+      }
       try {
         markExerciseError(exercise.id);
       } catch {
