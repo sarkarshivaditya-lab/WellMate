@@ -61,7 +61,14 @@
     --text-primary:   var(--foreground);
     --text-secondary: var(--muted-foreground);
     --text-meta:      var(--muted-foreground);
+    --text-label:     var(--muted-foreground);
     --text-disabled:  var(--muted);
+
+    /* Surface aliases (resolve previously undefined vars) */
+    --surface-bg:        var(--background);
+    --surface-elev-1:    var(--card);
+    --surface-separator: var(--border);
+    --surface-vignette:  var(--header-gradient-start);
 
     /* ===============================
        PAGE HEADER GRADIENT
@@ -171,6 +178,11 @@
 
   .card-shadow-pressed {
     box-shadow: var(--card-shadow-pressed);
+  }
+
+  /* Alias: soft teal elevation ring — used in interactive selected states */
+  .card-glow {
+    box-shadow: var(--card-shadow-hover);
   }
 
   /* ===============================

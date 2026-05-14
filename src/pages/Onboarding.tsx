@@ -302,58 +302,60 @@ export default function Onboarding() {
      ====================================================== */
 
   return (
-    <div
-      className="
-        min-h-screen flex items-center justify-center px-6
-        bg-[radial-gradient(ellipse_at_top,hsl(var(--surface-vignette))_0%,hsl(var(--surface-bg))_70%)]
-      "
-    >
-      <div
-        className="
-          max-w-md w-auto mx-auto
-          rounded-3xl
-          bg-[hsl(var(--surface-elev-1))]/85
-          backdrop-blur-2xl
-          border border-[hsl(var(--surface-separator))]/40
-          card-glow
-          p-10
-          space-y-10
-        "
-      >
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-b from-[hsl(var(--header-gradient-start))] to-background">
+      <div className="bg-card rounded-3xl border border-border card-shadow-hover p-8 sm:p-10 max-w-md w-full space-y-8">
+
         {/* ================= HEADER ================= */}
-        <div className="space-y-4">
-          <span className="text-[11px] uppercase tracking-[0.2em] text-[hsl(var(--text-meta))]">
-            Step {step} of 8
-          </span>
+        <div className="space-y-6">
 
-          <h1 className="text-[2.6rem] font-semibold leading-[1.15] text-[hsl(var(--text-primary))]">
-            {step === 1 && "Welcome to WellMate"}
-            {step === 2 && "Your body metrics"}
-            {step === 3 && "Your daily activity"}
-            {step === 4 && "Your movement habits"}
-            {step === 5 && "Your weight goal"}
-            {step === 6 && "Your muscle focus"}
-            {step === 7 && "Additional health details"}
-            {step === 8 && "Your health snapshot"}
-          </h1>
+          {/* Brand + progress */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                WellMate
+              </span>
+              <span className="text-[10px] tabular-nums text-muted-foreground">
+                {step} / 8
+              </span>
+            </div>
+            <div className="h-[3px] rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${(step / 8) * 100}%` }}
+              />
+            </div>
+          </div>
 
-          <p className="text-base leading-relaxed text-[hsl(var(--text-secondary))] max-w-sm">
-            {step === 1 && "Let’s personalize your health experience."}
-            {step === 2 && "These help us estimate your daily energy needs."}
-            {step === 3 && "Your activity level shapes your calorie baseline."}
-            {step === 4 && "Daily movement helps refine accuracy."}
-            {step === 5 && "We’ll adjust recommendations based on your goal."}
-            {step === 6 && "This helps prioritize strength vs balance."}
-            {step === 7 && "Only if applicable to you."}
-            {step === 8 && "Here’s what we’ve learned about you."}
-          </p>
+          {/* Step heading */}
+          <div className="space-y-1.5">
+            <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-foreground">
+              {step === 1 && "Welcome to WellMate"}
+              {step === 2 && "Your body metrics"}
+              {step === 3 && "Your daily activity"}
+              {step === 4 && "Your movement habits"}
+              {step === 5 && "Your weight goal"}
+              {step === 6 && "Your muscle focus"}
+              {step === 7 && "Additional health details"}
+              {step === 8 && "Your health snapshot"}
+            </h1>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {step === 1 && "Let's personalize your health experience."}
+              {step === 2 && "These help us estimate your daily energy needs."}
+              {step === 3 && "Your activity level shapes your calorie baseline."}
+              {step === 4 && "Daily movement helps refine accuracy."}
+              {step === 5 && "We'll adjust recommendations based on your goal."}
+              {step === 6 && "This helps prioritize strength vs balance."}
+              {step === 7 && "Only if applicable to you."}
+              {step === 8 && "Here's what we've learned about you."}
+            </p>
+          </div>
         </div>
 
         {/* ================= STEPS ================= */}
 
         {/* STEP 1 — IDENTITY */}
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <Field
               label="Date of Birth"
               type="date"
@@ -363,11 +365,8 @@ export default function Onboarding() {
                 setAttemptedNext(false);
               }}
             />
-            {attemptedNext && !dob && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && !dob && <ValidationError />}
+
             <Select
               label="Biological Sex"
               value={sex}
@@ -382,67 +381,36 @@ export default function Onboarding() {
                 { value: "other", label: "Other" },
               ]}
             />
-            {attemptedNext && !sex && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && !sex && <ValidationError />}
           </div>
         )}
 
         {/* STEP 2 — BODY */}
         {step === 2 && (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <p className="text-sm">Height units</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setHeightUnitAndSync("cm")}
-                  aria-pressed={heightUnit === "cm"}
-                  className={
-                    "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
-                    (heightUnit === "cm"
-                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
-                      : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
-                  }
-                >
-                  <div className="flex flex-col gap-1">
-                    <p
-                      className={
-                        (heightUnit === "cm"
-                          ? "text-[hsl(var(--action-primary))]"
-                          : "text-[hsl(var(--text-primary))]") + " font-medium"
+          <div className="space-y-5">
+            {/* Segmented unit control */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Height unit
+              </p>
+              <div className="inline-flex bg-muted rounded-xl p-1 gap-1">
+                {(["cm", "ftin"] as const).map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    onClick={() => setHeightUnitAndSync(unit)}
+                    aria-pressed={heightUnit === unit}
+                    className={`
+                      px-5 py-1.5 rounded-lg text-sm font-medium transition-premium
+                      ${heightUnit === unit
+                        ? "bg-card text-foreground card-shadow-rest"
+                        : "text-muted-foreground hover:text-foreground"
                       }
-                    >
-                      cm
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setHeightUnitAndSync("ftin")}
-                  aria-pressed={heightUnit === "ftin"}
-                  className={
-                    "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
-                    (heightUnit === "ftin"
-                      ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
-                      : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
-                  }
-                >
-                  <div className="flex flex-col gap-1">
-                    <p
-                      className={
-                        (heightUnit === "ftin"
-                          ? "text-[hsl(var(--action-primary))]"
-                          : "text-[hsl(var(--text-primary))]") + " font-medium"
-                      }
-                    >
-                      ft + in
-                    </p>
-                  </div>
-                </button>
+                    `}
+                  >
+                    {unit === "cm" ? "cm" : "ft + in"}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -480,11 +448,8 @@ export default function Onboarding() {
                 />
               </div>
             )}
-            {attemptedNext && Number(height) <= 0 && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && Number(height) <= 0 && <ValidationError />}
+
             <Field
               label="Weight (kg)"
               type="number"
@@ -494,11 +459,7 @@ export default function Onboarding() {
                 setAttemptedNext(false);
               }}
             />
-            {attemptedNext && Number(weight) <= 0 && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && Number(weight) <= 0 && <ValidationError />}
           </div>
         )}
 
@@ -522,11 +483,7 @@ export default function Onboarding() {
                 ["veryActive", "Very active", "Hard training or physical job"],
               ]}
             />
-            {attemptedNext && !activityLevel && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && !activityLevel && <ValidationError />}
           </>
         )}
 
@@ -561,11 +518,7 @@ export default function Onboarding() {
                 ["gain", "Gain weight"],
               ]}
             />
-            {attemptedNext && !weightGoal && (
-              <p className="text-xs text-[hsl(var(--destructive))]">
-                This field is required
-              </p>
-            )}
+            {attemptedNext && !weightGoal && <ValidationError />}
           </>
         )}
 
@@ -585,7 +538,7 @@ export default function Onboarding() {
 
         {/* STEP 7 — FEMALE HEALTH */}
         {step === 7 && sex === "female" && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <Field
               label="Cycle length (days)"
               type="number"
@@ -624,93 +577,95 @@ export default function Onboarding() {
 
         {/* STEP 8 — SUMMARY */}
         {step === 8 && (
-          <div className="space-y-4 text-sm text-[hsl(var(--text-primary))]">
-            <p className="text-sm text-[hsl(var(--text-meta))]">
+          <div className="space-y-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Based on your body and activity level
             </p>
-            <Summary label="Age" value={`${age} years`} />
-            <Summary
-              label="Height"
-              value={
-                heightUnit === "cm"
-                  ? `${height} cm`
-                  : `${heightFt} ft ${heightIn} in (${height} cm)`
-              }
-            />
-            <Summary label="Weight" value={`${weight} kg`} />
-            <Summary label="Activity" value={activityLevel ?? "—"} />
-            <Summary label="Daily steps" value={dailySteps} />
-            <Summary label="Goal" value={weightGoal} />
-            <Summary label="Muscle" value={muscleGoal} />
 
-            {sex === "female" && cycleLength && (
-              <Summary label="Cycle length" value={`${cycleLength} days`} />
-            )}
-            {sex === "female" && lastPeriod && (
-              <Summary label="Last period" value={lastPeriod} />
-            )}
-
-            {sex !== "female" && additionalHealthChoice === "yes" && (
+            {/* Metric rows */}
+            <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
+              <Summary label="Age" value={`${age} years`} />
               <Summary
-                label="Additional health info"
-                value={additionalHealthNotes}
+                label="Height"
+                value={
+                  heightUnit === "cm"
+                    ? `${height} cm`
+                    : `${heightFt} ft ${heightIn} in (${height} cm)`
+                }
               />
-            )}
+              <Summary label="Weight" value={`${weight} kg`} />
+              <Summary label="Activity" value={activityLevel ?? "—"} />
+              <Summary label="Daily steps" value={dailySteps} />
+              <Summary label="Goal" value={weightGoal} />
+              <Summary label="Muscle" value={muscleGoal} />
 
-            <div className="pt-4 border-t border-[hsl(var(--surface-separator))]/40">
-              <p className="text-[hsl(var(--text-meta))]">
-                Estimated daily maintenance calories
+              {sex === "female" && cycleLength && (
+                <Summary label="Cycle length" value={`${cycleLength} days`} />
+              )}
+              {sex === "female" && lastPeriod && (
+                <Summary label="Last period" value={lastPeriod} />
+              )}
+              {sex !== "female" && additionalHealthChoice === "yes" && (
+                <Summary
+                  label="Additional health info"
+                  value={additionalHealthNotes}
+                />
+              )}
+            </div>
+
+            {/* Calorie callout */}
+            <div className="rounded-2xl bg-primary/[0.07] border border-primary/20 px-5 py-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
+                Estimated maintenance calories
               </p>
-              <p className="text-2xl font-semibold">
-                {maintenanceCalories} kcal/day
+              <p className="text-3xl font-semibold text-foreground leading-none">
+                {maintenanceCalories}
+                <span className="text-base font-normal text-muted-foreground ml-1.5">
+                  kcal / day
+                </span>
               </p>
-              <p className="text-sm text-[hsl(var(--text-secondary))]">
-                Goal target: ~{goalCalories} kcal/day
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Goal target: ~{goalCalories} kcal / day
               </p>
             </div>
           </div>
         )}
 
         {/* ================= NAV ================= */}
-        <div className="pt-6 border-t border-[hsl(var(--surface-separator))]/40 flex justify-between items-center">
-          {/* BACK */}
+        <div className="flex items-center justify-between pt-2 border-t border-border">
           <button
+            type="button"
             onClick={back}
             disabled={step === 1}
             className="
-              text-sm px-3 py-1
-              text-[hsl(var(--text-meta))]
-              disabled:text-[hsl(var(--text-disabled))]
+              px-3 py-2 rounded-lg
+              text-sm text-muted-foreground
+              hover:text-foreground hover:bg-muted/60
+              disabled:opacity-30 disabled:cursor-not-allowed
               transition-premium
-              hover:text-[hsl(var(--text-primary))]
-              focus-visible:outline-none
-              focus-visible:ring-2 focus-visible:ring-[hsl(var(--action-primary))]/40
-              active:scale-[0.98]
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
             "
           >
             Back
           </button>
 
-          {/* CONTINUE / FINISH */}
           <button
+            type="button"
             onClick={step < 8 ? next : finish}
-            disabled={isStepValid() === false}
+            disabled={!isStepValid()}
             className="
-              rounded-xl
-              bg-[hsl(var(--action-primary))]
-              px-6 py-3
-              text-sm font-medium
-              text-[hsl(var(--action-primary-fg))]
-              card-glow
+              px-7 py-2.5 rounded-xl
+              text-sm font-semibold
+              bg-primary text-primary-foreground
+              card-shadow-rest
               hover:brightness-105
-              active:bg-[hsl(var(--action-pressed))]
-              active:scale-[0.98]
-              focus-visible:outline-none
-              focus-visible:ring-2 focus-visible:ring-[hsl(var(--action-primary))]/50
+              active:scale-[0.98] active:brightness-95
+              disabled:opacity-40 disabled:cursor-not-allowed
               transition-premium
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
             "
           >
-            {step < 8 ? "Continue" : "Finish"}
+            {step < 8 ? "Continue" : "Finish setup"}
           </button>
         </div>
       </div>
@@ -752,10 +707,16 @@ type SummaryProps = {
   value: React.ReactNode;
 };
 
+function ValidationError() {
+  return (
+    <p className="text-xs text-destructive">This field is required</p>
+  );
+}
+
 function Field({ label, type, value, onChange }: FieldProps) {
   return (
-    <div>
-      <label className="block text-[11px] uppercase tracking-wider mb-1 text-[hsl(var(--text-label))]">
+    <div className="space-y-1.5">
+      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </label>
       <input
@@ -764,10 +725,12 @@ function Field({ label, type, value, onChange }: FieldProps) {
         onChange={(e) => onChange(e.target.value)}
         className="
           w-full rounded-xl
-          bg-[hsl(var(--control-fill))]/65
-          border border-[hsl(var(--control-border))]
+          bg-muted/50
+          border border-border
           px-4 py-3
-          text-[hsl(var(--text-primary))]
+          text-sm text-foreground
+          focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60
+          transition-premium
         "
       />
     </div>
@@ -776,8 +739,8 @@ function Field({ label, type, value, onChange }: FieldProps) {
 
 function Select({ label, value, onChange, options }: SelectProps) {
   return (
-    <div>
-      <label className="block text-[11px] uppercase tracking-wider mb-1 text-[hsl(var(--text-label))]">
+    <div className="space-y-1.5">
+      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </label>
       <select
@@ -785,12 +748,12 @@ function Select({ label, value, onChange, options }: SelectProps) {
         onChange={(e) => onChange(e.target.value)}
         className="
           w-full rounded-xl
-          bg-[hsl(var(--control-fill))]/65
-          border border-[hsl(var(--control-border))]
+          bg-muted/50
+          border border-border
           px-4 py-3
-          text-[hsl(var(--text-primary))]
-          focus:outline-none
-          focus:ring-2 focus:ring-[hsl(var(--action-primary))]/50
+          text-sm text-foreground
+          focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60
+          transition-premium
         "
       >
         {options.map((o: SelectOption) => (
@@ -806,45 +769,49 @@ function Select({ label, value, onChange, options }: SelectProps) {
 function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
   return (
     <div className="space-y-3">
-      <p className="text-sm">{label}</p>
-      {options.map(([v, title, subtitle]: ChoiceOption) => (
-        <button
-          key={v}
-          onClick={() => onChange(v)}
-          aria-pressed={value === v}
-          className={
-            "w-full text-left rounded-xl border px-4 py-3 transition-premium " +
-            (value === v
-              ? "bg-[hsl(var(--action-primary))]/18 border-[hsl(var(--action-primary))] card-glow"
-              : "bg-[hsl(var(--control-fill))]/65 border-[hsl(var(--control-border))] hover:bg-[hsl(var(--control-fill))]/75")
-          }
-        >
-          <div className="flex flex-col gap-1">
-            <p
-              className={
-                (value === v
-                  ? "text-[hsl(var(--action-primary))]"
-                  : "text-[hsl(var(--text-primary))]") + " font-medium"
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="space-y-2">
+        {options.map(([v, title, subtitle]: ChoiceOption) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            aria-pressed={value === v}
+            className={`
+              w-full text-left rounded-xl border px-4 py-3.5 transition-premium
+              ${value === v
+                ? "bg-primary/10 border-primary/60 card-shadow-rest"
+                : "bg-muted/40 border-border hover:bg-muted/70"
               }
-            >
-              {title}
-            </p>
-            {subtitle && (
-              <p className="text-sm text-[hsl(var(--text-secondary))]">
-                {subtitle}
-              </p>
-            )}
-          </div>
-        </button>
-      ))}
+            `}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className={`text-sm font-medium leading-tight ${value === v ? "text-primary" : "text-foreground"}`}>
+                  {title}
+                </p>
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+                )}
+              </div>
+              {value === v && (
+                <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
 function Summary({ label, value }: SummaryProps) {
   return (
-    <p>
-      <span>{label}</span> — {value}
-    </p>
+    <div className="flex items-center justify-between px-4 py-3 bg-card">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground text-right capitalize max-w-[60%]">
+        {value}
+      </span>
+    </div>
   );
 }
