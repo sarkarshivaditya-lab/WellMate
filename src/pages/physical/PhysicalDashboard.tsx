@@ -9,6 +9,7 @@ import PeriodTracker from "./PeriodTracker";
 import PhysicalInsightsCard from "./PhysicalInsightsCard";
 import PhysicalGoalAdvisor from "./PhysicalGoalAdvisor";
 import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
+import { SleepTabContent } from "../Sleep";
 
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
@@ -264,23 +265,25 @@ function PhysicalSummaryCard() {
    ====================================================== */
 
 export default function PhysicalDashboard() {
-  const [tab, setTab] = useState<"overview" | "nutrition" | "activity">(() => {
+  const [tab, setTab] = useState<"overview" | "nutrition" | "activity" | "sleep">(() => {
     const saved = sessionStorage.getItem("physical_tab");
-    return saved === "nutrition" || saved === "activity" ? saved : "overview";
+    if (saved === "nutrition" || saved === "activity" || saved === "sleep") return saved;
+    return "overview";
   });
 
   return (
     <PageLayout
       title="Physical Health"
-      subtitle="Today’s activity, nutrition, and progress."
+      subtitle="Activity, nutrition, sleep, and progress."
       tabs={[
         { label: "Overview", value: "overview" },
         { label: "Nutrition", value: "nutrition" },
         { label: "Activity", value: "activity" },
+        { label: "Sleep", value: "sleep" },
       ]}
       activeTab={tab}
       onTabChange={(v) => {
-        const next = v as "overview" | "nutrition" | "activity";
+        const next = v as "overview" | "nutrition" | "activity" | "sleep";
         sessionStorage.setItem("physical_tab", next);
         setTab(next);
       }}
@@ -307,6 +310,12 @@ export default function PhysicalDashboard() {
         <div key="activity" className="space-y-6 animate-wm-tab-in">
           <ExerciseLog />
           <PeriodTracker />
+        </div>
+      )}
+
+      {tab === "sleep" && (
+        <div key="sleep" className="space-y-6 animate-wm-tab-in">
+          <SleepTabContent />
         </div>
       )}
     </PageLayout>

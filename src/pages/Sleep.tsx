@@ -22,7 +22,7 @@ import {
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
 
-export default function Sleep() {
+export function SleepTabContent() {
   const [showDialog, setShowDialog] = useState(false);
   const [startTime, setStartTime] = useState("22:00");
   const [endTime, setEndTime] = useState("07:00");
@@ -33,11 +33,10 @@ export default function Sleep() {
 
   const handleAddSleep = () => {
     const now = new Date();
-    const today = now.toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+    const today = now.toLocaleDateString("en-CA");
     const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
       .toLocaleDateString("en-CA");
 
-    // Build offset string so timestamps represent local wall-clock time
     const offsetMin = now.getTimezoneOffset();
     const sign = offsetMin <= 0 ? "+" : "-";
     const absMin = Math.abs(offsetMin);
@@ -66,17 +65,7 @@ export default function Sleep() {
   const avgMins = avg % 60;
 
   return (
-    <PageLayout
-      title="Sleep"
-      subtitle="Monitor your rest quality"
-      headerRight={
-        <Button size="sm" onClick={() => setShowDialog(true)}>
-          <PlusIcon className="h-4 w-4" />
-          Log Sleep
-        </Button>
-      }
-    >
-      {/* Dialog controlled by headerRight button */}
+    <>
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
@@ -139,6 +128,13 @@ export default function Sleep() {
       </Dialog>
 
       <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setShowDialog(true)}>
+            <PlusIcon className="h-4 w-4" />
+            Log Sleep
+          </Button>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle>7-Day Average</CardTitle>
@@ -203,6 +199,17 @@ export default function Sleep() {
           </CardContent>
         </Card>
       </div>
+    </>
+  );
+}
+
+export default function Sleep() {
+  return (
+    <PageLayout
+      title="Sleep"
+      subtitle="Monitor your rest quality"
+    >
+      <SleepTabContent />
     </PageLayout>
   );
 }
