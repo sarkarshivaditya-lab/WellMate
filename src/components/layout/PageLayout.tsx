@@ -228,7 +228,7 @@ function PageLayout({
 
             {/* Pill tabs */}
             {tabs && tabs.length > 0 && (
-              <div className="flex gap-1 bg-muted rounded-full p-1 self-start">
+              <div className="flex gap-1 bg-muted rounded-full p-2 w-full">
                 {tabs.map((tab) => {
                   const isActive = tab.value === activeTab;
                   return (
@@ -236,7 +236,7 @@ function PageLayout({
                       key={tab.value}
                       onClick={() => onTabChange?.(tab.value)}
                       className={cn(
-                        "px-4 py-2.5 text-[13px] font-medium rounded-full min-h-[36px]",
+                        "flex-1 px-2 py-2.5 text-[13px] font-medium rounded-full min-h-[36px] text-center",
                         "transition-premium",
                         isActive
                           ? "bg-card text-foreground shadow-[0_1px_3px_rgba(20,60,50,0.12),_0_0_0_1px_rgba(20,60,50,0.05)]"
