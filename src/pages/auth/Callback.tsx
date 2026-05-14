@@ -16,7 +16,7 @@ export default function AuthCallback() {
   return (
     <div className="flex flex-col items-center justify-center h-svh gap-4">
       <Spinner className="size-8" />
-      <p className="text-sm text-muted-foreground">Loading...</p>
+      <p className="text-sm text-muted-foreground">Signing you in…</p>
     </div>
   );
 }

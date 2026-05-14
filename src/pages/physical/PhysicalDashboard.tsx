@@ -1,6 +1,6 @@
-import { useState, useMemo, useSyncExternalStore } from "react";
+import { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 import Progress from "./Progress";
 import ExerciseLog from "./ExerciseLog";
@@ -14,10 +14,6 @@ import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 
-import {
-  getSyncStatus,
-  subscribeToSyncStatus,
-} from "@/sync/syncStatus";
 import { localDateIso } from "@/services/dateUtils";
 
 
@@ -80,12 +76,14 @@ function TodayActivitySummary() {
   if (!exercises || exercises.length === 0) {
     return (
       <Card>
-        <div className="p-6">
-          <h3 className="mb-2 text-sm font-medium">Today’s Activity</h3>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Today’s Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="text-sm text-muted-foreground">
             No activity logged yet today.
           </div>
-        </div>
+        </CardContent>
       </Card>
     );
   }
@@ -102,26 +100,27 @@ function TodayActivitySummary() {
 
   return (
     <Card>
-      <div className="p-6">
-        <h3 className="mb-3 text-sm font-medium">Today’s Activity</h3>
-
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Today’s Activity</CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="grid grid-cols-3 gap-4">
           <div>
             <div className="text-xs text-muted-foreground">Exercises</div>
-            <div className="text-lg font-semibold">{exercises.length}</div>
+            <div className="text-lg font-semibold tabular-nums">{exercises.length}</div>
           </div>
 
           <div>
             <div className="text-xs text-muted-foreground">Duration</div>
-            <div className="text-lg font-semibold">{totalDuration} min</div>
+            <div className="text-lg font-semibold tabular-nums">{totalDuration} min</div>
           </div>
 
           <div>
             <div className="text-xs text-muted-foreground">Calories</div>
-            <div className="text-lg font-semibold">{totalCalories} cal</div>
+            <div className="text-lg font-semibold tabular-nums">{totalCalories} cal</div>
           </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -158,9 +157,10 @@ function WeeklyActivityTrend() {
 
   return (
     <Card>
-      <div className="p-6">
-        <h3 className="mb-4 text-sm font-medium">Weekly Activity</h3>
-
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium">Weekly Activity</CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="relative flex items-end gap-3 h-28">
           <div
             className="absolute left-0 right-0 border-t border-dashed border-muted-foreground/40"
@@ -200,7 +200,7 @@ function WeeklyActivityTrend() {
           </span>
         </div>
 
-        <div className="mt-4 rounded-lg bg-muted/40 px-4 py-3">
+        <div className="mt-4 rounded-xl bg-muted/40 px-4 py-3">
           <div className="text-xs text-muted-foreground">
             Weekly Summary
           </div>
@@ -212,7 +212,7 @@ function WeeklyActivityTrend() {
             .
           </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -236,23 +236,25 @@ function PhysicalSummaryCard() {
 
   return (
     <Card>
-      <div className="p-6">
-        <h3 className="mb-3 text-sm font-medium">Profile</h3>
-        <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Profile</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <div className="text-xs text-muted-foreground">Height (cm)</div>
-            <div className="text-sm font-medium">{heightCm ?? "—"}</div>
+            <div className="text-xs text-muted-foreground">Height</div>
+            <div className="text-sm font-medium tabular-nums">{heightCm ? `${heightCm} cm` : "—"}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Weight (kg)</div>
-            <div className="text-sm font-medium">{weightKg ?? "—"}</div>
+            <div className="text-xs text-muted-foreground">Weight</div>
+            <div className="text-sm font-medium tabular-nums">{weightKg ? `${weightKg} kg` : "—"}</div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">BMI</div>
-            <div className="text-sm font-medium">{bmiDisplay}</div>
+            <div className="text-sm font-medium tabular-nums">{bmiDisplay}</div>
           </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -267,32 +269,10 @@ export default function PhysicalDashboard() {
     return saved === "nutrition" || saved === "activity" ? saved : "overview";
   });
 
-  const syncStatus = useSyncExternalStore(
-    subscribeToSyncStatus,
-    getSyncStatus,
-    getSyncStatus,
-  );
-
-  const syncMeta =
-    syncStatus === "syncing"
-      ? { label: "Syncing…", dot: "bg-blue-500 animate-pulse" }
-      : syncStatus === "error"
-        ? { label: "Sync error", dot: "bg-red-500" }
-        : { label: "Up to date", dot: "bg-emerald-500" };
-
   return (
     <PageLayout
       title="Physical Health"
       subtitle="Today’s activity, nutrition, and progress."
-      headerRight={
-        <div
-          className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground"
-          title="Local changes sync automatically when you’re online."
-        >
-          <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${syncMeta.dot}`} />
-          <span>{syncMeta.label}</span>
-        </div>
-      }
       tabs={[
         { label: "Overview", value: "overview" },
         { label: "Nutrition", value: "nutrition" },

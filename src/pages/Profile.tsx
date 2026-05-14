@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageLayout from "@/components/layout/PageLayout";
 import {
@@ -90,15 +92,10 @@ export default function Profile() {
         <CardContent className="space-y-4">
           {/* AUTH RESTORING */}
           {isLoading && (
-            <>
-              <div className="text-sm text-muted-foreground">
-                Checking sign-in status…
-              </div>
-
-              <Button className="w-full" disabled>
-                Please wait
-              </Button>
-            </>
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-48 rounded-md" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
           )}
 
           {/* SIGNED OUT */}
@@ -171,20 +168,18 @@ export default function Profile() {
       {isAuthenticated && !isLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>Sync status</CardTitle>
+            <CardTitle>Sync Status</CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-2">
             <div
-              className={
-                syncTone === "emerald"
-                  ? "text-sm text-emerald-600"
-                  : syncTone === "amber"
-                  ? "text-sm text-amber-600"
-                  : syncTone === "red"
-                  ? "text-sm text-red-600"
-                  : "text-sm text-muted-foreground"
-              }
+              className={cn(
+                "text-sm",
+                syncTone === "emerald" && "text-emerald-600",
+                syncTone === "amber" && "text-amber-600",
+                syncTone === "red" && "text-red-600",
+                syncTone === "muted" && "text-muted-foreground",
+              )}
             >
               {syncLabel}
             </div>

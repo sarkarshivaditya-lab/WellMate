@@ -292,7 +292,7 @@ function WellMateLauncher() {
                     key={opt}
                     type="button"
                     onClick={() => handleSend(opt)}
-                    className="rounded-full border border-border px-3 py-1.5 text-sm bg-background hover:bg-muted transition-colors duration-150 min-h-[36px]"
+                    className="rounded-full border border-border px-3 py-1.5 text-sm bg-background hover:bg-muted transition-premium min-h-[36px]"
                   >
                     {opt}
                   </button>
@@ -360,7 +360,7 @@ function WellMateLauncher() {
               onClick={send}
               disabled={!input.trim() || thinking}
               className={cn(
-                "rounded-xl px-3 py-2 text-sm font-medium transition-colors duration-150",
+                "rounded-xl px-3 py-2 text-sm font-medium transition-premium",
                 !input.trim() || thinking
                   ? "bg-muted text-muted-foreground"
                   : "bg-primary text-primary-foreground",

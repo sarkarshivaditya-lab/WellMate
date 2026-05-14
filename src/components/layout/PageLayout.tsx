@@ -177,22 +177,23 @@ function PageLayout({
                             )}
                           >
                             <div className="space-y-2">
-                              <div className="font-semibold tracking-tight">Sync status</div>
+                              <div className="font-semibold tracking-tight">Sync</div>
 
                               <div className="text-muted-foreground">
-                                State:{" "}
-                                <span className="font-medium text-foreground">{syncStatus}</span>
+                                {syncStatus === "syncing" && "Syncing your data…"}
+                                {syncStatus === "retrying" && "Retrying failed items…"}
+                                {syncStatus === "error" && "Some items couldn't sync."}
+                                {syncStatus === "offline" && "You're offline — sync will resume automatically."}
+                                {syncStatus === "idle" && pendingCount === 0 && "Everything is up to date."}
+                                {syncStatus === "idle" && pendingCount > 0 && `${pendingCount} item${pendingCount !== 1 ? "s" : ""} waiting to sync.`}
                               </div>
 
-                              <div className="text-muted-foreground">
-                                Pending:{" "}
-                                <span className="font-medium text-foreground">{pendingCount}</span>
-                              </div>
-
-                              <div className="text-muted-foreground">
-                                Failed:{" "}
-                                <span className="font-medium text-foreground">{deadletterCount}</span>
-                              </div>
+                              {deadletterCount > 0 && (
+                                <div className="text-muted-foreground">
+                                  <span className="font-medium text-foreground">{deadletterCount}</span>{" "}
+                                  item{deadletterCount !== 1 ? "s" : ""} failed to sync.
+                                </div>
+                              )}
                             </div>
 
                             <div className="mt-4 flex flex-col gap-2">
@@ -296,13 +297,13 @@ function PageLayout({
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => restoreDeadletterTask(task.id)}
-                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-premium"
+                      className="flex-1 rounded-xl border border-border px-2 py-1 hover:bg-muted transition-premium"
                     >
                       Restore
                     </button>
                     <button
                       onClick={() => discardDeadletterTask(task.id)}
-                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-premium"
+                      className="flex-1 rounded-xl border border-border px-2 py-1 hover:bg-muted transition-premium"
                     >
                       Discard
                     </button>

@@ -14,7 +14,7 @@ export default function MiniLineChart({
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center bg-secondary/50 rounded-lg"
+        className="flex items-center justify-center bg-secondary/50 rounded-xl"
         style={{ width, height }}
       >
         <p className="text-sm text-muted-foreground">No data yet</p>
@@ -44,7 +44,7 @@ export default function MiniLineChart({
   const areaD = `${pathD} L ${lastPoint[0]},${height - padding} L ${firstPoint[0]},${height - padding} Z`;
 
   return (
-    <svg width={width} height={height} className="bg-secondary/30 rounded-lg">
+    <svg width={width} height={height} className="bg-secondary/30 rounded-xl">
       {/* Area fill */}
       <path
         d={areaD}
