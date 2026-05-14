@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
+import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { PlusIcon, TrashIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -43,11 +44,12 @@ export default function PeriodTracker() {
   if (user === undefined) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Period Tracking</CardTitle>
+        <CardHeader className="pb-2">
+          <Skeleton className="h-4 w-36 rounded-md" />
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Loading your profile…</p>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-3/4 rounded-xl" />
         </CardContent>
       </Card>
     );
@@ -197,8 +199,10 @@ export default function PeriodTracker() {
         </CardHeader>
         <CardContent className="space-y-3">
           {cycles === undefined ? (
-            <div className="py-8 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-2.5 py-1">
+              <Skeleton className="h-14 w-full rounded-xl" />
+              <Skeleton className="h-14 w-full rounded-xl" />
+              <Skeleton className="h-14 w-4/5 rounded-xl" />
             </div>
           ) : sortedCycles.length === 0 ? (
             <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">

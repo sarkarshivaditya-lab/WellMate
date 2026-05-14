@@ -298,7 +298,7 @@ export default function Roadmap() {
           className={cn(
             "w-full flex items-center justify-between rounded-xl px-4 py-3.5",
             "border border-border/50 bg-muted/30 hover:bg-muted/60",
-            "transition-colors duration-150 text-left",
+            "transition-premium text-left",
           )}
         >
           <span className="text-[13px] text-muted-foreground">Back to Profile</span>

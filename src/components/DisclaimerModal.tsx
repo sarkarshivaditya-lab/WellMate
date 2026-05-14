@@ -88,7 +88,7 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
               className={cn(
                 "w-full flex items-center justify-between px-4 py-3 text-[12px] font-medium",
                 "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                "transition-colors duration-150",
+                "transition-premium",
               )}
             >
               <span>Read full disclaimer</span>

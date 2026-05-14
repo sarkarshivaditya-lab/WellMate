@@ -178,7 +178,7 @@ function WeeklyActivityTrend() {
               >
                 <div className="w-full h-28 flex items-end">
                   <div
-                    className="w-full rounded bg-primary/60 transition-all group-hover:bg-primary"
+                    className="w-full rounded bg-primary/60 transition-premium group-hover:bg-primary"
                     style={{
                       height: `${Math.max(2, heightPx)}px`,
                     }}

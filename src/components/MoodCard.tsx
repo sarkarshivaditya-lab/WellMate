@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Doc } from "@/convex/_generated/dataModel.d.ts";
 
 interface MoodCardProps {
@@ -20,7 +21,7 @@ export default function MoodCard({ mood, onClick }: MoodCardProps) {
 
   return (
     <Card
-      className={`${onClick ? "cursor-pointer hover:bg-accent" : ""}`}
+      className={cn(onClick && "cursor-pointer hover:bg-accent/30 transition-premium")}
       onClick={onClick}
     >
       <CardContent className="p-4">

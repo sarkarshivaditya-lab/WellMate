@@ -155,7 +155,7 @@ export default function FoodLog() {
           <Button
             onClick={() => setShowAddMeal(true)}
             size="sm"
-            className="card-glow hover:brightness-105 active:scale-[0.97]"
+            className="card-glow"
           >
             <PlusIcon className="mr-1.5 h-4 w-4" />
             Add

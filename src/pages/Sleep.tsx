@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -108,11 +109,12 @@ export default function Sleep() {
                   <button
                     key={r}
                     onClick={() => setRating(r)}
-                    className={`flex-1 text-3xl rounded-xl py-2 transition-all duration-150 ${
+                    className={cn(
+                      "flex-1 text-3xl rounded-xl py-2 transition-premium",
                       rating === r
-                        ? "scale-110 bg-primary/10 ring-1 ring-primary/30"
-                        : "opacity-50 hover:opacity-75"
-                    }`}
+                        ? "scale-105 bg-primary/10 ring-1 ring-primary/30"
+                        : "opacity-50 hover:opacity-75",
+                    )}
                   >
                     {ratingEmojis[r - 1]}
                   </button>
@@ -180,7 +182,7 @@ export default function Sleep() {
                 return (
                   <div
                     key={s.localId}
-                    className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3 transition-colors duration-150 hover:bg-muted/70"
+                    className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3 transition-premium hover:bg-muted/70"
                   >
                     <div>
                       <div className="text-sm font-medium">{date}</div>

@@ -399,7 +399,7 @@ export default function Overview() {
                     onClick={() => setEditorMood(editorMood === i + 1 ? undefined : i + 1)}
                     aria-label={MOOD_LABELS[i]}
                     className={cn(
-                      "flex-1 rounded-xl py-2.5 text-xl transition-all duration-150",
+                      "flex-1 rounded-xl py-2.5 text-xl transition-premium",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                       editorMood === i + 1
                         ? "bg-primary/12 ring-1 ring-primary/40 scale-[1.06]"

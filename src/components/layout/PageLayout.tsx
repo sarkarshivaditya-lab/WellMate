@@ -139,7 +139,7 @@ function PageLayout({
                           onClick={() => setPanelOpen((v) => !v)}
                           className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border",
-                            "transition-all duration-150",
+                            "transition-premium",
                             "hover:brightness-[0.97] active:scale-[0.98]",
                             syncStatus === "offline"  && "bg-muted text-muted-foreground border-border",
                             syncStatus === "syncing"  && "bg-blue-50 text-blue-700 border-blue-200/80",
@@ -198,7 +198,7 @@ function PageLayout({
                             <div className="mt-4 flex flex-col gap-2">
                               <button
                                 onClick={() => { requestManualRetry(); setPanelOpen(false); }}
-                                className="rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors duration-150"
+                                className="rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-premium"
                               >
                                 Retry now
                               </button>
@@ -206,7 +206,7 @@ function PageLayout({
                               {deadletterCount > 0 && (
                                 <button
                                   onClick={() => { openDeadletterView(); setPanelOpen(false); }}
-                                  className="rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors duration-150"
+                                  className="rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-premium"
                                 >
                                   View failed items
                                 </button>
@@ -236,7 +236,7 @@ function PageLayout({
                       onClick={() => onTabChange?.(tab.value)}
                       className={cn(
                         "px-4 py-2.5 text-[13px] font-medium rounded-full min-h-[36px]",
-                        "transition-all duration-150",
+                        "transition-premium",
                         isActive
                           ? "bg-card text-foreground shadow-[0_1px_3px_rgba(20,60,50,0.12),_0_0_0_1px_rgba(20,60,50,0.05)]"
                           : "text-muted-foreground hover:text-foreground/80",
@@ -271,7 +271,7 @@ function PageLayout({
             <div className="font-semibold tracking-tight">Failed sync items</div>
             <button
               onClick={() => setDeadletterOpen(false)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+              className="text-sm text-muted-foreground hover:text-foreground transition-premium"
             >
               Close
             </button>
@@ -284,7 +284,7 @@ function PageLayout({
               {deadletter.map((task) => (
                 <div
                   key={task.id}
-                  className="rounded-xl border border-border p-3 text-sm transition-colors duration-150 hover:bg-muted/30"
+                  className="rounded-xl border border-border p-3 text-sm transition-premium hover:bg-muted/30"
                 >
                   <div className="font-medium">
                     {task.entity} · {task.action}
@@ -296,13 +296,13 @@ function PageLayout({
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => restoreDeadletterTask(task.id)}
-                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-colors duration-150"
+                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-premium"
                     >
                       Restore
                     </button>
                     <button
                       onClick={() => discardDeadletterTask(task.id)}
-                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-colors duration-150"
+                      className="flex-1 rounded-lg border border-border px-2 py-1 hover:bg-muted transition-premium"
                     >
                       Discard
                     </button>
