@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,11 +33,12 @@ import {
   type LocalJournalEntry,
 } from "@/data/local/journalStore";
 import { cn } from "@/lib/utils";
-import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
+import { PlusIcon, BookOpenIcon, SparklesIcon, X } from "lucide-react";
 import { localDateIso } from "@/services/dateUtils";
 import practicesData from "@/data/practices.json";
 import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 import { haptics } from "@/motion";
+import { useFirstWeek } from "@/hooks/useFirstWeek";
 
 /* ======================================================
    LOCAL MOOD STORE — lightweight, no dependency
@@ -61,6 +62,81 @@ const MOOD_EMOJIS = ["😢", "😔", "😐", "😊", "😄"];
 const MOOD_LABELS = ["Very Low", "Low", "Okay", "Good", "Excellent"];
 
 /* ======================================================
+   JOURNAL DRAFT — persists across editor dismissals
+   ====================================================== */
+
+const JOURNAL_DRAFT_KEY = "wellmate_journal_draft";
+
+type JournalDraft = { title: string; body: string; mood?: number };
+
+function readDraft(): JournalDraft | null {
+  try {
+    const raw = localStorage.getItem(JOURNAL_DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as JournalDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(d: JournalDraft) {
+  try {
+    if (d.title || d.body) {
+      localStorage.setItem(JOURNAL_DRAFT_KEY, JSON.stringify(d));
+    } else {
+      localStorage.removeItem(JOURNAL_DRAFT_KEY);
+    }
+  } catch {}
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(JOURNAL_DRAFT_KEY);
+  } catch {}
+}
+
+/* ======================================================
+   FIRST-WEEK WELCOME CARD
+   Same dismissed key as PhysicalDashboard — shown once, anywhere.
+   ====================================================== */
+
+const WELCOME_DISMISSED_KEY = "wellmate_welcome_dismissed";
+
+function WelcomeCard() {
+  const { isFirstWeek } = useFirstWeek();
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(WELCOME_DISMISSED_KEY) === "true",
+  );
+
+  if (!isFirstWeek || dismissed) return null;
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent">
+      <CardContent className="pt-4 pb-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold">Welcome to WellMate</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              This is your mental wellbeing space — mood check-ins, journaling, and gentle tools. Start with whatever feels right.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss welcome message"
+            onClick={() => {
+              localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
+              setDismissed(true);
+            }}
+            className="text-muted-foreground/30 hover:text-muted-foreground flex-shrink-0 mt-0.5 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ======================================================
    OVERVIEW
    ====================================================== */
 
@@ -76,6 +152,13 @@ export default function Overview() {
   const [editorTitle, setEditorTitle] = useState("");
   const [editorBody, setEditorBody] = useState("");
   const [editorMood, setEditorMood] = useState<number | undefined>(undefined);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Auto-save draft whenever the new-entry editor content changes
+  useEffect(() => {
+    if (!showEditor || editingEntry) return;
+    saveDraft({ title: editorTitle, body: editorBody, mood: editorMood });
+  }, [showEditor, editingEntry, editorTitle, editorBody, editorMood]);
 
   const today = localDateIso();
   const moods = getLocalMoods();
@@ -93,10 +176,19 @@ export default function Overview() {
   }
 
   function openNewEntry() {
+    const draft = readDraft();
     setEditingEntry(null);
-    setEditorTitle("");
-    setEditorBody("");
-    setEditorMood(undefined);
+    if (draft && (draft.title || draft.body)) {
+      setEditorTitle(draft.title);
+      setEditorBody(draft.body);
+      setEditorMood(draft.mood);
+      setDraftRestored(true);
+    } else {
+      setEditorTitle("");
+      setEditorBody("");
+      setEditorMood(undefined);
+      setDraftRestored(false);
+    }
     setShowEditor(true);
   }
 
@@ -111,6 +203,8 @@ export default function Overview() {
   function closeEditor() {
     setShowEditor(false);
     setEditingEntry(null);
+    setDraftRestored(false);
+    // Draft is intentionally left in localStorage — restored on next openNewEntry()
   }
 
   function handleSaveEntry() {
@@ -130,6 +224,7 @@ export default function Overview() {
       });
       emitAnalyticsEvent({ type: "wellness_logged", entity: "journal", ts: Date.now() });
     }
+    clearDraft();
     haptics.complete();
     refreshEntries();
     closeEditor();
@@ -168,6 +263,8 @@ export default function Overview() {
       ────────────────────────────────────────────── */}
       {tab === "overview" && (
         <div key="overview" className="space-y-6 animate-wm-tab-in">
+          <WelcomeCard />
+
           {/* Today's Mood */}
           <Card>
             <CardHeader>
@@ -390,6 +487,26 @@ export default function Overview() {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Draft restored indicator */}
+            {draftRestored && (
+              <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                <p className="text-[11px] text-muted-foreground">Draft restored</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearDraft();
+                    setEditorTitle("");
+                    setEditorBody("");
+                    setEditorMood(undefined);
+                    setDraftRestored(false);
+                  }}
+                  className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                >
+                  Discard
+                </button>
+              </div>
+            )}
+
             {/* Optional title */}
             <Input
               placeholder="Title (optional)"

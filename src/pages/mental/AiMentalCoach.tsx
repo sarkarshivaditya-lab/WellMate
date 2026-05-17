@@ -13,9 +13,11 @@ import {
   RotateCcw,
   Send,
   Sparkles,
+  WifiOff,
 } from "lucide-react";
 import type { AiMentalResponse } from "@/services/aiMentalTypes";
 import { haptics } from "@/motion";
+import { useConnectivity } from "@/hooks/useConnectivity";
 
 /* ======================================================
    EMOTION CONFIG
@@ -82,6 +84,7 @@ export function CoachTabContent() {
   const [message, setMessage] = useState("");
   const [response, setResponse] = useState<AiMentalResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const connectivity = useConnectivity();
 
   const askCoach = useAction(api.aiMentalCoach.askMentalCoach);
 
@@ -122,8 +125,23 @@ export function CoachTabContent() {
         </div>
       </div>
 
-      {/* Fallback / setup notice */}
-      {fallbackMode && (
+      {/* Offline notice — takes priority over fallback / setup */}
+      {connectivity === "offline" && (
+        <Card className="border-border/50 bg-muted/30">
+          <CardContent className="flex gap-3 pt-4 pb-4">
+            <WifiOff className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <div>
+              <p className="text-[13px] font-medium">You're offline</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                Coaching requires a connection. You can still journal or explore tools while offline.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fallback / setup notice — only shown when online and AI returns low-confidence */}
+      {fallbackMode && connectivity === "online" && (
         <Card className="border-blue-400/30 bg-blue-50/60">
           <CardContent className="flex gap-3 pt-4 pb-4">
             <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
@@ -150,7 +168,7 @@ export function CoachTabContent() {
           />
           <Button
             onClick={handleSubmit}
-            disabled={!message.trim() || isLoading}
+            disabled={!message.trim() || isLoading || connectivity === "offline"}
             className="w-full"
           >
             {isLoading ? (

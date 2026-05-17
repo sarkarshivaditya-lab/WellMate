@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Browser } from "@capacitor/browser";
@@ -20,6 +20,8 @@ import AiMentalCoach from "./pages/mental/AiMentalCoach";
 import Profile from "./pages/Profile";
 import Roadmap from "./pages/Roadmap";
 import Sleep from "./pages/Sleep";
+import Pricing from "./pages/Pricing";
+import NotFound from "./pages/NotFound";
 
 import AppShell from "./components/layout/AppShell";
 import {
@@ -361,16 +363,19 @@ export default function App() {
         />
 
         <Route
-          path="*"
+          path="/pricing"
           element={
-            <div className="min-h-screen bg-background text-foreground p-8">
-              <h1 className="text-2xl font-bold">Not Found</h1>
-              <p className="mt-2">
-                Nothing here — <Link to="/">Go home</Link>
-              </p>
-            </div>
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Pricing />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
           }
         />
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
