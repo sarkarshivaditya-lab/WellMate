@@ -2,13 +2,13 @@ import React from "react";
 
 interface State {
   hasError: boolean;
-  message: string;
+  errorId: string;
 }
 
 /**
- * Top-level error boundary. Catches any uncaught render error (including
- * provider crashes that escape their own try/catch) and shows a recovery UI
- * instead of a blank/frozen screen.
+ * Top-level error boundary. Catches uncaught render errors and shows a calm
+ * recovery UI instead of a blank screen. Raw error messages are logged to the
+ * console but never shown to users.
  */
 export class AppErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -16,13 +16,14 @@ export class AppErrorBoundary extends React.Component<
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, message: "" };
+    this.state = { hasError: false, errorId: "" };
   }
 
-  static getDerivedStateFromError(error: unknown): State {
-    const message =
-      error instanceof Error ? error.message : "An unexpected error occurred.";
-    return { hasError: true, message };
+  static getDerivedStateFromError(): State {
+    return {
+      hasError: true,
+      errorId: `ERR-${Date.now().toString(36).toUpperCase()}`,
+    };
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
@@ -33,52 +34,30 @@ export class AppErrorBoundary extends React.Component<
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "2rem",
-          background: "hsl(165,10%,96%)",
-          color: "hsl(170,20%,12%)",
-          textAlign: "center",
-          gap: "1rem",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "11px",
-            textTransform: "uppercase",
-            letterSpacing: "0.15em",
-            color: "hsl(166,10%,45%)",
-          }}
-        >
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
+        <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
           WellMate
         </p>
-        <h1 style={{ fontSize: "20px", fontWeight: 600 }}>
-          Something went wrong
-        </h1>
-        <p style={{ fontSize: "14px", color: "hsl(166,10%,45%)", maxWidth: "280px" }}>
-          {this.state.message}
-        </p>
+
+        <div className="space-y-2 max-w-xs">
+          <h1 className="text-xl font-semibold text-foreground">
+            Something unexpected happened
+          </h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Your data is safe. A quick reload usually resolves this.
+          </p>
+        </div>
+
         <button
           onClick={() => window.location.reload()}
-          style={{
-            marginTop: "1rem",
-            padding: "12px 28px",
-            borderRadius: "14px",
-            background: "hsl(166,44%,38%)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: "15px",
-            border: "none",
-            cursor: "pointer",
-          }}
+          className="mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3 transition-opacity hover:opacity-90 active:scale-[0.97]"
         >
           Reload app
         </button>
+
+        <p className="text-[10px] text-muted-foreground/40 mt-2">
+          {this.state.errorId}
+        </p>
       </div>
     );
   }

@@ -194,7 +194,7 @@ export default function Overview() {
                 ) : (
                   <div className="py-6 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      You haven't checked in with yourself today
+                      How are you feeling today?
                     </p>
                     <DialogTrigger asChild>
                       <Button>
@@ -290,10 +290,14 @@ export default function Overview() {
                 </div>
               ) : (
                 <div className="py-6 text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">No reflections yet</p>
+                  <p className="text-sm text-muted-foreground">Nothing written yet</p>
+                  <p className="text-xs text-muted-foreground/60">
+                    Even a sentence or two can help you understand how you feel.
+                  </p>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="mt-1"
                     onClick={() => { setTab("journal"); openNewEntry(); }}
                   >
                     Write your first entry

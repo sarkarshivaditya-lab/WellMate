@@ -24,6 +24,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusIcon, TrashIcon, X, Dumbbell } from "lucide-react";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 import { toast } from "sonner";
 import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
@@ -126,13 +133,17 @@ export default function ExerciseLog() {
 
       <CardContent className="space-y-2">
         {exercises.length === 0 ? (
-          <div className="py-8 text-center space-y-2">
-            <Dumbbell className="mx-auto h-8 w-8 text-muted-foreground/40" />
-            <div className="text-sm text-muted-foreground">No exercise logged today</div>
-            <div className="text-xs text-muted-foreground/70">
-              Even a short walk or stretch can be helpful — totally optional.
-            </div>
-          </div>
+          <Empty className="border-none bg-transparent py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Dumbbell />
+              </EmptyMedia>
+              <EmptyTitle className="text-base">Nothing logged today</EmptyTitle>
+              <EmptyDescription>
+                A short walk or stretch counts — totally optional.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div className="divide-y divide-border">
             {exercises.map((exercise) => (

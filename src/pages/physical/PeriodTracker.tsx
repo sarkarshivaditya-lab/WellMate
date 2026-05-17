@@ -20,13 +20,22 @@ import { Input } from "@/components/ui/input.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
-import { PlusIcon, TrashIcon } from "lucide-react";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty.tsx";
+import { PlusIcon, TrashIcon, WifiOff, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { localDateIso } from "@/services/dateUtils";
 import { haptics } from "@/motion";
+import { useConnectivity } from "@/hooks/useConnectivity";
 
 export default function PeriodTracker() {
+  const connectivity = useConnectivity();
   const user = useQuery(api.users.getCurrentUser);
   const cycles = useQuery(api.cycles.getCycles);
   const addCycle = useMutation(api.cycles.addCycle);
@@ -41,7 +50,22 @@ export default function PeriodTracker() {
     notes: "",
   });
 
-  // 1️⃣ Convex still loading
+  // 1️⃣ Offline — Convex queries will never resolve; show a calm placeholder
+  if (connectivity === "offline" && user === undefined) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+          <WifiOff className="h-7 w-7 text-muted-foreground/30" aria-hidden="true" />
+          <div>
+            <p className="text-sm text-muted-foreground">Period tracking is available when online.</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Your data is safe and will load when you reconnect.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 2️⃣ Convex still loading
   if (user === undefined) {
     return (
       <Card>
@@ -56,12 +80,12 @@ export default function PeriodTracker() {
     );
   }
 
-  // 2️⃣ Authenticated route, but user record not ready yet
+  // 3️⃣ Authenticated route, but user record not ready yet
   if (user === null) {
     return null;
   }
 
-  // 3️⃣ Feature gating based on profile flag
+  // 4️⃣ Feature gating based on profile flag
   if (!user.periodTrackingEnabled) {
     return (
       <Card>
@@ -208,10 +232,17 @@ export default function PeriodTracker() {
               <Skeleton className="h-14 w-4/5 rounded-xl" />
             </div>
           ) : sortedCycles.length === 0 ? (
-            <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
-              <p className="text-sm">No cycles logged yet</p>
-              <p className="text-xs text-muted-foreground/70">Tap "Add Cycle" to get started</p>
-            </div>
+            <Empty className="border-none bg-transparent py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CalendarDays />
+                </EmptyMedia>
+                <EmptyTitle className="text-base">No cycles logged yet</EmptyTitle>
+                <EmptyDescription>
+                  Log your first cycle to start tracking and get predictions.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             sortedCycles.map((cycle) => (
               <div

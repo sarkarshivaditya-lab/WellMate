@@ -22,6 +22,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
 import { PlusIcon, UtensilsCrossed } from "lucide-react";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 import FoodSearchInput from "@/components/FoodSearchInput.tsx";
 import MealCard from "@/components/MealCard.tsx";
 import type { FoodSearchResult } from "@/adapters/foodAdapter.interface.ts";
@@ -171,13 +178,17 @@ export default function FoodLog() {
         {!meals ? (
           <MealSkeleton />
         ) : meals.length === 0 ? (
-          <div className="py-8 text-center space-y-2">
-            <UtensilsCrossed className="mx-auto h-8 w-8 text-muted-foreground/40" />
-            <div className="text-sm text-muted-foreground">No meals logged today</div>
-            <div className="text-xs text-muted-foreground/70">
-              Logging even one meal can be helpful — optional.
-            </div>
-          </div>
+          <Empty className="border-none bg-transparent py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <UtensilsCrossed />
+              </EmptyMedia>
+              <EmptyTitle className="text-base">Nothing logged today</EmptyTitle>
+              <EmptyDescription>
+                Log when it feels easy — even a snack or drink counts.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div className="space-y-3">
             {meals.map((meal) => (

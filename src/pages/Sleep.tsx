@@ -13,6 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, MoonIcon } from "lucide-react";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 import { toast } from "sonner";
 import PageLayout from "@/components/layout/PageLayout";
 import { addSleepLog } from "@/data/local/sleepStore";
@@ -142,8 +149,8 @@ export function SleepTabContent() {
           <CardContent>
             {sleep.length === 0 ? (
               <div className="text-muted-foreground">
-                <div className="text-3xl font-bold text-foreground/25">—</div>
-                <p className="mt-1 text-sm">No sleep logged yet</p>
+                <div className="text-3xl font-bold text-foreground/20 tabular-nums">—</div>
+                <p className="mt-1 text-sm text-muted-foreground/70">Log a few nights to see your average.</p>
               </div>
             ) : (
               <>
@@ -164,11 +171,17 @@ export function SleepTabContent() {
           </CardHeader>
           <CardContent className="space-y-3">
             {sleep.length === 0 ? (
-              <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
-                <MoonIcon className="h-8 w-8 opacity-30" />
-                <p className="text-sm">No sleep logged yet</p>
-                <p className="text-xs text-muted-foreground/70">Tap "Log Sleep" to add your first entry</p>
-              </div>
+              <Empty className="border-none bg-transparent py-6">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <MoonIcon />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-base">No sleep logged yet</EmptyTitle>
+                  <EmptyDescription>
+                    Log your first night to start tracking your rest patterns.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               sleep.map((s) => {
                 const hours = Math.floor(s.durationMin / 60);

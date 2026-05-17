@@ -1,34 +1,40 @@
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button.tsx";
-import PageLayout from "@/components/layout/PageLayout";
+import { ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname,
-    );
+    console.error("404: attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
   return (
-    <PageLayout>
-      <div className="w-full max-w-3xl mx-auto text-center space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-6xl font-bold text-muted-foreground">404</h1>
-          <h2 className="text-2xl font-semibold">Page Not Found</h2>
-        </div>
-        <p className="text-lg text-muted-foreground max-w-md mx-auto">
-          This page does not exist.
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
+      <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+        WellMate
+      </p>
+
+      <div className="space-y-2 max-w-xs">
+        <h1 className="text-2xl font-semibold text-foreground">
+          This page doesn't exist
+        </h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          The link you followed may be outdated, or this section isn't available yet.
         </p>
-        <div className="pt-4">
-          <Button asChild>
-            <Link to="/">Return to Home</Link>
-          </Button>
-        </div>
       </div>
-    </PageLayout>
+
+      <div className="flex flex-col gap-2 w-full max-w-[200px]">
+        <Button asChild>
+          <Link to="/physical">Go to dashboard</Link>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" />
+          Go back
+        </Button>
+      </div>
+    </div>
   );
 }
