@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { X } from "lucide-react";
 
 import Progress from "./Progress";
 import ExerciseLog from "./ExerciseLog";
@@ -14,6 +15,7 @@ import { SleepTabContent } from "../Sleep";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
+import { useFirstWeek } from "@/hooks/useFirstWeek";
 import { useFeatureTracker } from "@/analytics";
 
 import { localDateIso } from "@/services/dateUtils";
@@ -220,6 +222,50 @@ function WeeklyActivityTrend() {
 }
 
 /* ======================================================
+   FIRST-WEEK WELCOME CARD
+   Shown for the first 7 days after onboarding. Dismissable.
+   Calm encouragement — not gamified, not pushy.
+   ====================================================== */
+
+const WELCOME_DISMISSED_KEY = "wellmate_welcome_dismissed";
+
+function WelcomeCard() {
+  const { isFirstWeek } = useFirstWeek();
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(WELCOME_DISMISSED_KEY) === "true",
+  );
+
+  if (!isFirstWeek || dismissed) return null;
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent">
+      <CardContent className="pt-4 pb-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-semibold">Welcome to WellMate</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Start wherever feels natural — one sleep entry, one habit, one meal.
+              You don't need to use everything at once.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss welcome message"
+            onClick={() => {
+              localStorage.setItem(WELCOME_DISMISSED_KEY, "true");
+              setDismissed(true);
+            }}
+            className="text-muted-foreground/30 hover:text-muted-foreground flex-shrink-0 mt-0.5 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ======================================================
    PHYSICAL SUMMARY
    ====================================================== */
 
@@ -292,6 +338,7 @@ export default function PhysicalDashboard() {
     >
       {tab === "overview" && (
         <div key="overview" className="space-y-6 animate-wm-tab-in">
+          <WelcomeCard />
           <PhysicalConfidenceCard />
           <TodayActivitySummary />
           <WeeklyActivityTrend />

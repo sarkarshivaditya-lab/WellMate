@@ -17,6 +17,11 @@ import {
   getSyncQueue,
   getDeadletterQueue,
 } from "@/sync/syncQueue";
+import {
+  getOperationQueue,
+  getDeadLetterQueue as getOpDeadLetterQueue,
+  subscribeToOperationQueue,
+} from "@/reliability/operationQueue";
 import { track } from "@/telemetry/telemetry";
 import { subscribeToConnectivity } from "@/reliability/connectivity";
 
@@ -61,16 +66,29 @@ export function getSyncStatus(): SyncStatus {
 }
 
 /**
- * Read-only derived visibility for UI badges / indicators
+ * Read-only derived visibility for UI badges / indicators.
+ * Counts from both the legacy syncQueue and the new operationQueue.
  */
 export function getSyncSummary(): SyncSummary {
-  const queue = getSyncQueue();
-  const dead = getDeadletterQueue();
+  const legacyQueue = getSyncQueue();
+  const legacyDead = getDeadletterQueue();
+  const opQueue = getOperationQueue();
+  const opDead = getOpDeadLetterQueue();
+
+  // Only count operations that are genuinely in-flight (not already done or cancelled)
+  const opPending = opQueue.filter(
+    (op) =>
+      op.status !== "synced" &&
+      op.status !== "cancelled" &&
+      op.status !== "tombstoned",
+  ).length;
+
+  const deadletterCount = legacyDead.length + opDead.length;
 
   return {
-    pendingCount: queue.length,
-    deadletterCount: dead.length,
-    hasErrors: dead.length > 0,
+    pendingCount: legacyQueue.length + opPending,
+    deadletterCount,
+    hasErrors: deadletterCount > 0,
   };
 }
 
@@ -158,3 +176,10 @@ export function openDeadletterView() {
    ========================= */
 
 subscribeToConnectivity(() => notify());
+
+/* =========================
+   OPERATION QUEUE AWARENESS
+   Reacts to the new operationQueue so SyncPulse updates reactively.
+   ========================= */
+
+subscribeToOperationQueue(() => notify());

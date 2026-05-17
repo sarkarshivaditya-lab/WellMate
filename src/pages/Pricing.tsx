@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import GatedFeatureBanner from "@/components/GatedFeatureBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TIER_FEATURES } from "@/services/subscriptionUtils";
 import {
@@ -57,9 +58,26 @@ export default function Pricing() {
     );
   }
 
+  const planExpired =
+    subscription?.tier === "pro" && subscription?.status !== "active";
+
   return (
     <PageLayout>
       <div className="w-full space-y-8">
+        {/* Expired plan notice — shown when pro has lapsed */}
+        {planExpired && (
+          <GatedFeatureBanner
+            feature="Your Pro plan has ended"
+            description={
+              subscription?.status === "past_due"
+                ? "Your last payment didn't go through. Update your billing to restore access — your data is always safe."
+                : "Your Pro plan has ended. Renew anytime to restore full access — your data is always safe."
+            }
+            onUpgrade={handleUpgrade}
+            variant="expired"
+          />
+        )}
+
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">Choose Your Plan</h1>

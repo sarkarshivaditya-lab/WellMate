@@ -1,7 +1,7 @@
 // src/components/NotificationSettings.tsx
 
-import { useState, useCallback } from "react";
-import { Bell, Moon, ChevronRight, BellOff } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Bell, Moon, ChevronRight, BellOff, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -280,11 +280,28 @@ function NotificationSettingsSheet({
    NOTIFICATION SETTINGS CARD — renders in Profile
    -------------------------------------------------- */
 
+type BrowserPermission = "granted" | "denied" | "default" | "unavailable";
+
+function getBrowserPermission(): BrowserPermission {
+  if (typeof Notification === "undefined") return "unavailable";
+  return Notification.permission;
+}
+
 export default function NotificationSettings() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(
     () => getNotificationPreferences(),
   );
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [browserPermission, setBrowserPermission] = useState<BrowserPermission>(
+    getBrowserPermission,
+  );
+
+  // Re-check permission on focus (user may have changed it in browser settings)
+  useEffect(() => {
+    const onFocus = () => setBrowserPermission(getBrowserPermission());
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   const inQuiet = isInQuietHours(prefs);
 
@@ -320,6 +337,21 @@ export default function NotificationSettings() {
               : "Notifications are paused"}
           </CardDescription>
         </CardHeader>
+
+        {/* Browser permission denied — shown when OS/browser has blocked notifications */}
+        {browserPermission === "denied" && (
+          <CardContent className="pt-0 pb-4 px-6">
+            <div className="flex items-start gap-3 rounded-xl bg-muted/40 px-4 py-3">
+              <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-medium">Notifications are blocked</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Your browser is preventing WellMate from sending reminders. To change this, open your browser or device settings and allow notifications for this site.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        )}
 
         {prefs.enabled && (
           <CardContent className="p-0">
