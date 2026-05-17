@@ -37,6 +37,7 @@ import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
 import { localDateIso } from "@/services/dateUtils";
 import practicesData from "@/data/practices.json";
 import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
+import { haptics } from "@/motion";
 
 /* ======================================================
    LOCAL MOOD STORE — lightweight, no dependency
@@ -129,11 +130,13 @@ export default function Overview() {
       });
       emitAnalyticsEvent({ type: "wellness_logged", entity: "journal", ts: Date.now() });
     }
+    haptics.complete();
     refreshEntries();
     closeEditor();
   }
 
   function handleDeleteEntry(localId: string) {
+    haptics.destructive();
     deleteJournalEntry(localId);
     refreshEntries();
   }
@@ -142,6 +145,7 @@ export default function Overview() {
     const next: LocalMood = { dateIso: today, moodValue, note };
     const filtered = moods.filter((m) => m.dateIso !== today);
     localStorage.setItem("mental.moods", JSON.stringify([...filtered, next]));
+    haptics.gentle();
     emitAnalyticsEvent({ type: "wellness_logged", entity: "mood", ts: Date.now() });
     setShowMoodDialog(false);
   }

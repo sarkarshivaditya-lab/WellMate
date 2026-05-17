@@ -44,6 +44,7 @@ import {
 } from "@/data/local/habitsStore";
 import { localDateIso } from "@/services/dateUtils";
 import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
+import { haptics } from "@/motion";
 
 export default function Habits() {
   useFeatureTracker("habits");
@@ -87,6 +88,7 @@ export default function Habits() {
     });
     setHabits(listHabits());
 
+    haptics.complete();
     toast.success("Habit created");
     setTitle("");
     setDescription("");
@@ -97,7 +99,10 @@ export default function Habits() {
     const wasComplete = isCompletedToday(localId);
     toggleEntry(localId, today);
     if (!wasComplete) {
+      haptics.complete();
       emitAnalyticsEvent({ type: "wellness_logged", entity: "habit", ts: Date.now() });
+    } else {
+      haptics.light();
     }
     setTodayEntries(listEntriesByDate(today));
     setAllEntries(listAllEntries());

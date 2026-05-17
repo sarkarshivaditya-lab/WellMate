@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { haptics } from "@/motion";
 
 interface MoodSelectorProps {
   initialMood?: number;
@@ -30,6 +31,7 @@ export default function MoodSelector({
 
   const handleSave = () => {
     if (selectedMood !== null) {
+      haptics.gentle();
       onSave(selectedMood, note);
     }
   };
@@ -41,7 +43,7 @@ export default function MoodSelector({
           {moodEmojis.map((mood) => (
             <button
               key={mood.value}
-              onClick={() => setSelectedMood(mood.value)}
+              onClick={() => { haptics.light(); setSelectedMood(mood.value); }}
               className={cn(
                 "flex flex-col items-center gap-1 p-3 rounded-xl transition-premium",
                 selectedMood === mood.value
@@ -76,7 +78,7 @@ export default function MoodSelector({
           Save Mood
         </Button>
         {onCancel && (
-          <Button onClick={onCancel} variant="outline">
+          <Button onClick={() => { haptics.dismiss(); onCancel(); }} variant="outline">
             Cancel
           </Button>
         )}

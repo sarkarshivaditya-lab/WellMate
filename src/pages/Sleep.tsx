@@ -18,6 +18,7 @@ import PageLayout from "@/components/layout/PageLayout";
 import { addSleepLog } from "@/data/local/sleepStore";
 import { useRecentSleepLogs } from "@/hooks/useSleepLogs";
 import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
+import { haptics } from "@/motion";
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
 
@@ -50,6 +51,7 @@ export function SleepTabContent() {
       notes: notes || undefined,
     });
 
+    haptics.complete();
     toast.success("Sleep logged");
     emitAnalyticsEvent({ type: "wellness_logged", entity: "sleep", ts: Date.now() });
     setShowDialog(false);

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input.tsx";
 import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 import { Loader2Icon, SparklesIcon, AlertTriangleIcon } from "lucide-react";
 import type { AiResponse } from "@/services/aiTypes.ts";
+import { haptics } from "@/motion";
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ export default function AiCoach() {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
+    haptics.light();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",

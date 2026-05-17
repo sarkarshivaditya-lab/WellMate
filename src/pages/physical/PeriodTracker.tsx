@@ -24,6 +24,7 @@ import { PlusIcon, TrashIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
 import { localDateIso } from "@/services/dateUtils";
+import { haptics } from "@/motion";
 
 export default function PeriodTracker() {
   const user = useQuery(api.users.getCurrentUser);
@@ -99,6 +100,7 @@ export default function PeriodTracker() {
         lengthDays: form.lengthDays ? parseFloat(form.lengthDays) : undefined,
         notes: form.notes || undefined,
       });
+      haptics.complete();
       toast.success("Cycle logged");
       setShowAddCycle(false);
       setForm({ startDate: "", lengthDays: "", notes: "" });
@@ -109,6 +111,7 @@ export default function PeriodTracker() {
 
   const handleDeleteCycle = async (cycleId: Id<"cycles">) => {
     try {
+      haptics.destructive();
       await deleteCycle({ cycleId });
       toast.success("Cycle removed");
     } catch {

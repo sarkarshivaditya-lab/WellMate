@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LocalJournalEntry } from "@/data/local/journalStore";
+import { haptics } from "@/motion";
 
 const MOOD_EMOJIS = ["😢", "😔", "😐", "😊", "😄"];
 
@@ -64,7 +65,7 @@ export default function JournalCard({ entry, onEdit, onDelete }: JournalCardProp
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                onClick={(e) => { e.stopPropagation(); haptics.destructive(); onDelete(); }}
                 aria-label="Delete entry"
               >
                 <Trash2Icon className="h-3.5 w-3.5 text-destructive/70" />

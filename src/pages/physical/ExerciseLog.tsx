@@ -30,6 +30,7 @@ import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { readOnboardingPayload } from "@/data/local/onboardingPayload";
 import { localDateIso } from "@/services/dateUtils";
 import { emitAnalyticsEvent } from "@/analytics";
+import { haptics } from "@/motion";
 
 /* ---------- Skeleton ---------- */
 
@@ -86,6 +87,7 @@ export default function ExerciseLog() {
       notes: form.notes || undefined,
     });
 
+    haptics.complete();
     toast.success("Exercise saved");
     emitAnalyticsEvent({ type: "wellness_logged", entity: "exercise", ts: Date.now() });
     setShowAddExercise(false);
@@ -159,6 +161,7 @@ export default function ExerciseLog() {
                         variant="destructive"
                         className="h-9 px-3 text-xs"
                         onClick={() => {
+                          haptics.destructive();
                           deleteExercise(exercise.id);
                           setConfirmDeleteId(null);
                         }}
@@ -169,7 +172,7 @@ export default function ExerciseLog() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9"
-                        onClick={() => setConfirmDeleteId(null)}
+                        onClick={() => { haptics.dismiss(); setConfirmDeleteId(null); }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -178,7 +181,7 @@ export default function ExerciseLog() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setConfirmDeleteId(exercise.id)}
+                      onClick={() => { haptics.caution(); setConfirmDeleteId(exercise.id); }}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>

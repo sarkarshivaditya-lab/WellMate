@@ -71,6 +71,23 @@
     --surface-vignette:  var(--header-gradient-start);
 
     /* ===============================
+       MOTION TOKENS — CSS custom properties
+       Mirrors src/motion/tokens.ts for CSS consumers.
+       =============================== */
+    --wm-duration-instant:  0ms;
+    --wm-duration-quick:    100ms;
+    --wm-duration-standard: 200ms;
+    --wm-duration-calm:     300ms;
+    --wm-duration-ambient:  500ms;
+    --wm-duration-breathe:  1600ms;
+    --wm-duration-blink:    1000ms;
+
+    --wm-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --wm-ease-smooth: ease-out;
+    --wm-ease-gentle: ease-in-out;
+    --wm-ease-linear: linear;
+
+    /* ===============================
        PAGE HEADER GRADIENT
        Perceptible teal warmth at top, fades to background.
        6-stop lightness gap (90% → 96%) — clearly visible.
@@ -266,5 +283,45 @@
     );
     background-size: 200% 100%;
     animation: wm-shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* ===============================
+     REDUCED MOTION SUPPORT
+     Respects prefers-reduced-motion: reduce system setting.
+     Disables all decorative animation; preserves state continuity.
+     CSS-level companion to src/hooks/useReducedMotion.ts.
+     =============================== */
+  @media (prefers-reduced-motion: reduce) {
+    /* Entrance animations — reveal instantly, no movement */
+    .animate-wm-icon-in,
+    .animate-wm-fade-1,
+    .animate-wm-fade-2,
+    .animate-wm-fade-3,
+    .animate-wm-fade-4,
+    .animate-wm-tab-in,
+    .animate-wm-route-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    /* Ambient loops — stop entirely, hold resting state */
+    .animate-wm-float,
+    .animate-wm-float-alt,
+    .animate-wm-glow {
+      animation: none;
+    }
+
+    /* Skeleton — static muted swatch, no sweep */
+    .skeleton-shimmer {
+      animation: none;
+      background: hsl(var(--muted));
+      opacity: 0.75;
+    }
+
+    /* Core transition — collapse to near-instant (preserves state feedback) */
+    .transition-premium {
+      transition-duration: var(--wm-duration-quick);
+    }
   }
 }

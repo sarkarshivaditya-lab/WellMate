@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { AiMentalResponse } from "@/services/aiMentalTypes";
+import { haptics } from "@/motion";
 
 /* ======================================================
    EMOTION CONFIG
@@ -86,6 +87,7 @@ export function CoachTabContent() {
 
   async function handleSubmit() {
     if (!message.trim() || isLoading) return;
+    haptics.light();
     setIsLoading(true);
     try {
       const result = await askCoach({ message: message.trim() });

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Trash2, X } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel.d.ts";
+import { haptics } from "@/motion";
 
 interface HabitCardProps {
   habit: Doc<"habits">;
@@ -64,6 +65,7 @@ export default function HabitCard({
                     className="h-9 px-3 text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
+                      haptics.destructive();
                       onArchive();
                       setConfirming(false);
                     }}
@@ -76,6 +78,7 @@ export default function HabitCard({
                     className="h-9 w-9"
                     onClick={(e) => {
                       e.stopPropagation();
+                      haptics.dismiss();
                       setConfirming(false);
                     }}
                   >
@@ -89,6 +92,7 @@ export default function HabitCard({
                   className="h-9 w-9 text-muted-foreground hover:text-destructive"
                   onClick={(e) => {
                     e.stopPropagation();
+                    haptics.caution();
                     setConfirming(true);
                   }}
                 >
@@ -103,6 +107,7 @@ export default function HabitCard({
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirming(false);
+                isCompletedToday ? haptics.light() : haptics.complete();
                 onToggle();
               }}
             >

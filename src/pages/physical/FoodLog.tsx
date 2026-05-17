@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { useMealsByDate } from "@/hooks/useMealsByDate";
 import { localDateIso } from "@/services/dateUtils";
 import { emitAnalyticsEvent } from "@/analytics";
+import { haptics } from "@/motion";
 
 /* ---------- Skeleton ---------- */
 
@@ -117,6 +118,7 @@ export default function FoodLog() {
       ...totals,
     });
 
+    haptics.complete();
     toast.success("Meal saved");
     emitAnalyticsEvent({ type: "wellness_logged", entity: "meal", ts: Date.now() });
     setShowAddMeal(false);

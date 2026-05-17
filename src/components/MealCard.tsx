@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button.tsx";
 import { TrashIcon } from "lucide-react";
+import { haptics } from "@/motion";
 
 interface DisplayMealItem {
   name: string;
@@ -35,7 +36,7 @@ export default function MealCard({ meal, onDelete }: MealCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={onDelete}
+            onClick={() => { haptics.destructive(); onDelete!(); }}
             className="h-9 w-9 flex-shrink-0 text-muted-foreground hover:text-destructive"
           >
             <TrashIcon className="h-4 w-4" />
