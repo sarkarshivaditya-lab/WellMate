@@ -1,85 +1,125 @@
+import { safeRead, safeWrite } from "@/reliability/persistence";
+
 export type LocalMood = {
   localId: string;
   dateIso: string;
   moodValue: number;
   note?: string;
   updatedAt: number;
+  syncStatus: "pending" | "synced";
 };
 
 const MOODS_KEY = "local_moods";
 
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+/* --------------------------------------------------
+   IN-MEMORY CACHE + SUBSCRIPTION
+   -------------------------------------------------- */
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+let cachedSnapshot: LocalMood[] = hydrate();
+
+function hydrate(): LocalMood[] {
+  const raw = safeRead<unknown[]>(MOODS_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  // Migration: backfill syncStatus for records written before this field existed.
+  // Treat missing syncStatus as "pending" so they are synced once.
+  return raw.map((item) => {
+    const m = item as Record<string, unknown>;
+    return {
+      localId: String(m.localId ?? ""),
+      dateIso: String(m.dateIso ?? ""),
+      moodValue: Number(m.moodValue ?? 0),
+      note: m.note !== undefined ? String(m.note) : undefined,
+      updatedAt: Number(m.updatedAt ?? 0),
+      syncStatus: (m.syncStatus === "synced" ? "synced" : "pending") as "pending" | "synced",
+    };
+  }).filter((m) => m.localId && m.dateIso);
 }
 
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
+function flush() {
+  safeWrite(MOODS_KEY, cachedSnapshot);
 }
 
-/**
- * Get mood for a specific date
- */
+function notify() {
+  listeners.forEach((l) => { try { l(); } catch { /* never crash */ } });
+}
+
+export function subscribeToMoods(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function getAllLocalMoods(): LocalMood[] {
+  return cachedSnapshot;
+}
+
+/* --------------------------------------------------
+   QUERIES
+   -------------------------------------------------- */
+
 export function getMoodByDate(dateIso: string): LocalMood | null {
-  const moods = load<LocalMood[]>(MOODS_KEY, []);
-  return moods.find((m) => m.dateIso === dateIso) || null;
+  return cachedSnapshot.find((m) => m.dateIso === dateIso) ?? null;
 }
 
-/**
- * List moods (most recent first)
- */
 export function listMoods(limit = 30): LocalMood[] {
-  const moods = load<LocalMood[]>(MOODS_KEY, []);
-  return moods
+  return cachedSnapshot
     .slice()
     .sort((a, b) => b.dateIso.localeCompare(a.dateIso))
     .slice(0, limit);
 }
 
-/**
- * Add or update mood for a date (upsert)
- */
+export function listPendingMoods(): LocalMood[] {
+  return cachedSnapshot.filter((m) => m.syncStatus === "pending");
+}
+
+/* --------------------------------------------------
+   MUTATIONS
+   -------------------------------------------------- */
+
 export function upsertMood(input: {
   dateIso: string;
   moodValue: number;
   note?: string;
 }) {
-  const moods = load<LocalMood[]>(MOODS_KEY, []);
   const now = Date.now();
-
-  const idx = moods.findIndex((m) => m.dateIso === input.dateIso);
+  const idx = cachedSnapshot.findIndex((m) => m.dateIso === input.dateIso);
 
   if (idx !== -1) {
-    moods[idx] = {
-      ...moods[idx],
-      moodValue: input.moodValue,
-      note: input.note,
-      updatedAt: now,
-    };
+    cachedSnapshot = cachedSnapshot.map((m, i) =>
+      i === idx
+        ? { ...m, moodValue: input.moodValue, note: input.note, updatedAt: now, syncStatus: "pending" }
+        : m,
+    );
   } else {
-    moods.push({
-      localId: crypto.randomUUID(),
-      dateIso: input.dateIso,
-      moodValue: input.moodValue,
-      note: input.note,
-      updatedAt: now,
-    });
+    cachedSnapshot = [
+      ...cachedSnapshot,
+      {
+        localId: crypto.randomUUID(),
+        dateIso: input.dateIso,
+        moodValue: input.moodValue,
+        note: input.note,
+        updatedAt: now,
+        syncStatus: "pending",
+      },
+    ];
   }
 
-  save(MOODS_KEY, moods);
+  flush();
+  notify();
 }
 
-/**
- * Delete mood by date
- */
 export function deleteMoodByDate(dateIso: string) {
-  const moods = load<LocalMood[]>(MOODS_KEY, []);
-  save(
-    MOODS_KEY,
-    moods.filter((m) => m.dateIso !== dateIso),
+  cachedSnapshot = cachedSnapshot.filter((m) => m.dateIso !== dateIso);
+  flush();
+  notify();
+}
+
+export function markMoodSynced(localId: string) {
+  cachedSnapshot = cachedSnapshot.map((m) =>
+    m.localId === localId ? { ...m, syncStatus: "synced" } : m,
   );
+  flush();
+  // No notify() needed — sync status change is invisible to UI
 }

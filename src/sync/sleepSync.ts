@@ -1,21 +1,8 @@
 import type { ConvexReactClient } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { listRecentSleep, markSleepLogSynced } from "@/data/local/sleepStore";
+import { listPendingSleep, markSleepLogSynced } from "@/data/local/sleepStore";
 
-/**
- * Returns true if the error is an UNAUTHENTICATED response from Convex.
- * When this happens the Convex connection has no valid identity — retrying
- * the same mutation would fail again. The loop aborts so the logs remain
- * "pending" for the next authenticated sync cycle instead of spamming
- * server-side auth errors.
- */
-function isUnauthError(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const msg = String((err as { message?: unknown }).message ?? "");
-  if (msg.includes("UNAUTHENTICATED") || msg.includes("User not logged in")) return true;
-  const data = (err as { data?: { code?: unknown } }).data;
-  return String(data?.code ?? "") === "UNAUTHENTICATED";
-}
+import { isUnauthError } from "./syncUtils";
 
 /**
  * Best-effort local → Convex mirror for sleep logs.
@@ -30,8 +17,8 @@ function isUnauthError(err: unknown): boolean {
 export async function syncSleep(convex: ConvexReactClient | null | undefined) {
   if (!convex) return;
 
-  // Treat missing syncStatus (legacy logs from before this field existed) as "pending"
-  const pending = listRecentSleep(30).filter((s) => (s.syncStatus ?? "pending") === "pending");
+  // listPendingSleep returns ALL pending logs regardless of age — never silently drops old records
+  const pending = listPendingSleep();
   if (pending.length === 0) return;
 
   for (const s of pending) {

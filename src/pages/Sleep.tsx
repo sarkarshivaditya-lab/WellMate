@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { PlusIcon, MoonIcon } from "lucide-react";
 import { toast } from "sonner";
 import PageLayout from "@/components/layout/PageLayout";
-import {
-  addSleepLog,
-  listRecentSleep,
-} from "@/data/local/sleepStore";
+import { addSleepLog } from "@/data/local/sleepStore";
+import { useRecentSleepLogs } from "@/hooks/useSleepLogs";
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
 
@@ -29,7 +27,8 @@ export function SleepTabContent() {
   const [rating, setRating] = useState(3);
   const [notes, setNotes] = useState("");
 
-  const sleep = useMemo(() => listRecentSleep(7), []);
+  // Reactive — updates immediately when a log is added
+  const sleep = useRecentSleepLogs(7);
 
   const handleAddSleep = () => {
     const now = new Date();
@@ -54,13 +53,9 @@ export function SleepTabContent() {
     setNotes("");
   };
 
-  const calculateAverage = () => {
-    if (sleep.length === 0) return 0;
-    const total = sleep.reduce((sum, s) => sum + s.durationMin, 0);
-    return Math.round(total / sleep.length);
-  };
-
-  const avg = calculateAverage();
+  const avg = sleep.length === 0
+    ? 0
+    : Math.round(sleep.reduce((sum, s) => sum + s.durationMin, 0) / sleep.length);
   const avgHours = Math.floor(avg / 60);
   const avgMins = avg % 60;
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button.tsx";
@@ -12,6 +12,310 @@ import {
 import { toast } from "sonner";
 import practicesData from "@/data/practices.json";
 import PageLayout from "@/components/layout/PageLayout";
+import {
+  getQueueSummary,
+  getDeadLetterQueue,
+  restoreFromDeadLetter,
+  discardDeadLetter,
+  subscribeToOperationQueue,
+  getOperationQueue,
+} from "@/reliability/operationQueue";
+import { subscribeToConnectivity, getConnectivity } from "@/reliability/connectivity";
+import {
+  getDiagnosticsSnapshot,
+  subscribeToDiagnostics,
+  resetDiagnostics,
+  type DiagnosticsSnapshot,
+} from "@/reliability/diagnostics";
+import {
+  getHydrationState,
+  subscribeToHydration,
+} from "@/reliability/hydration";
+import { getConflictLog } from "@/reliability/conflictResolver";
+import {
+  getDeadletterQueue as getLegacyDeadLetter,
+  restoreDeadletterTask,
+  discardDeadletterTask,
+} from "@/sync/syncQueue";
+import {
+  runReliabilityStressTests,
+  type StressTestReport,
+} from "@/reliability/__tests__/stressTest";
+
+/* --------------------------------------------------
+   RELIABILITY PANEL — hooks
+   -------------------------------------------------- */
+
+function useQueueSummary() {
+  return useSyncExternalStore(subscribeToOperationQueue, getQueueSummary, getQueueSummary);
+}
+
+function useDiagnostics(): DiagnosticsSnapshot {
+  return useSyncExternalStore(subscribeToDiagnostics, getDiagnosticsSnapshot, getDiagnosticsSnapshot);
+}
+
+function useHydrationStatus() {
+  return useSyncExternalStore(
+    subscribeToHydration,
+    () => getHydrationState().status,
+    () => getHydrationState().status,
+  );
+}
+
+/* --------------------------------------------------
+   RELIABILITY PANEL — component
+   -------------------------------------------------- */
+
+function ReliabilityPanel() {
+  const summary = useQueueSummary();
+  const diag = useDiagnostics();
+  const hydrationStatus = useHydrationStatus();
+  const [connectivity, setConnectivity] = useState(() => getConnectivity());
+  const [showEvents, setShowEvents] = useState(false);
+  const [stressReport, setStressReport] = useState<StressTestReport | null>(null);
+  const [stressRunning, setStressRunning] = useState(false);
+  const deadLetter = getDeadLetterQueue();
+  const legacyDeadLetter = getLegacyDeadLetter();
+  const conflicts = getConflictLog();
+
+  useEffect(() => {
+    const unsub = subscribeToConnectivity((s) => setConnectivity(s));
+    return unsub;
+  }, []);
+
+  const hydrationColor =
+    hydrationStatus === "ready" ? "text-green-400"
+    : hydrationStatus === "degraded" ? "text-yellow-400"
+    : hydrationStatus === "failed" || hydrationStatus === "corrupted" ? "text-red-400"
+    : "text-muted-foreground";
+
+  const connectivityColor =
+    connectivity === "online" ? "text-green-400" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Reliability Diagnostics</CardTitle>
+        <CardDescription>Engineering-only — sync, hydration, queue, and conflict state</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 text-xs font-mono">
+
+        {/* Status row */}
+        <div className="flex flex-wrap gap-4">
+          <div>
+            Hydration: <span className={hydrationColor}>{hydrationStatus}</span>
+          </div>
+          <div>
+            Network: <span className={connectivityColor}>{connectivity}</span>
+          </div>
+          <div>Sync OK: <span className="text-green-400">{diag.syncSuccess}</span></div>
+          <div>Sync Err: <span className="text-red-400">{diag.syncError}</span></div>
+          <div>Retries: {diag.syncRetry}</div>
+          <div>Auth aborts: {diag.authAbort}</div>
+        </div>
+
+        {/* Operation queue */}
+        <div>
+          <div className="font-semibold text-sm mb-1 text-foreground">Operation Queue</div>
+          <div className="flex flex-wrap gap-3">
+            <span>Pending: <span className="text-yellow-400">{summary.pending}</span></span>
+            <span>Syncing: <span className="text-blue-400">{summary.syncing}</span></span>
+            <span>Synced: <span className="text-green-400">{summary.synced}</span></span>
+            <span>Failed: <span className="text-red-400">{summary.failed}</span></span>
+            <span>Retry: {summary.retryScheduled}</span>
+            <span>Conflict: <span className="text-orange-400">{summary.conflict}</span></span>
+            <span>Dead-letter: <span className="text-red-500">{summary.deadLetter}</span></span>
+            <span>Cancelled: {summary.cancelled}</span>
+          </div>
+        </div>
+
+        {/* Conflict + duplicate prevention */}
+        <div className="flex flex-wrap gap-4">
+          <div>Conflicts detected: {diag.conflictDetected}</div>
+          <div>Conflicts resolved: {diag.conflictResolved}</div>
+          <div>Duplicates prevented: {diag.duplicatePrevented}</div>
+          <div>Cross-tab syncs: {diag.crossTabSync}</div>
+        </div>
+
+        {/* Storage health */}
+        <div className="flex flex-wrap gap-4">
+          <div>Storage failures: <span className={diag.storageFailure > 0 ? "text-red-400" : ""}>{diag.storageFailure}</span></div>
+          <div>Corruption recovery: {diag.corruptionRecovery}</div>
+          <div>Quarantined: {diag.persistenceQuarantine}</div>
+          <div>Memory pressure: {diag.memoryPressure}</div>
+        </div>
+
+        {/* Timing */}
+        <div className="flex flex-wrap gap-4">
+          <div>Avg hydration: {diag.avgHydrationMs !== null ? `${diag.avgHydrationMs}ms` : "—"}</div>
+          <div>Last sync: {diag.lastSyncDurationMs !== null ? `${diag.lastSyncDurationMs}ms` : "—"}</div>
+        </div>
+
+        {/* Dead-letter queue */}
+        {deadLetter.length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-red-400">Dead-Letter Queue ({deadLetter.length})</div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {[...deadLetter].map((op) => (
+                <div key={op.operationId} className="flex items-center gap-2 p-2 bg-secondary/40 rounded text-xs">
+                  <span className="flex-1 truncate">{op.entityType}/{op.entityId.slice(0, 8)} — {op.operationType}</span>
+                  <span className="text-muted-foreground truncate max-w-32">{op.errorReason}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-5 text-xs px-2"
+                    onClick={() => { restoreFromDeadLetter(op.operationId); toast.info("Op restored to queue"); }}
+                  >Restore</Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-5 text-xs px-2"
+                    onClick={() => { discardDeadLetter(op.operationId); toast.info("Op discarded"); }}
+                  >Discard</Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Legacy dead-letter queue (meals/exercises from syncQueue.ts) */}
+        {legacyDeadLetter.length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-red-400">Legacy Dead-Letter ({legacyDeadLetter.length})</div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {[...legacyDeadLetter].map((task) => (
+                <div key={task.id} className="flex items-center gap-2 p-2 bg-secondary/40 rounded text-xs">
+                  <span className="flex-1 truncate">{task.entity}/{task.localId.slice(0, 8)} — {task.action}</span>
+                  <span className="text-muted-foreground">attempts: {task.attempts}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-5 text-xs px-2"
+                    onClick={() => { restoreDeadletterTask(task.id); toast.info("Legacy task restored"); }}
+                  >Restore</Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-5 text-xs px-2"
+                    onClick={() => { discardDeadletterTask(task.id); toast.info("Legacy task discarded"); }}
+                  >Discard</Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent conflict log */}
+        {conflicts.length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-orange-400">Recent Conflicts ({conflicts.length})</div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {[...conflicts].reverse().slice(0, 5).map((c) => (
+                <div key={c.id} className="p-2 bg-secondary/40 rounded text-xs">
+                  <span>{c.entityType}/{c.entityId.slice(0, 8)} — {c.conflictType} → {c.resolution}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent events toggle */}
+        <div>
+          <button
+            className="text-xs text-muted-foreground underline"
+            onClick={() => setShowEvents((v) => !v)}
+          >
+            {showEvents ? "Hide" : "Show"} recent events ({diag.recentEvents.length})
+          </button>
+          {showEvents && (
+            <div className="mt-2 space-y-0.5 max-h-48 overflow-y-auto">
+              {[...diag.recentEvents].reverse().slice(0, 30).map((e, i) => (
+                <div key={i} className="flex gap-2 text-xs text-muted-foreground">
+                  <span className="shrink-0">{new Date(e.ts).toISOString().slice(11, 23)}</span>
+                  <span className="text-foreground">{e.type}</span>
+                  {e.data && <span className="truncate">{JSON.stringify(e.data)}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Stress Test Runner */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={stressRunning}
+              onClick={async () => {
+                setStressRunning(true);
+                setStressReport(null);
+                try {
+                  const report = await runReliabilityStressTests();
+                  setStressReport(report);
+                  if (report.failed === 0) {
+                    toast.success(`All ${report.total} reliability tests passed in ${report.durationMs}ms`);
+                  } else {
+                    toast.error(`${report.failed}/${report.total} reliability tests FAILED`);
+                  }
+                } finally {
+                  setStressRunning(false);
+                }
+              }}
+            >
+              {stressRunning ? "Running…" : "Run Stress Tests"}
+            </Button>
+            {stressReport && (
+              <span className={`text-xs font-mono ${stressReport.failed === 0 ? "text-green-400" : "text-red-400"}`}>
+                {stressReport.passed}/{stressReport.total} passed ({stressReport.durationMs}ms)
+              </span>
+            )}
+          </div>
+          {stressReport && stressReport.failed > 0 && (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {stressReport.results.filter(r => !r.passed).map((r, i) => (
+                <div key={i} className="text-xs text-red-400 p-1 bg-secondary/30 rounded">
+                  <span className="font-semibold">FAIL:</span> {r.name}
+                  {r.error && <div className="text-muted-foreground mt-0.5 ml-2">{r.error}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => { resetDiagnostics(); toast.info("Diagnostics reset"); }}
+          >
+            Reset Diagnostics
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const snapshot = {
+                queue: getQueueSummary(),
+                deadLetter: getDeadLetterQueue(),
+                diagnostics: getDiagnosticsSnapshot(),
+                hydration: getHydrationState(),
+                ops: getOperationQueue(),
+              };
+              navigator.clipboard?.writeText(JSON.stringify(snapshot, null, 2)).then(() =>
+                toast.success("Reliability snapshot copied to clipboard")
+              );
+            }}
+          >
+            Copy Snapshot
+          </Button>
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dev() {
   const user = useQuery(api.users.getCurrentUser);
@@ -266,6 +570,8 @@ export default function Dev() {
             <div>Wellbeing practices: {practicesData.length}</div>
           </CardContent>
         </Card>
+
+        <ReliabilityPanel />
 
         <div className="text-xs text-muted-foreground">
           <p>WellMate Developer Tools v1.0</p>

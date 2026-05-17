@@ -1,3 +1,10 @@
+import { safeRead, safeWrite } from "@/reliability/persistence";
+import {
+  registerStorageKey,
+  mergeVersionedArrays,
+  parseStorageValue,
+} from "@/reliability/storageSync";
+
 export type LocalSleepLog = {
   localId: string;
   startIso: string;
@@ -11,18 +18,66 @@ export type LocalSleepLog = {
 
 const SLEEP_KEY = "local_sleep_logs";
 
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+/* --------------------------------------------------
+   IN-MEMORY CACHE + SUBSCRIPTION
+   -------------------------------------------------- */
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+let cachedSnapshot: LocalSleepLog[] = hydrate();
+
+function hydrate(): LocalSleepLog[] {
+  const raw = safeRead<unknown[]>(SLEEP_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    const s = item as Record<string, unknown>;
+    return {
+      localId: String(s.localId ?? ""),
+      startIso: String(s.startIso ?? ""),
+      endIso: String(s.endIso ?? ""),
+      durationMin: Number(s.durationMin ?? 0),
+      rating: Number(s.rating ?? 3),
+      notes: s.notes !== undefined ? String(s.notes) : undefined,
+      updatedAt: Number(s.updatedAt ?? 0),
+      syncStatus: (s.syncStatus === "synced" ? "synced" : "pending") as "pending" | "synced",
+    };
+  }).filter((s) => s.localId && s.startIso);
 }
 
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
+function flush() {
+  safeWrite(SLEEP_KEY, cachedSnapshot);
 }
+
+function notify() {
+  listeners.forEach((l) => { try { l(); } catch { /* never crash */ } });
+}
+
+export function subscribeToSleep(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+// Cross-tab consistency: when another tab writes sleep logs, merge with our cache
+registerStorageKey(SLEEP_KEY, (rawValue) => {
+  const remote = parseStorageValue<LocalSleepLog[]>(rawValue);
+  if (!Array.isArray(remote)) return;
+  // Merge: higher updatedAt wins per localId
+  const merged = mergeVersionedArrays(cachedSnapshot, remote, "localId");
+  // Only update if the merge produced a different result
+  if (merged.length !== cachedSnapshot.length || merged.some((r, i) => r.localId !== cachedSnapshot[i]?.localId)) {
+    cachedSnapshot = merged;
+    notify();
+  }
+});
+
+export function getAllLocalSleep(): LocalSleepLog[] {
+  return cachedSnapshot;
+}
+
+/* --------------------------------------------------
+   QUERIES
+   -------------------------------------------------- */
 
 function calcDuration(startIso: string, endIso: string) {
   const start = new Date(startIso).getTime();
@@ -31,15 +86,22 @@ function calcDuration(startIso: string, endIso: string) {
 }
 
 export function listRecentSleep(days = 7): LocalSleepLog[] {
-  const all = load<LocalSleepLog[]>(SLEEP_KEY, []);
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffIso = cutoff.toISOString();
 
-  return all
+  return cachedSnapshot
     .filter((s) => s.startIso >= cutoffIso)
     .sort((a, b) => b.startIso.localeCompare(a.startIso));
 }
+
+export function listPendingSleep(): LocalSleepLog[] {
+  return cachedSnapshot.filter((s) => s.syncStatus === "pending");
+}
+
+/* --------------------------------------------------
+   MUTATIONS
+   -------------------------------------------------- */
 
 export function addSleepLog(input: {
   startIso: string;
@@ -47,10 +109,8 @@ export function addSleepLog(input: {
   rating: number;
   notes?: string;
 }) {
-  const logs = load<LocalSleepLog[]>(SLEEP_KEY, []);
   const now = Date.now();
-
-  logs.push({
+  const entry: LocalSleepLog = {
     localId: crypto.randomUUID(),
     startIso: input.startIso,
     endIso: input.endIso,
@@ -59,15 +119,16 @@ export function addSleepLog(input: {
     notes: input.notes,
     updatedAt: now,
     syncStatus: "pending",
-  });
+  };
 
-  save(SLEEP_KEY, logs);
+  cachedSnapshot = [...cachedSnapshot, entry];
+  flush();
+  notify();
 }
 
 export function markSleepLogSynced(localId: string) {
-  const logs = load<LocalSleepLog[]>(SLEEP_KEY, []);
-  const idx = logs.findIndex((s) => s.localId === localId);
-  if (idx === -1) return;
-  logs[idx].syncStatus = "synced";
-  save(SLEEP_KEY, logs);
+  cachedSnapshot = cachedSnapshot.map((s) =>
+    s.localId === localId ? { ...s, syncStatus: "synced" } : s,
+  );
+  flush();
 }

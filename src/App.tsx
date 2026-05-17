@@ -22,6 +22,12 @@ import Roadmap from "./pages/Roadmap";
 import Sleep from "./pages/Sleep";
 
 import AppShell from "./components/layout/AppShell";
+import {
+  init as initLifecycle,
+  dispose as disposeLifecycle,
+} from "./reliability/lifecycleCoordinator";
+import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
+import { startHydration, markHydrationReady } from "./reliability/hydration";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
@@ -140,6 +146,30 @@ function RootEntry() {
 }
 
 /* ======================================================
+   APP STARTUP — lifecycle init + interrupted write recovery
+   ====================================================== */
+
+function useAppStartup() {
+  React.useEffect(() => {
+    // Recover any writes interrupted by prior tab crash / kill
+    recoverAllInterruptedWrites();
+
+    // Start hydration state machine
+    startHydration();
+
+    // Initialize lifecycle coordinator (visibility, connectivity, memory pressure)
+    initLifecycle();
+
+    // Mark hydration ready — stores are synchronously available from localStorage
+    markHydrationReady();
+
+    return () => {
+      disposeLifecycle();
+    };
+  }, []);
+}
+
+/* ======================================================
    GLOBAL RUNTIME SAFETY (NON-VISUAL)
    ====================================================== */
 
@@ -174,6 +204,7 @@ function useGlobalRuntimeGuards() {
    ====================================================== */
 
 export default function App() {
+  useAppStartup();
   useGlobalRuntimeGuards();
 
   return (

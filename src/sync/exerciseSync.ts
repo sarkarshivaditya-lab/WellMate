@@ -1,13 +1,16 @@
 // src/sync/exerciseSync.ts
 
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { ConvexReactClient } from "convex/react";
 import {
   getAllLocalExercises,
   markExerciseSynced,
   markExerciseError,
+  purgeDeletedExercise,
   type LocalExercise,
 } from "@/data/local/exercises";
+import { isUnauthError } from "./syncUtils";
 
 /* ======================================================
    CONFIG
@@ -15,16 +18,8 @@ import {
 
 const SYNC_BATCH_SIZE = 10;
 
-function isUnauthError(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const msg = String((err as { message?: unknown }).message ?? "");
-  if (msg.includes("UNAUTHENTICATED") || msg.includes("User not logged in")) return true;
-  const data = (err as { data?: { code?: unknown } }).data;
-  return String(data?.code ?? "") === "UNAUTHENTICATED";
-}
-
 /* ======================================================
-   EXERCISE SYNC (FIRE-AND-FORGET, OFFLINE-SAFE)
+   EXERCISE SYNC
    ====================================================== */
 
 export async function syncExercises(
@@ -32,23 +27,40 @@ export async function syncExercises(
 ) {
   if (!convex) return;
 
-  let pending: LocalExercise[];
-
+  let all: LocalExercise[];
   try {
-    pending = getAllLocalExercises().filter(
-      (e) => e.syncStatus === "pending",
-    );
+    all = getAllLocalExercises();
   } catch {
     return;
   }
 
-  if (pending.length === 0) return;
+  // 1. Handle tombstoned exercises first (deletes take priority)
+  const tombstoned = all.filter((e) => e.deletedAt);
+  for (const exercise of tombstoned.slice(0, SYNC_BATCH_SIZE)) {
+    try {
+      if (exercise.convexId) {
+        // Has a remote record — delete it
+        await convex.mutation(api.exercises.deleteExercise, {
+          exerciseId: exercise.convexId as Id<"exercises">,
+        });
+      }
+      // Whether remote delete succeeded or no remote record existed, purge locally
+      try { purgeDeletedExercise(exercise.id); } catch { /* non-fatal */ }
+    } catch (err) {
+      if (isUnauthError(err)) return; // abort entire sync loop
+      // Other errors: leave tombstone, retry next cycle
+    }
+  }
 
+  // 2. Handle pending creates (skip already-synced and tombstoned)
+  const pending = getAllLocalExercises().filter(
+    (e) => e.syncStatus === "pending" && !e.deletedAt,
+  );
   const batch = pending.slice(0, SYNC_BATCH_SIZE);
 
   for (const exercise of batch) {
     try {
-      await convex.mutation(api.exercises.addExercise, {
+      const convexId = await convex.mutation(api.exercises.addExercise, {
         dateIso: exercise.dateIso,
         type: exercise.type,
         name: exercise.name,
@@ -58,7 +70,8 @@ export async function syncExercises(
       });
 
       try {
-        markExerciseSynced(exercise.id);
+        // Store the returned Convex ID so future deletes/updates can target it
+        markExerciseSynced(exercise.id, convexId as string);
       } catch {
         // local write failure is non-fatal
       }

@@ -116,6 +116,7 @@ export async function syncMeals(
             totalCalories: meal.totalCalories,
             totalProteinG: meal.totalProteinG,
             totalFatG: meal.totalFatG,
+            totalCarbsG: meal.totalCarbsG,
             sourceAdapter: meal.sourceAdapter,
           });
 

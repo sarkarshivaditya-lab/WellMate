@@ -11,6 +11,7 @@ import {
  * useExercisesByDate
  *
  * Derived selector over the reactive exercise store.
+ * - Filters out tombstoned exercises (deletedAt set)
  * - No local state
  * - No effects
  * - No polling
@@ -20,12 +21,12 @@ export function useExercisesByDate(dateIso: string) {
   const allExercises = useAllExercises();
 
   const exercises = useMemo(
-    () => allExercises.filter((e) => e.dateIso === dateIso),
+    () => allExercises.filter((e) => e.dateIso === dateIso && !e.deletedAt),
     [allExercises, dateIso],
   );
 
   const addExercise = (
-    input: Omit<LocalExercise, "id" | "createdAt" | "syncStatus">,
+    input: Omit<LocalExercise, "id" | "createdAt" | "syncStatus" | "convexId" | "deletedAt">,
   ) => {
     addLocalExercise(input);
   };

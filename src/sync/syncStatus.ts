@@ -18,6 +18,7 @@ import {
   getDeadletterQueue,
 } from "@/sync/syncQueue";
 import { track } from "@/telemetry/telemetry";
+import { subscribeToConnectivity } from "@/reliability/connectivity";
 
 /* =========================
    TYPES
@@ -153,9 +154,7 @@ export function openDeadletterView() {
 
 /* =========================
    BROWSER OFFLINE AWARENESS
+   Uses connectivity.ts as single source of truth — no duplicate event listeners.
    ========================= */
 
-if (typeof window !== "undefined") {
-  window.addEventListener("online", () => notify());
-  window.addEventListener("offline", () => notify());
-}
+subscribeToConnectivity(() => notify());

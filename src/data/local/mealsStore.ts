@@ -2,6 +2,8 @@
 
 import { enqueueSyncTask } from "@/sync/syncQueue";
 import type { MealItemData } from "@/services/mealService";
+import { safeRead } from "@/reliability/persistence";
+import { atomicWrite } from "@/reliability/transactionGuard";
 
 export type LocalMeal = {
   id: string;
@@ -53,15 +55,11 @@ export function getAllLocalMeals(): LocalMeal[] {
 /* ---------- internals ---------- */
 
 function readAll(): LocalMeal[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
+  return safeRead<LocalMeal[]>(STORAGE_KEY, []);
 }
 
 function writeAll(items: LocalMeal[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  atomicWrite(STORAGE_KEY, JSON.stringify(items));
   cachedSnapshot = items;
   notify();
 }
