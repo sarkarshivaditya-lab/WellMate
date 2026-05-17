@@ -41,6 +41,158 @@ import {
   runReliabilityStressTests,
   type StressTestReport,
 } from "@/reliability/__tests__/stressTest";
+import {
+  getAnalyticsSnapshot,
+  getDailySummaries,
+  getOnboardingState,
+  subscribeToAnalytics,
+} from "@/analytics";
+import type { AnalyticsSnapshot } from "@/analytics";
+
+/* --------------------------------------------------
+   ANALYTICS PANEL — component
+   -------------------------------------------------- */
+
+function useAnalyticsSnapshot(): AnalyticsSnapshot {
+  const [snap, setSnap] = useState<AnalyticsSnapshot>(() => getAnalyticsSnapshot());
+  useEffect(() => {
+    const unsub = subscribeToAnalytics(() => setSnap(getAnalyticsSnapshot()));
+    return unsub;
+  }, []);
+  return snap;
+}
+
+function AnalyticsPanel() {
+  const snap = useAnalyticsSnapshot();
+  const onboarding = getOnboardingState();
+  const { today, aggregates, retention, sessionDepth, sessionDurationMs } = snap;
+
+  const durationSec = Math.round(sessionDurationMs / 1000);
+  const durationLabel =
+    durationSec < 60 ? `${durationSec}s` : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Product Analytics</CardTitle>
+        <CardDescription>Local-only · privacy-first · aggregated summaries</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 text-xs font-mono">
+
+        {/* Session */}
+        <div>
+          <div className="font-semibold text-sm mb-1 text-foreground">Current Session</div>
+          <div className="flex flex-wrap gap-4">
+            <div>Depth: <span className="text-blue-400">{sessionDepth}</span> actions</div>
+            <div>Duration: <span className="text-blue-400">{durationLabel}</span></div>
+            <div>Total sessions: {aggregates.totalSessions}</div>
+            <div>Total actions: {aggregates.totalActions}</div>
+          </div>
+        </div>
+
+        {/* Streak + retention */}
+        <div>
+          <div className="font-semibold text-sm mb-1 text-foreground">Retention</div>
+          <div className="flex flex-wrap gap-4">
+            <div>Streak: <span className={aggregates.currentStreak >= 3 ? "text-green-400" : "text-yellow-400"}>{aggregates.currentStreak}d</span></div>
+            <div>Best: {aggregates.longestStreak}d</div>
+            <div>Active this wk: <span className="text-green-400">{retention.activeDaysThisWeek}/7</span></div>
+            <div>Active last wk: {retention.activeDaysLastWeek}/7</div>
+            <div>Active/30d: {retention.activeDaysLast30}</div>
+            <div>Avg actions/day: {retention.avgActionsPerActiveDay}</div>
+          </div>
+        </div>
+
+        {/* Today's summary */}
+        {today && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-foreground">Today ({today.date})</div>
+            <div className="flex flex-wrap gap-3">
+              {today.mealsLogged > 0 && <span>Meals: <span className="text-green-400">{today.mealsLogged}</span></span>}
+              {today.sleepLogged > 0 && <span>Sleep: <span className="text-green-400">{today.sleepLogged}</span></span>}
+              {today.exerciseLogged > 0 && <span>Exercise: <span className="text-green-400">{today.exerciseLogged}</span></span>}
+              {today.habitsCompleted > 0 && <span>Habits: <span className="text-green-400">{today.habitsCompleted}</span></span>}
+              {today.moodLogged > 0 && <span>Mood: <span className="text-green-400">{today.moodLogged}</span></span>}
+              {today.journalEntries > 0 && <span>Journal: <span className="text-green-400">{today.journalEntries}</span></span>}
+              {today.cycleLogged > 0 && <span>Cycle: <span className="text-green-400">{today.cycleLogged}</span></span>}
+              {today.sessionCount > 0 && <span>Sessions: {today.sessionCount}</span>}
+              {today.featuresOpened.length > 0 && (
+                <span>Features: {today.featuresOpened.join(", ")}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Entity consistency (30d) */}
+        {Object.keys(retention.entityConsistency).length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-foreground">30-day Consistency</div>
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(retention.entityConsistency).map(([entity, days]) => (
+                <span key={entity}>
+                  {entity}: <span className={days >= 20 ? "text-green-400" : days >= 10 ? "text-yellow-400" : "text-muted-foreground"}>{days}d</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Feature engagement */}
+        {Object.keys(aggregates.featureCounts).length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-foreground">Feature Opens (lifetime)</div>
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(aggregates.featureCounts)
+                .sort(([, a], [, b]) => b - a)
+                .map(([feature, count]) => (
+                  <span key={feature}>
+                    {feature}: <span className="text-blue-400">{count}</span>
+                  </span>
+                ))}
+            </div>
+            {retention.topFeature && (
+              <div className="mt-1 text-muted-foreground">Top: {retention.topFeature}</div>
+            )}
+          </div>
+        )}
+
+        {/* Onboarding */}
+        <div>
+          <div className="font-semibold text-sm mb-1 text-foreground">Onboarding</div>
+          <div className="flex flex-wrap gap-4">
+            <div>Phase: <span className={onboarding.phase === "completed" ? "text-green-400" : "text-yellow-400"}>{onboarding.phase}</span></div>
+            {onboarding.firstSeenDate && <div>First seen: {onboarding.firstSeenDate}</div>}
+            {onboarding.completionDate && <div>Completed: {onboarding.completionDate}</div>}
+          </div>
+        </div>
+
+        {/* Origin */}
+        {aggregates.firstSeenDate && (
+          <div className="text-muted-foreground">
+            Analytics since: {aggregates.firstSeenDate} · {getDailySummaries().length} daily records
+          </div>
+        )}
+
+        {/* Copy snapshot */}
+        <div className="pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const data = { ...snap, onboarding, dailySummaries: getDailySummaries() };
+              navigator.clipboard?.writeText(JSON.stringify(data, null, 2)).then(() =>
+                toast.success("Analytics snapshot copied to clipboard"),
+              );
+            }}
+          >
+            Copy Analytics Snapshot
+          </Button>
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+}
 
 /* --------------------------------------------------
    RELIABILITY PANEL — hooks
@@ -570,6 +722,8 @@ export default function Dev() {
             <div>Wellbeing practices: {practicesData.length}</div>
           </CardContent>
         </Card>
+
+        <AnalyticsPanel />
 
         <ReliabilityPanel />
 

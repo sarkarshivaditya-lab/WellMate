@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { PlusIcon, BookOpenIcon, SparklesIcon } from "lucide-react";
 import { localDateIso } from "@/services/dateUtils";
 import practicesData from "@/data/practices.json";
+import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 
 /* ======================================================
    LOCAL MOOD STORE — lightweight, no dependency
@@ -63,6 +64,7 @@ const MOOD_LABELS = ["Very Low", "Low", "Okay", "Good", "Excellent"];
    ====================================================== */
 
 export default function Overview() {
+  useFeatureTracker("mental");
   const [tab, setTab] = useState<"overview" | "journal" | "coach" | "tools">("overview");
   const [showMoodDialog, setShowMoodDialog] = useState(false);
 
@@ -125,6 +127,7 @@ export default function Overview() {
         tags: [],
         mood: editorMood,
       });
+      emitAnalyticsEvent({ type: "wellness_logged", entity: "journal", ts: Date.now() });
     }
     refreshEntries();
     closeEditor();
@@ -139,6 +142,7 @@ export default function Overview() {
     const next: LocalMood = { dateIso: today, moodValue, note };
     const filtered = moods.filter((m) => m.dateIso !== today);
     localStorage.setItem("mental.moods", JSON.stringify([...filtered, next]));
+    emitAnalyticsEvent({ type: "wellness_logged", entity: "mood", ts: Date.now() });
     setShowMoodDialog(false);
   }
 

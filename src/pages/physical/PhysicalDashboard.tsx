@@ -14,6 +14,7 @@ import { SleepTabContent } from "../Sleep";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
+import { useFeatureTracker } from "@/analytics";
 
 import { localDateIso } from "@/services/dateUtils";
 
@@ -265,6 +266,7 @@ function PhysicalSummaryCard() {
    ====================================================== */
 
 export default function PhysicalDashboard() {
+  useFeatureTracker("physical");
   const [tab, setTab] = useState<"overview" | "nutrition" | "activity" | "sleep">(() => {
     const saved = sessionStorage.getItem("physical_tab");
     if (saved === "nutrition" || saved === "activity" || saved === "sleep") return saved;

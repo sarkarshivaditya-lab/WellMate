@@ -33,6 +33,7 @@ import type { MealItemData } from "@/services/mealService.ts";
 import { toast } from "sonner";
 import { useMealsByDate } from "@/hooks/useMealsByDate";
 import { localDateIso } from "@/services/dateUtils";
+import { emitAnalyticsEvent } from "@/analytics";
 
 /* ---------- Skeleton ---------- */
 
@@ -117,6 +118,7 @@ export default function FoodLog() {
     });
 
     toast.success("Meal saved");
+    emitAnalyticsEvent({ type: "wellness_logged", entity: "meal", ts: Date.now() });
     setShowAddMeal(false);
     setMealName("");
     setMealItems([]);

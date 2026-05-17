@@ -28,6 +28,7 @@ import {
 } from "./reliability/lifecycleCoordinator";
 import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
+import { initAnalytics, disposeAnalytics } from "./analytics";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
@@ -163,8 +164,12 @@ function useAppStartup() {
     // Mark hydration ready — stores are synchronously available from localStorage
     markHydrationReady();
 
+    // Initialize privacy-first analytics (must come after lifecycle init)
+    initAnalytics();
+
     return () => {
       disposeLifecycle();
+      disposeAnalytics();
     };
   }, []);
 }

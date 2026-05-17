@@ -44,6 +44,26 @@ import { atomicWrite } from "./transactionGuard";
 import { recordDiagnosticEvent } from "./diagnostics";
 
 /* --------------------------------------------------
+   ANALYTICS HOOK
+   Registered once by analytics/index.ts. Called after
+   every successful local commit so analytics can track
+   wellness logging events without coupling to each store.
+   -------------------------------------------------- */
+
+type AnalyticsHook = (entityType: EntityType, operationType: OperationType) => void;
+const analyticsHooks: AnalyticsHook[] = [];
+
+export function registerAnalyticsHook(fn: AnalyticsHook): void {
+  analyticsHooks.push(fn);
+}
+
+function notifyAnalyticsHooks(entityType: EntityType, operationType: OperationType): void {
+  for (const fn of analyticsHooks) {
+    try { fn(entityType, operationType); } catch { /* never crash */ }
+  }
+}
+
+/* --------------------------------------------------
    TYPES
    -------------------------------------------------- */
 
@@ -143,6 +163,7 @@ export function commitMutation<T extends Record<string, unknown>>(
   try {
     input.commitLocal();
     localCommitted = true;
+    notifyAnalyticsHooks(input.entityType, input.operationType);
   } catch (err) {
     recordDiagnosticEvent("storage_failure", {
       entityType: input.entityType,

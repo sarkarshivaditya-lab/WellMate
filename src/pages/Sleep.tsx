@@ -17,10 +17,12 @@ import { toast } from "sonner";
 import PageLayout from "@/components/layout/PageLayout";
 import { addSleepLog } from "@/data/local/sleepStore";
 import { useRecentSleepLogs } from "@/hooks/useSleepLogs";
+import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
 
 export function SleepTabContent() {
+  useFeatureTracker("sleep");
   const [showDialog, setShowDialog] = useState(false);
   const [startTime, setStartTime] = useState("22:00");
   const [endTime, setEndTime] = useState("07:00");
@@ -49,6 +51,7 @@ export function SleepTabContent() {
     });
 
     toast.success("Sleep logged");
+    emitAnalyticsEvent({ type: "wellness_logged", entity: "sleep", ts: Date.now() });
     setShowDialog(false);
     setNotes("");
   };

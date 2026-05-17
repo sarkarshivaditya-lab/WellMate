@@ -29,6 +29,7 @@ import { estimateCaloriesFromExercise } from "@/services/nutritionEngine";
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { readOnboardingPayload } from "@/data/local/onboardingPayload";
 import { localDateIso } from "@/services/dateUtils";
+import { emitAnalyticsEvent } from "@/analytics";
 
 /* ---------- Skeleton ---------- */
 
@@ -86,6 +87,7 @@ export default function ExerciseLog() {
     });
 
     toast.success("Exercise saved");
+    emitAnalyticsEvent({ type: "wellness_logged", entity: "exercise", ts: Date.now() });
     setShowAddExercise(false);
     setForm({ type: "cardio", name: "", durationMinutes: "", notes: "" });
   };

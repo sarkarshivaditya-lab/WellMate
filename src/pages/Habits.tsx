@@ -43,8 +43,10 @@ import {
   computeStreak,
 } from "@/data/local/habitsStore";
 import { localDateIso } from "@/services/dateUtils";
+import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 
 export default function Habits() {
+  useFeatureTracker("habits");
   const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [title, setTitle] = useState("");
@@ -92,7 +94,11 @@ export default function Habits() {
   };
 
   const handleToggle = (localId: string) => {
+    const wasComplete = isCompletedToday(localId);
     toggleEntry(localId, today);
+    if (!wasComplete) {
+      emitAnalyticsEvent({ type: "wellness_logged", entity: "habit", ts: Date.now() });
+    }
     setTodayEntries(listEntriesByDate(today));
     setAllEntries(listAllEntries());
   };
