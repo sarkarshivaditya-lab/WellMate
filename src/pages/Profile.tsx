@@ -17,6 +17,7 @@ import { getAllLocalExercises } from "@/data/local/exercises";
 import { getPendingMeals } from "@/data/local/mealsStore";
 import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
 import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
+import NotificationSettings from "@/components/NotificationSettings";
 
 /**
  * Profile / Settings
@@ -209,6 +210,11 @@ export default function Profile() {
           </p>
         </CardContent>
       </Card>
+
+      {/* =========================
+          NOTIFICATIONS
+         ========================= */}
+      <NotificationSettings />
 
       {/* =========================
           WHAT'S NEXT
