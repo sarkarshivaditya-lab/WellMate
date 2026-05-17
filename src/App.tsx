@@ -29,6 +29,7 @@ import {
 import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
+import { initNotifications, disposeNotifications } from "./notifications";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
@@ -167,9 +168,13 @@ function useAppStartup() {
     // Initialize privacy-first analytics (must come after lifecycle init)
     initAnalytics();
 
+    // Initialize calm notification system (must come after analytics init)
+    initNotifications();
+
     return () => {
       disposeLifecycle();
       disposeAnalytics();
+      disposeNotifications();
     };
   }, []);
 }

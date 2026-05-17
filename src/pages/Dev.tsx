@@ -48,6 +48,115 @@ import {
   subscribeToAnalytics,
 } from "@/analytics";
 import type { AnalyticsSnapshot } from "@/analytics";
+import {
+  getNotificationSnapshot,
+  forceEvaluate,
+  resetFatigue,
+  clearHistory,
+} from "@/notifications";
+import type { NotificationSnapshot } from "@/notifications";
+
+/* --------------------------------------------------
+   NOTIFICATION PANEL — component
+   -------------------------------------------------- */
+
+function NotificationPanel() {
+  const [snap, setSnap] = useState<NotificationSnapshot>(() => getNotificationSnapshot());
+
+  const refresh = () => setSnap(getNotificationSnapshot());
+
+  const handleForceEvaluate = () => {
+    forceEvaluate();
+    setTimeout(refresh, 100);
+    toast.info("Notification engine evaluated");
+  };
+
+  const handleResetFatigue = () => {
+    resetFatigue();
+    refresh();
+    toast.info("Fatigue state reset");
+  };
+
+  const handleClearHistory = () => {
+    clearHistory();
+    refresh();
+    toast.info("Notification history cleared");
+  };
+
+  const { fatigueState, preferences, recentHistory } = snap;
+  const categoriesWithFatigue = Object.entries(fatigueState.lastDelivered) as [string, number][];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notification Engine</CardTitle>
+        <CardDescription>Calm notification architecture · local-first</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5 text-xs font-mono">
+
+        <div>
+          <div className="font-semibold text-sm mb-1 text-foreground">Status</div>
+          <div className="flex flex-wrap gap-4">
+            <div>Enabled: <span className={snap.enabled ? "text-green-400" : "text-red-400"}>{snap.enabled ? "yes" : "no"}</span></div>
+            <div>Queue: <span className="text-blue-400">{snap.queueLength}</span> pending</div>
+            <div>In quiet hours: <span className={snap.isInQuietHours ? "text-yellow-400" : "text-green-400"}>{snap.isInQuietHours ? "yes" : "no"}</span></div>
+            <div>Today: <span className="text-blue-400">{fatigueState.todayCount}</span> / {preferences.dailyCap} cap</div>
+            <div>Sensitivity: {preferences.sensitivityLevel}</div>
+          </div>
+        </div>
+
+        {categoriesWithFatigue.length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-foreground">Last Delivered (per category)</div>
+            <div className="space-y-1">
+              {categoriesWithFatigue.map(([cat, ts]) => (
+                <div key={cat} className="flex gap-4">
+                  <span className="text-muted-foreground w-40">{cat}</span>
+                  <span>{new Date(ts).toLocaleTimeString()}</span>
+                  {(fatigueState.ignoreCount[cat as keyof typeof fatigueState.ignoreCount] ?? 0) > 0 && (
+                    <span className="text-yellow-400">ignored ×{fatigueState.ignoreCount[cat as keyof typeof fatigueState.ignoreCount]}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {recentHistory.length > 0 && (
+          <div>
+            <div className="font-semibold text-sm mb-1 text-foreground">Recent History</div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {recentHistory.map((r, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className={r.suppressed ? "text-muted-foreground" : "text-green-400"}>
+                    {r.suppressed ? "suppressed" : "delivered"}
+                  </span>
+                  <span className="text-muted-foreground">{r.category}</span>
+                  <span>{new Date(r.deliveredAt).toLocaleTimeString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button size="sm" variant="outline" onClick={handleForceEvaluate}>
+            Force Evaluate
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleResetFatigue}>
+            Reset Fatigue
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleClearHistory}>
+            Clear History
+          </Button>
+          <Button size="sm" variant="outline" onClick={refresh}>
+            Refresh
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 /* --------------------------------------------------
    ANALYTICS PANEL — component
@@ -724,6 +833,8 @@ export default function Dev() {
         </Card>
 
         <AnalyticsPanel />
+
+        <NotificationPanel />
 
         <ReliabilityPanel />
 
