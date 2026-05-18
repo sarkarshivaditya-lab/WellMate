@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { Cloud, CloudOff, RotateCw, AlertCircle, Check } from "lucide-react";
 import {
   getSyncStatus,
   getSyncSummary,
@@ -137,10 +138,21 @@ function PageLayout({
                       <div className="relative" ref={badgeRef}>
                         <button
                           onClick={() => setPanelOpen((v) => !v)}
+                          aria-label={
+                            syncStatus === "offline"  ? "Sync status: offline" :
+                            syncStatus === "syncing"  ? `Sync status: syncing${pendingCount > 0 ? `, ${pendingCount} pending` : ""}` :
+                            syncStatus === "retrying" ? "Sync status: retrying" :
+                            syncStatus === "error"    ? `Sync status: error${hasErrors ? " — items failed to sync" : ""}` :
+                            pendingCount > 0         ? `Sync status: ${pendingCount} items pending` :
+                            "Sync status: up to date"
+                          }
+                          aria-expanded={panelOpen}
+                          aria-haspopup="dialog"
                           className={cn(
                             "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border",
                             "transition-premium",
                             "hover:brightness-[0.97] active:scale-[0.98]",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                             syncStatus === "offline"  && "bg-muted text-muted-foreground border-border",
                             syncStatus === "syncing"  && "bg-blue-50 text-blue-700 border-blue-200/80",
                             syncStatus === "error"    && "bg-red-50 text-red-700 border-red-200/80",
@@ -148,7 +160,16 @@ function PageLayout({
                             syncStatus === "idle"     && "bg-muted text-muted-foreground border-border",
                           )}
                         >
-                          <span>
+                          {/* Status icon — non-color differentiator */}
+                          <span aria-hidden className="flex-shrink-0">
+                            {syncStatus === "offline"  && <CloudOff className="h-3 w-3" />}
+                            {syncStatus === "syncing"  && <RotateCw className="h-3 w-3 animate-spin" />}
+                            {syncStatus === "retrying" && <RotateCw className="h-3 w-3" />}
+                            {syncStatus === "error"    && <AlertCircle className="h-3 w-3" />}
+                            {syncStatus === "idle"     && (pendingCount > 0 ? <Cloud className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
+                          </span>
+
+                          <span aria-hidden>
                             {syncStatus === "offline"  && "Offline"}
                             {syncStatus === "syncing"  && "Syncing"}
                             {syncStatus === "retrying" && "Retrying"}
@@ -157,11 +178,7 @@ function PageLayout({
                           </span>
 
                           {pendingCount > 0 && (
-                            <span className="opacity-50">({pendingCount})</span>
-                          )}
-
-                          {hasErrors && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            <span aria-hidden className="opacity-50">({pendingCount})</span>
                           )}
                         </button>
 
@@ -228,16 +245,25 @@ function PageLayout({
 
             {/* Pill tabs */}
             {tabs && tabs.length > 0 && (
-              <div className="flex gap-1 bg-muted rounded-full p-2 w-full">
+              <div
+                role="tablist"
+                aria-label="Page sections"
+                className="flex gap-1 bg-muted rounded-full p-2 w-full"
+              >
                 {tabs.map((tab) => {
                   const isActive = tab.value === activeTab;
                   return (
                     <button
                       key={tab.value}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls={`tabpanel-${tab.value}`}
+                      id={`tab-${tab.value}`}
                       onClick={() => onTabChange?.(tab.value)}
                       className={cn(
-                        "flex-1 px-2 py-2.5 text-[13px] font-medium rounded-full min-h-[36px] text-center",
+                        "flex-1 px-2 py-2.5 text-[13px] font-medium rounded-full min-h-[44px] text-center",
                         "transition-premium",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                         isActive
                           ? "bg-card text-foreground shadow-[0_1px_3px_rgba(20,60,50,0.12),_0_0_0_1px_rgba(20,60,50,0.05)]"
                           : "text-muted-foreground hover:text-foreground/80",
@@ -269,10 +295,11 @@ function PageLayout({
           )}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold tracking-tight">Failed sync items</div>
+            <div className="font-semibold tracking-tight" id="deadletter-title">Failed sync items</div>
             <button
               onClick={() => setDeadletterOpen(false)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-premium"
+              aria-label="Close failed sync items panel"
+              className="text-sm text-muted-foreground hover:text-foreground transition-premium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-md px-1"
             >
               Close
             </button>

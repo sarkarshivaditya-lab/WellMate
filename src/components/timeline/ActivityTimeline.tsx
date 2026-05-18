@@ -67,11 +67,17 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
                 navigate(item.route);
               }
             }}
+            aria-label={
+              item.route
+                ? `${item.title}${item.subtitle ? ` — ${item.subtitle}` : ""} — tap to view`
+                : `${item.title}${item.subtitle ? ` — ${item.subtitle}` : ""}`
+            }
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl",
               "bg-card/60 border border-border/30",
               "hover:bg-card/90 hover:border-border/50",
               "transition-premium active:scale-[0.98]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
               "text-left",
               item.route ? "cursor-pointer" : "cursor-default",
               i === 0 && "animate-wm-fade-1",
@@ -82,6 +88,7 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
           >
             {/* Module icon */}
             <span
+              aria-hidden
               className={cn(
                 "flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg",
                 colors.bg,
@@ -91,8 +98,8 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
               {icon}
             </span>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
+            {/* Content — aria-hidden since the button has a descriptive aria-label */}
+            <div aria-hidden className="flex-1 min-w-0">
               <p className="text-sm font-medium leading-tight truncate">
                 {item.title}
               </p>
@@ -105,7 +112,7 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
 
             {/* Time */}
             {item.timestamp && (
-              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+              <span aria-hidden className="text-[10px] text-muted-foreground flex-shrink-0">
                 {relativeTime(item.timestamp)}
               </span>
             )}

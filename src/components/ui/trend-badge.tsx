@@ -26,10 +26,22 @@ export function TrendBadge({ trend, size = "md", className }: Props) {
   const iconCls = cn(ICON_SIZE[size], className);
 
   if (trend === "up") {
-    return <TrendingUp className={cn(iconCls, "text-emerald-500")} />;
+    return (
+      <span role="img" aria-label="trending up">
+        <TrendingUp aria-hidden className={cn(iconCls, "text-emerald-500")} />
+      </span>
+    );
   }
   if (trend === "down") {
-    return <TrendingDown className={cn(iconCls, "text-amber-500")} />;
+    return (
+      <span role="img" aria-label="trending down">
+        <TrendingDown aria-hidden className={cn(iconCls, "text-amber-500")} />
+      </span>
+    );
   }
-  return <Minus className={cn(iconCls, "text-muted-foreground/60")} />;
+  return (
+    <span role="img" aria-label="stable">
+      <Minus aria-hidden className={cn(iconCls, "text-muted-foreground/60")} />
+    </span>
+  );
 }

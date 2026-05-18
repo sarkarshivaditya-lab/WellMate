@@ -76,12 +76,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Skip-to-content — keyboard accessibility */}
+      <a href="#main-content" className="skip-to-content">
+        Skip to content
+      </a>
+
       {/* Connectivity + sync status strips — always above content */}
       <OfflineBanner />
       <SyncPulse />
 
       {/* Main scrollable content */}
-      <main className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom)+1.5rem)]">
+      <main
+        id="main-content"
+        aria-label="Main content"
+        className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom)+1.5rem)]"
+      >
         <div key={location.pathname} className="animate-wm-route-in">
           {children}
         </div>

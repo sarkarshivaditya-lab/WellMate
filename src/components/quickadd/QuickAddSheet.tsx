@@ -69,20 +69,29 @@ function MoodForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-between gap-2">
+      <div
+        role="group"
+        aria-label="How are you feeling?"
+        className="flex justify-between gap-2"
+      >
         {MOOD_OPTIONS.map((opt) => (
           <button
             key={opt.value}
+            type="button"
+            aria-pressed={selected === opt.value}
+            aria-label={opt.label}
             onClick={() => { setSelected(opt.value); haptics.light(); }}
             className={cn(
               "flex-1 flex flex-col items-center gap-1 py-3 rounded-2xl border transition-premium",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "min-h-[60px]",
               selected === opt.value
                 ? "border-primary bg-primary/10"
                 : "border-border bg-muted/40 hover:bg-muted/60",
             )}
           >
-            <span className="text-2xl">{opt.emoji}</span>
-            <span className="text-[10px] text-muted-foreground font-medium">
+            <span aria-hidden className="text-2xl">{opt.emoji}</span>
+            <span aria-hidden className="text-[10px] text-muted-foreground font-medium">
               {opt.label}
             </span>
           </button>
@@ -126,19 +135,22 @@ function JournalForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-3">
       <Input
         placeholder="Title (optional)"
+        aria-label="Journal entry title (optional)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="bg-muted/40 border-border/60"
       />
+      <label htmlFor="journal-text" className="sr-only">Journal entry</label>
       <textarea
+        id="journal-text"
         placeholder="What's on your mind?"
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={5}
         className={cn(
           "w-full rounded-xl border border-border/60 bg-muted/40 px-3 py-2.5",
-          "text-sm placeholder:text-muted-foreground resize-none outline-none",
-          "focus:border-primary/40 transition-premium",
+          "text-sm placeholder:text-muted-foreground resize-none",
+          "focus:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 transition-premium",
         )}
       />
       <Button onClick={handleSubmit} disabled={!text.trim()} className="w-full">
@@ -173,13 +185,21 @@ function ExerciseForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
+      <div
+        role="group"
+        aria-label="Exercise type"
+        className="flex flex-wrap gap-1.5"
+      >
         {EXERCISE_TYPES.map((t) => (
           <button
             key={t}
+            type="button"
+            aria-pressed={type === t}
             onClick={() => { setType(t); haptics.light(); }}
             className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition-premium",
+              "px-3 py-2 rounded-full text-xs font-medium border capitalize transition-premium",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "min-h-[36px]",
               type === t
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-muted/40 text-muted-foreground hover:bg-muted/60",
@@ -250,8 +270,11 @@ function SleepForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground font-medium">Bedtime</p>
+          <label htmlFor="sleep-bedtime" className="text-xs text-muted-foreground font-medium">
+            Bedtime
+          </label>
           <Input
+            id="sleep-bedtime"
             type="time"
             value={bedtime}
             onChange={(e) => setBedtime(e.target.value)}
@@ -259,8 +282,11 @@ function SleepForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground font-medium">Wake time</p>
+          <label htmlFor="sleep-waketime" className="text-xs text-muted-foreground font-medium">
+            Wake time
+          </label>
           <Input
+            id="sleep-waketime"
             type="time"
             value={wakeTime}
             onChange={(e) => setWakeTime(e.target.value)}
@@ -270,20 +296,25 @@ function SleepForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground font-medium">Sleep quality</p>
-        <div className="flex gap-2">
+        <p id="sleep-quality-label" className="text-xs text-muted-foreground font-medium">Sleep quality</p>
+        <div role="group" aria-labelledby="sleep-quality-label" className="flex gap-2">
           {[1, 2, 3, 4, 5].map((r) => (
             <button
               key={r}
+              type="button"
+              aria-pressed={rating === r}
+              aria-label={`Sleep quality ${r} out of 5`}
               onClick={() => { setRating(r); haptics.light(); }}
               className={cn(
                 "flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-premium",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "min-h-[44px]",
                 rating === r
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-muted/40 text-muted-foreground hover:bg-muted/60",
               )}
             >
-              {r}
+              <span aria-hidden>{r}</span>
             </button>
           ))}
         </div>
@@ -368,13 +399,17 @@ function HabitForm({ onDone }: { onDone: () => void }) {
         onChange={(e) => setTitle(e.target.value)}
         className="bg-muted/40 border-border/60"
       />
-      <div className="flex gap-2">
+      <div role="group" aria-label="Habit cadence" className="flex gap-2">
         {(["daily", "weekly"] as const).map((c) => (
           <button
             key={c}
+            type="button"
+            aria-pressed={cadence === c}
             onClick={() => { setCadence(c); haptics.light(); }}
             className={cn(
               "flex-1 py-2 rounded-xl text-sm font-medium border capitalize transition-premium",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "min-h-[44px]",
               cadence === c
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-muted/40 text-muted-foreground hover:bg-muted/60",
@@ -429,26 +464,44 @@ export function QuickAddSheet({ open, onClose, defaultEntity = "mood" }: Props) 
         </SheetHeader>
 
         {/* Entity type tabs */}
-        <div className="flex gap-1.5 overflow-x-auto pb-4 scrollbar-hide">
+        <div
+          role="tablist"
+          aria-label="What would you like to log?"
+          className="flex gap-1.5 overflow-x-auto pb-4 scrollbar-hide"
+        >
           {ENTITIES.map((e) => (
             <button
               key={e.id}
+              role="tab"
+              aria-selected={active === e.id}
+              aria-controls={`quickadd-panel-${e.id}`}
+              id={`quickadd-tab-${e.id}`}
+              type="button"
               onClick={() => { setActive(e.id); haptics.light(); }}
               className={cn(
                 "flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium border transition-premium",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "min-h-[36px]",
                 active === e.id
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-muted/40 text-muted-foreground hover:bg-muted/60",
               )}
             >
-              <span>{e.emoji}</span>
+              <span aria-hidden>{e.emoji}</span>
               <span>{e.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Active form */}
-        <ActiveForm onDone={onClose} />
+        {/* Active form — aria-live announces form switch for screen readers */}
+        <div
+          role="tabpanel"
+          id={`quickadd-panel-${active}`}
+          aria-labelledby={`quickadd-tab-${active}`}
+          aria-live="polite"
+        >
+          <ActiveForm onDone={onClose} />
+        </div>
       </SheetContent>
     </Sheet>
   );

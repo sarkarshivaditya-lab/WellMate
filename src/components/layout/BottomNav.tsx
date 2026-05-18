@@ -75,6 +75,7 @@ function NavItem({
 export default function BottomNav() {
   return (
     <nav
+      aria-label="Main navigation"
       className={cn(
         // Fixed at bottom — content scrolls behind glass
         "fixed bottom-0 inset-x-0 z-40",
@@ -94,7 +95,7 @@ export default function BottomNav() {
         />
         <NavItem
           to="/physical"
-          label="Home"
+          label="Physical"
           icon={<Home className="h-5 w-5" />}
         />
         <NavItem
@@ -105,7 +106,7 @@ export default function BottomNav() {
         />
         <NavItem
           to="/habits"
-          label="Insights"
+          label="Habits"
           icon={<Repeat className="h-5 w-5" />}
         />
         <NavItem

@@ -30,19 +30,22 @@ function DomainPill({
   const value =
     !score || score.dataQuality === "insufficient" ? "—" : `${score.score}`;
   const colors = scoreLevelColors[level];
+  const hasData = score && score.dataQuality !== "insufficient";
 
   return (
     <div
+      role="img"
+      aria-label={hasData ? `${label} score: ${value}` : `${label}: no data yet`}
       className={cn(
         "flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl",
         colors.bg,
       )}
     >
-      <Icon className={cn("h-3.5 w-3.5", colors.text)} />
-      <span className={cn("text-sm font-semibold tabular-nums", colors.text)}>
+      <Icon aria-hidden className={cn("h-3.5 w-3.5", colors.text)} />
+      <span aria-hidden className={cn("text-sm font-semibold tabular-nums", colors.text)}>
         {value}
       </span>
-      <span className="text-[9px] text-muted-foreground font-medium tracking-wide uppercase">
+      <span aria-hidden className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">
         {label}
       </span>
     </div>
@@ -65,12 +68,21 @@ export function WellnessScoreCard({ composite, className }: Props) {
     >
       {/* Header row */}
       <div className="flex items-center gap-4">
-        <ScoreRing
-          score={composite.dataQuality === "insufficient" ? 0 : composite.score}
-          level={composite.level}
-          size={68}
-          label="Wellness"
-        />
+        <div
+          role="img"
+          aria-label={
+            composite.dataQuality === "insufficient"
+              ? "Overall wellness score: not enough data yet"
+              : `Overall wellness score: ${composite.score} — ${composite.level}`
+          }
+        >
+          <ScoreRing
+            score={composite.dataQuality === "insufficient" ? 0 : composite.score}
+            level={composite.level}
+            size={68}
+            label="Wellness"
+          />
+        </div>
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight">

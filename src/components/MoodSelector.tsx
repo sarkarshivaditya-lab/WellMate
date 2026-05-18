@@ -39,20 +39,26 @@ export default function MoodSelector({
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex justify-between gap-2">
+        <p id="mood-group-label" className="sr-only">Select your mood</p>
+        <div role="group" aria-labelledby="mood-group-label" className="flex justify-between gap-2">
           {moodEmojis.map((mood) => (
             <button
               key={mood.value}
+              type="button"
+              aria-pressed={selectedMood === mood.value}
+              aria-label={mood.label}
               onClick={() => { haptics.light(); setSelectedMood(mood.value); }}
               className={cn(
                 "flex flex-col items-center gap-1 p-3 rounded-xl transition-premium",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "min-h-[60px] min-w-[52px]",
                 selectedMood === mood.value
                   ? "bg-primary/10 ring-2 ring-primary"
                   : "bg-secondary hover:bg-secondary/80"
               )}
             >
-              <span className="text-3xl">{mood.emoji}</span>
-              <span className="text-xs text-muted-foreground">{mood.label}</span>
+              <span aria-hidden className="text-3xl">{mood.emoji}</span>
+              <span aria-hidden className="text-xs text-muted-foreground">{mood.label}</span>
             </button>
           ))}
         </div>

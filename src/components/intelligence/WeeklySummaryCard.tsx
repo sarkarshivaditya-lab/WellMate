@@ -70,13 +70,22 @@ export function WeeklySummaryCard({ comparison, className }: Props) {
         </span>
       </div>
 
-      <div className="space-y-2.5">
+      <div role="list" aria-label="Weekly domain breakdown" className="space-y-2.5">
         {rows.map((row) => (
-          <div key={row.label} className="flex items-center gap-3">
-            <span className="w-20 shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div
+            key={row.label}
+            role="listitem"
+            aria-label={
+              row.value !== null
+                ? `${row.label}: ${row.value} ${row.unit}, ${row.trend === "up" ? "trending up" : row.trend === "down" ? "trending down" : "stable"} vs last week`
+                : `${row.label}: no data this week`
+            }
+            className="flex items-center gap-3"
+          >
+            <span aria-hidden className="w-20 shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {row.label}
             </span>
-            <div className="flex-1 min-w-0">
+            <div aria-hidden className="flex-1 min-w-0">
               {row.value !== null ? (
                 <span className="text-sm font-semibold tabular-nums">
                   {row.value}

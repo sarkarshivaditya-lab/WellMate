@@ -286,6 +286,42 @@
   }
 
   /* ===============================
+     SKIP-TO-CONTENT — KEYBOARD ACCESSIBILITY
+     Visually hidden until focused; reveals at top-left on Tab.
+     Lets keyboard/screen-reader users bypass navigation.
+     =============================== */
+  .skip-to-content {
+    position: fixed;
+    top: -100%;
+    left: 0.5rem;
+    z-index: 9999;
+    padding: 0.5rem 1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 0 0 0.5rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.15s ease;
+  }
+
+  .skip-to-content:focus {
+    top: 0;
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* ===============================
+     ACCESSIBLE FOCUS RING
+     High-visibility focus ring for keyboard navigation.
+     Applied via .focus-ring utility on custom interactive elements.
+     =============================== */
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* ===============================
      REDUCED MOTION SUPPORT
      Respects prefers-reduced-motion: reduce system setting.
      Disables all decorative animation; preserves state continuity.
