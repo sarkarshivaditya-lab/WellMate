@@ -1,12 +1,13 @@
 // src/components/intelligence/WellnessScoreCard.tsx
 // Composite wellness score card for the Overview page.
-// Calm, explainable — shows score breakdown + top insight.
+// Domain pills are tappable — tap to reveal that domain's explanation + signals inline.
 
-import React from "react";
+import React, { useState } from "react";
 import { Moon, Dumbbell, UtensilsCrossed, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreRing } from "./ScoreRing";
 import { InsightCard } from "@/components/ui/insight-card";
+import { SignalPill } from "@/components/ui/signal-pill";
 import { scoreLevelColors } from "@/design/tokens";
 import type { CompositeWellnessScore, WellnessScore, ScoreLevel } from "@/intelligence/types";
 
@@ -17,12 +18,20 @@ const DOMAIN_CONFIG = {
   habits:    { label: "Habits",    Icon: Repeat },
 };
 
+type DomainKey = keyof typeof DOMAIN_CONFIG;
+
+// ── DomainPill ────────────────────────────────────────────────────────────────
+
 function DomainPill({
   domainKey,
   score,
+  selected,
+  onClick,
 }: {
-  domainKey: keyof typeof DOMAIN_CONFIG;
+  domainKey: DomainKey;
   score: WellnessScore | null;
+  selected?: boolean;
+  onClick?: () => void;
 }) {
   const { label, Icon } = DOMAIN_CONFIG[domainKey];
   const level: ScoreLevel =
@@ -32,13 +41,37 @@ function DomainPill({
   const colors = scoreLevelColors[level];
   const hasData = score && score.dataQuality !== "insufficient";
 
+  if (!hasData) {
+    return (
+      <div
+        role="img"
+        aria-label={`${label}: no data yet`}
+        className={cn(
+          "flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl",
+          colors.bg,
+        )}
+      >
+        <Icon aria-hidden className={cn("h-3.5 w-3.5", colors.text)} />
+        <span aria-hidden className={cn("text-sm font-semibold tabular-nums", colors.text)}>
+          {value}
+        </span>
+        <span aria-hidden className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">
+          {label}
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div
-      role="img"
-      aria-label={hasData ? `${label} score: ${value}` : `${label}: no data yet`}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${label} score: ${value}. Tap for details.`}
+      aria-expanded={selected}
       className={cn(
-        "flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl",
+        "flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors touch-manipulation",
         colors.bg,
+        selected && "ring-1 ring-inset ring-current/20",
       )}
     >
       <Icon aria-hidden className={cn("h-3.5 w-3.5", colors.text)} />
@@ -48,9 +81,49 @@ function DomainPill({
       <span aria-hidden className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">
         {label}
       </span>
+    </button>
+  );
+}
+
+// ── DomainExpansion ───────────────────────────────────────────────────────────
+
+function DomainExpansion({
+  domainKey,
+  score,
+}: {
+  domainKey: DomainKey;
+  score: WellnessScore;
+}) {
+  const { label } = DOMAIN_CONFIG[domainKey];
+  const positiveSignals = score.signals.filter((s) => s.positive);
+  const cautionSignals = score.signals.filter((s) => !s.positive);
+  const allSignals = [...positiveSignals, ...cautionSignals].slice(0, 4);
+
+  return (
+    <div className="rounded-xl bg-muted/30 border border-border/20 px-3 py-3 space-y-2.5">
+      <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+        {label} · Why this score
+      </p>
+      <p className="text-[13px] text-foreground/80 leading-relaxed">
+        {score.explanation}
+      </p>
+      {allSignals.length > 0 && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {allSignals.map((sig) => (
+            <SignalPill
+              key={sig.label}
+              label={sig.label}
+              value={sig.value}
+              positive={sig.positive}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+// ── WellnessScoreCard ─────────────────────────────────────────────────────────
 
 type Props = {
   composite: CompositeWellnessScore;
@@ -58,6 +131,17 @@ type Props = {
 };
 
 export function WellnessScoreCard({ composite, className }: Props) {
+  const [selectedDomain, setSelectedDomain] = useState<DomainKey | null>(null);
+
+  function handleDomainTap(key: DomainKey) {
+    setSelectedDomain((prev) => (prev === key ? null : key));
+  }
+
+  const expandedScore =
+    selectedDomain != null ? composite.domains[selectedDomain] : null;
+  const showExpansion =
+    expandedScore != null && expandedScore.dataQuality !== "insufficient";
+
   return (
     <InsightCard
       className={cn(
@@ -96,18 +180,23 @@ export function WellnessScoreCard({ composite, className }: Props) {
         </div>
       </div>
 
-      {/* Domain breakdown */}
+      {/* Domain breakdown — tappable when data is available */}
       <div className="grid grid-cols-4 gap-2">
-        {(Object.keys(DOMAIN_CONFIG) as (keyof typeof DOMAIN_CONFIG)[]).map(
-          (key) => (
-            <DomainPill
-              key={key}
-              domainKey={key}
-              score={composite.domains[key]}
-            />
-          ),
-        )}
+        {(Object.keys(DOMAIN_CONFIG) as DomainKey[]).map((key) => (
+          <DomainPill
+            key={key}
+            domainKey={key}
+            score={composite.domains[key]}
+            selected={selectedDomain === key}
+            onClick={() => handleDomainTap(key)}
+          />
+        ))}
       </div>
+
+      {/* Inline domain expansion */}
+      {showExpansion && selectedDomain && (
+        <DomainExpansion domainKey={selectedDomain} score={expandedScore!} />
+      )}
     </InsightCard>
   );
 }

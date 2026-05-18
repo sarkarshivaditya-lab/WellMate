@@ -2,9 +2,10 @@
 // Sleep intelligence card for the Sleep page.
 // Surfaces sleep score, recovery readiness, debt, and key signals.
 
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ScoreRing } from "./ScoreRing";
+import { ScoreExplainerSheet } from "./ScoreExplainerSheet";
 import { InsightCard, InsightCardHeader } from "@/components/ui/insight-card";
 import { SignalPill } from "@/components/ui/signal-pill";
 import { TrendBadge } from "@/components/ui/trend-badge";
@@ -23,7 +24,16 @@ export function SleepScoreCard({
   recoveryReadiness,
   className,
 }: Props) {
+  const [explainOpen, setExplainOpen] = useState(false);
+
   return (
+    <>
+    <ScoreExplainerSheet
+      open={explainOpen}
+      onClose={() => setExplainOpen(false)}
+      score={sleepScore}
+      domainLabel="Sleep"
+    />
     <InsightCard
       insufficient={sleepScore.dataQuality === "insufficient"}
       insufficientLabel="Sleep Intelligence"
@@ -43,6 +53,7 @@ export function SleepScoreCard({
         title={sleepScore.headline}
         body={sleepScore.explanation}
         trailing={<TrendBadge trend={sleepScore.trend} />}
+        onExplain={sleepScore.dataQuality !== "insufficient" ? () => setExplainOpen(true) : undefined}
       />
 
       {/* Signal grid */}
@@ -92,5 +103,6 @@ export function SleepScoreCard({
         {recoveryReadiness.context}
       </p>
     </InsightCard>
+    </>
   );
 }

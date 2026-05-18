@@ -2,10 +2,11 @@
 // Habit intelligence card for the Habits page.
 // Shows momentum score, streak leaders, consistency, resilience.
 
-import React from "react";
+import React, { useState } from "react";
 import { Activity, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreRing } from "./ScoreRing";
+import { ScoreExplainerSheet } from "./ScoreExplainerSheet";
 import { InsightCard, InsightCardHeader } from "@/components/ui/insight-card";
 import { SignalPill } from "@/components/ui/signal-pill";
 import { TrendBadge } from "@/components/ui/trend-badge";
@@ -20,6 +21,8 @@ type Props = {
 };
 
 export function HabitMomentumCard({ habitScore, habitStats, className }: Props) {
+  const [explainOpen, setExplainOpen] = useState(false);
+
   // Sort by 30-day consistency rather than streak so the primary signal is
   // sustained follow-through, not recent unbroken runs.
   const topHabits = [...habitStats]
@@ -27,6 +30,13 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
     .slice(0, 3);
 
   return (
+    <>
+    <ScoreExplainerSheet
+      open={explainOpen}
+      onClose={() => setExplainOpen(false)}
+      score={habitScore}
+      domainLabel="Habits"
+    />
     <InsightCard
       insufficient={habitScore.dataQuality === "insufficient"}
       insufficientLabel="Habit Intelligence"
@@ -46,6 +56,7 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
         title={habitScore.headline}
         body={habitScore.explanation}
         trailing={<TrendBadge trend={habitScore.trend} />}
+        onExplain={habitScore.dataQuality !== "insufficient" ? () => setExplainOpen(true) : undefined}
       />
 
       {/* Signal grid */}
@@ -105,5 +116,6 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
         </div>
       )}
     </InsightCard>
+    </>
   );
 }

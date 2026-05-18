@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import type { WellnessRelation } from "@/insights/wellnessRelations";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { WellnessScoreCard } from "@/components/intelligence/WellnessScoreCard";
 import { WeeklySummaryCard } from "@/components/intelligence/WeeklySummaryCard";
+import { RecentChangesCard } from "@/components/intelligence/RecentChangesCard";
 import { useWellnessIntelligence } from "@/hooks/useWellnessIntelligence";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { useWellnessMemory } from "@/hooks/useWellnessMemory";
@@ -159,6 +160,7 @@ const CATEGORY_ICONS: Partial<Record<RecommendationCategory, LucideIcon>> = {
 };
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
+  const [expanded, setExpanded] = useState(false);
   const Icon = CATEGORY_ICONS[rec.category] ?? Sparkles;
 
   const iconColor =
@@ -168,21 +170,57 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         ? "text-amber-600 dark:text-amber-400"
         : "text-primary/60";
 
+  const hasExplainability =
+    rec.explainability.reason.length > 0 ||
+    rec.explainability.contributingSignals.length > 0;
+
   return (
     <div
       className={cn(
         "px-4 py-3.5 rounded-2xl",
         "bg-card/60 border border-border/30",
-        "flex items-start gap-3",
       )}
     >
-      <span className={cn("mt-0.5 flex-shrink-0", iconColor)}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="space-y-0.5 min-w-0">
-        <p className="text-[13px] font-medium text-foreground/90 leading-snug">{rec.title}</p>
-        <p className="text-[12px] text-muted-foreground leading-relaxed">{rec.body}</p>
+      <div className="flex items-start gap-3">
+        <span className={cn("mt-0.5 flex-shrink-0", iconColor)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="space-y-0.5 min-w-0 flex-1">
+          <p className="text-[13px] font-medium text-foreground/90 leading-snug">{rec.title}</p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed">{rec.body}</p>
+          {hasExplainability && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className="mt-1 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+            >
+              {expanded ? "Less" : "Why?"}
+            </button>
+          )}
+        </div>
       </div>
+      {expanded && hasExplainability && (
+        <div className="mt-2.5 ml-7 rounded-xl bg-muted/30 border border-border/20 px-3 py-2.5 space-y-1.5">
+          {rec.explainability.reason && (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {rec.explainability.reason}
+            </p>
+          )}
+          {rec.explainability.contributingSignals.length > 0 && (
+            <ul className="space-y-0.5">
+              {rec.explainability.contributingSignals.map((signal) => (
+                <li
+                  key={signal}
+                  className="text-[11px] text-muted-foreground/80 leading-relaxed before:content-['·'] before:mr-1.5"
+                >
+                  {signal}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -232,6 +270,9 @@ export default function Overview() {
       <div className="space-y-8">
         {/* Composite wellness score */}
         <WellnessScoreCard composite={intelligence.composite} />
+
+        {/* Behavioral shifts from longitudinal memory — only renders when significant */}
+        <RecentChangesCard deltas={memory?.behavioralDeltas ?? []} />
 
         {/* Module quick-links — ordered by behavioral affinity */}
         <div className="space-y-3">

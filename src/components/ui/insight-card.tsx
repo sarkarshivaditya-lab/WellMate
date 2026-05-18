@@ -11,6 +11,7 @@
 //   </InsightCard>
 
 import React from "react";
+import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { surface } from "@/design/tokens";
 
@@ -93,6 +94,7 @@ type InsightCardHeaderProps = {
   title: string;
   body?: string;
   trailing?: React.ReactNode; // TrendBadge or action slot
+  onExplain?: () => void;     // when set, renders an Info icon button
   className?: string;
 };
 
@@ -101,6 +103,7 @@ export function InsightCardHeader({
   title,
   body,
   trailing,
+  onExplain,
   className,
 }: InsightCardHeaderProps) {
   return (
@@ -108,8 +111,18 @@ export function InsightCardHeader({
       {leading}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-semibold leading-tight">{title}</p>
+          <p className="text-sm font-semibold leading-tight flex-1 min-w-0">{title}</p>
           {trailing}
+          {onExplain && (
+            <button
+              type="button"
+              onClick={onExplain}
+              aria-label="Explain this score"
+              className="-mr-1 flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 hover:text-muted-foreground transition-colors touch-manipulation"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         {body && (
           <p className="mt-1 text-[11px] text-muted-foreground leading-snug line-clamp-2">
