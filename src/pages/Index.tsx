@@ -12,6 +12,13 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Droplets,
+  Zap,
+  Heart,
+  Sparkles,
+  Shield,
+  Gauge,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActivityTimeline } from "@/components/timeline/ActivityTimeline";
@@ -22,6 +29,9 @@ import { WellnessScoreCard } from "@/components/intelligence/WellnessScoreCard";
 import { WeeklySummaryCard } from "@/components/intelligence/WeeklySummaryCard";
 import { useWellnessIntelligence } from "@/hooks/useWellnessIntelligence";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
+import { useWellnessMemory } from "@/hooks/useWellnessMemory";
+import { useRecommendations } from "@/hooks/useRecommendations";
+import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
 
 // ── Quick links ───────────────────────────────────────────────────────────────
 
@@ -97,6 +107,50 @@ function RelationCard({ relation }: { relation: WellnessRelation }) {
   );
 }
 
+// ── Recommendation card ───────────────────────────────────────────────────────
+
+const CATEGORY_ICONS: Partial<Record<RecommendationCategory, LucideIcon>> = {
+  sleep: Moon,
+  recovery: Zap,
+  hydration: Droplets,
+  activity: Activity,
+  mood: Heart,
+  habits: Repeat,
+  pacing: Gauge,
+  reflection: Sparkles,
+  stabilization: Shield,
+  stress_management: Shield,
+};
+
+function RecommendationCard({ rec }: { rec: Recommendation }) {
+  const Icon = CATEGORY_ICONS[rec.category] ?? Sparkles;
+
+  const iconColor =
+    rec.trend === "positive"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : rec.trend === "negative"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-primary/60";
+
+  return (
+    <div
+      className={cn(
+        "px-4 py-3.5 rounded-2xl",
+        "bg-card/60 border border-border/30",
+        "flex items-start gap-3",
+      )}
+    >
+      <span className={cn("mt-0.5 flex-shrink-0", iconColor)}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="space-y-0.5 min-w-0">
+        <p className="text-[13px] font-medium text-foreground/90 leading-snug">{rec.title}</p>
+        <p className="text-[12px] text-muted-foreground leading-relaxed">{rec.body}</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Recent activity (gated) ───────────────────────────────────────────────────
 // Returns null — no orphaned section header — when the user has no logged data.
 
@@ -124,6 +178,8 @@ export default function Overview() {
     : null;
   const intelligence = useWellnessIntelligence(profile);
   const relations = useMemo(() => computeWellnessRelations(), []);
+  const { memory } = useWellnessMemory();
+  const { recommendations } = useRecommendations(memory);
 
   return (
     <PageLayout title="Overview" subtitle="Your wellness at a glance.">
@@ -159,6 +215,18 @@ export default function Overview() {
             description="Track rest quality and patterns"
           />
         </div>
+
+        {/* Contextual guidance — only shown when recommendations are ready */}
+        {recommendations.length > 0 && (
+          <section className="space-y-3">
+            <SectionHeader label="Guidance" />
+            <div className="space-y-2">
+              {recommendations.map((rec) => (
+                <RecommendationCard key={rec.id} rec={rec} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Cross-module wellness insights — only shown when enough data exists */}
         {relations.length > 0 && (
