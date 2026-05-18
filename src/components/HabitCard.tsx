@@ -40,8 +40,8 @@ export default function HabitCard({
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold">{habit.title}</h3>
                 {streak > 0 && (
-                  <Badge variant="secondary" className="text-xs" aria-label={`${streak}-day streak`}>
-                    <span aria-hidden>🔥</span> {streak} day{streak > 1 ? "s" : ""}
+                  <Badge variant="outline" className="text-xs text-muted-foreground" aria-label={`${streak} days of consistent activity`}>
+                    {streak} day{streak > 1 ? "s" : ""}
                   </Badge>
                 )}
               </div>
@@ -68,8 +68,8 @@ export default function HabitCard({
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold">{habit.title}</h3>
                 {streak > 0 && (
-                  <Badge variant="secondary" className="text-xs" aria-label={`${streak}-day streak`}>
-                    <span aria-hidden>🔥</span> {streak} day{streak > 1 ? "s" : ""}
+                  <Badge variant="outline" className="text-xs text-muted-foreground" aria-label={`${streak} days of consistent activity`}>
+                    {streak} day{streak > 1 ? "s" : ""}
                   </Badge>
                 )}
               </div>

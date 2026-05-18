@@ -297,6 +297,39 @@ const habitsStreakSupport: Rule = (ctx) => {
   };
 };
 
+const habitsOvercommitment: Rule = (ctx) => {
+  // Only surface when there are many habits AND follow-through is low.
+  // Framed as simplification support, not failure feedback.
+  if (ctx.habitsActiveCount < 5) return null;
+  if (ctx.habitsCompletionRate30d >= 40) return null;
+  return {
+    id: "habits_overcommitment",
+    category: "habits",
+    title: "Fewer habits, steadier rhythm",
+    body: `Having ${ctx.habitsActiveCount} active habits with lower follow-through is common. Narrowing to one or two often builds more lasting consistency than trying to maintain everything at once.`,
+    supportingSignals: [
+      { label: "Active habits", value: `${ctx.habitsActiveCount}` },
+      { label: "Completion rate (30d)", value: `${ctx.habitsCompletionRate30d}%` },
+    ],
+    relatedDomains: ["habits"],
+    confidence: "medium",
+    severity: "gentle",
+    trend: "neutral",
+    explainability: {
+      reason: `${ctx.habitsActiveCount} active habits with ${ctx.habitsCompletionRate30d}% 30-day completion — volume may be exceeding sustainable capacity.`,
+      contributingSignals: [
+        `Active habits: ${ctx.habitsActiveCount}`,
+        `30-day completion: ${ctx.habitsCompletionRate30d}%`,
+      ],
+      windowDays: 30,
+    },
+    cooldownDays: 14,
+    optionalityScore: 0.95,
+    priority: 0,
+    generatedAt: now(),
+  };
+};
+
 // ── Mood rules ────────────────────────────────────────────────────────────────
 
 const moodVolatile: Rule = (ctx) => {
@@ -522,6 +555,7 @@ export const ALL_RULES: Rule[] = [
   // Habits
   habitsDecline,
   habitsStreakSupport,
+  habitsOvercommitment,
   // Hydration
   hydrationConsistency,
   // Reflection

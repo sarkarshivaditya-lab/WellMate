@@ -2,7 +2,11 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HabitMomentumCard } from "@/components/intelligence/HabitMomentumCard";
-import { computeHabitScore, computeHabitStats } from "@/intelligence/habitIntelligence";
+import {
+  computeHabitScore,
+  computeHabitStats,
+  computeHabitConsistencyProfile,
+} from "@/intelligence/habitIntelligence";
 import PageLayout from "@/components/layout/PageLayout";
 import {
   Empty,
@@ -70,6 +74,7 @@ export default function Habits() {
   // only recomputes when actual habit data changes.
   const habitScore = useMemo(() => computeHabitScore(), [allEntries]);
   const habitStats = useMemo(() => computeHabitStats(), [allEntries]);
+  const consistencyProfile = useMemo(() => computeHabitConsistencyProfile(), [allEntries, habits]);
 
   const handleAddHabit = () => {
     if (!title.trim()) {
@@ -249,6 +254,25 @@ export default function Habits() {
       ) : (
         <div className="space-y-4">
           <HabitMomentumCard habitScore={habitScore} habitStats={habitStats} />
+
+          {/* Overcommitment awareness — shown when many habits + low follow-through.
+              Framed as gentle information, never as failure or pressure. */}
+          {consistencyProfile.overloadRisk && (
+            <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground/80 mb-0.5">Many habits active</p>
+              <p>
+                Focusing on one or two habits at a time often builds more lasting consistency than maintaining many at once. Consider archiving a few until these feel steady.
+              </p>
+            </div>
+          )}
+
+          {/* Return opportunity — shown when at least one habit has no recent activity.
+              Framed as a calm invitation, not a missed-day reminder. */}
+          {!consistencyProfile.overloadRisk && consistencyProfile.hasReturnOpportunity && habits.length > 0 && (
+            <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+              <p>Some habits are ready to continue whenever you are. Every return counts.</p>
+            </div>
+          )}
 
           <div className="space-y-3">
             {habits.map((habit) => (

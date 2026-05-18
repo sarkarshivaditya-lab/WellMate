@@ -1,7 +1,9 @@
 // src/intelligence/habitIntelligence.ts
 // Deterministic habit consistency, momentum, and resilience scoring.
 // Reuses computeStreak() from habitsStore — no duplication.
-// Streaks are supportive, never punishing.
+// Score weights: consistency (40%) > momentum (30%) > resilience (20%) > rhythm streak (10%).
+// Resilience and recovery are weighted higher than streak length — supporting
+// sustainable behavioral patterns over perfectionist compliance.
 
 import {
   listHabits,
@@ -29,9 +31,19 @@ function dateIsoDaysAgo(n: number): string {
 export type HabitStats = {
   habit: LocalHabit;
   streak: number;
-  consistency30: number;    // % of last 30 days completed
+  consistency30: number;    // % of last 30 days completed (0-100 integer)
   momentum7: number;        // % of last 7 days completed (for daily habits)
   bouncebacks: number;      // missed-then-recovered events (resilience)
+};
+
+// Consistency health profile — used for overcommitment detection and
+// gentle surface-level awareness in the Habits page.
+export type HabitConsistencyProfile = {
+  overloadRisk: boolean;         // 5+ habits AND avg consistency < 40%
+  activeHabitCount: number;
+  avgConsistency30: number;      // 0-100 integer
+  lowPerformingHabits: string[]; // titles of habits with <30% consistency
+  hasReturnOpportunity: boolean; // at least one habit with 0 completions in last 7 days
 };
 
 export function computeHabitStats(): HabitStats[] {
@@ -96,10 +108,10 @@ export function computeHabitScore(): WellnessScore {
   const allEntries = listAllEntries();
   const signals: SignalItem[] = [];
 
-  // ── Overall consistency (35 pts) ─────────────────────────────────────────
+  // ── Overall consistency (40 pts) ─────────────────────────────────────────
   const avgConsistency =
     stats.reduce((s, h) => s + h.consistency30, 0) / stats.length;
-  const consistencyScore = Math.round((avgConsistency / 100) * 35);
+  const consistencyScore = Math.round((avgConsistency / 100) * 40);
 
   signals.push({
     label: "30-day consistency",
@@ -107,10 +119,10 @@ export function computeHabitScore(): WellnessScore {
     positive: avgConsistency >= 60,
   });
 
-  // ── Momentum (35 pts) — last 7 days ──────────────────────────────────────
+  // ── Momentum (30 pts) — last 7 days ──────────────────────────────────────
   const avgMomentum =
     stats.reduce((s, h) => s + h.momentum7, 0) / stats.length;
-  const momentumScore = Math.round((avgMomentum / 100) * 35);
+  const momentumScore = Math.round((avgMomentum / 100) * 30);
 
   signals.push({
     label: "This week's completion",
@@ -118,25 +130,29 @@ export function computeHabitScore(): WellnessScore {
     positive: avgMomentum >= 50,
   });
 
-  // ── Streak bonus (20 pts) ─────────────────────────────────────────────────
+  // ── Rhythm streak bonus (10 pts) — informational, not primary ────────────
+  // Capped at 10 consecutive days = max bonus. De-emphasized relative to
+  // consistency and resilience so short gaps don't overshadow long-run patterns.
   const bestStreak = Math.max(...stats.map((s) => s.streak), 0);
-  const streakScore = Math.min(20, bestStreak * 2);
+  const streakScore = Math.min(10, bestStreak);
 
   if (bestStreak > 0) {
     signals.push({
-      label: "Best active streak",
+      label: "Current rhythm",
       value: `${bestStreak} day${bestStreak !== 1 ? "s" : ""}`,
       positive: true,
     });
   }
 
-  // ── Resilience bonus (10 pts) ─────────────────────────────────────────────
+  // ── Resilience bonus (20 pts) — returning after a miss matters more ───────
+  // 5 bounce-backs = max bonus. Recovery events are as valuable as sustained
+  // streaks — this weight reflects that real human consistency includes gaps.
   const totalBouncebacks = stats.reduce((s, h) => s + h.bouncebacks, 0);
-  const resilienceScore = Math.min(10, totalBouncebacks * 2);
+  const resilienceScore = Math.min(20, totalBouncebacks * 4);
 
   if (totalBouncebacks > 0) {
     signals.push({
-      label: "Recovery events",
+      label: "Times returned after a miss",
       value: `${totalBouncebacks}`,
       positive: true,
     });
@@ -169,14 +185,14 @@ export function computeHabitScore(): WellnessScore {
   let explanation: string;
 
   if (score >= 70) {
-    headline = "Strong habit momentum";
-    explanation = `You're completing ${Math.round(avgMomentum)}% of your habits this week, with ${Math.round(avgConsistency)}% consistency over the past 30 days. ${bestStreak > 0 ? `Your best active streak is ${bestStreak} day${bestStreak !== 1 ? "s" : ""}.` : "That consistency is building something real."}`;
+    headline = "Steady habit rhythm";
+    explanation = `You're completing ${Math.round(avgMomentum)}% of your habits this week, with ${Math.round(avgConsistency)}% consistency over the past 30 days. ${totalBouncebacks > 0 ? `You've returned after missed days ${totalBouncebacks} time${totalBouncebacks !== 1 ? "s" : ""} — that kind of recovery is what builds lasting rhythm.` : "That consistency is building something real."}`;
   } else if (score >= 45) {
     headline = "Habits are taking shape";
-    explanation = `You're completing about ${Math.round(avgMomentum)}% of your habits this week. ${totalBouncebacks > 0 ? `You've come back ${totalBouncebacks} time${totalBouncebacks !== 1 ? "s" : ""} after a missed day — that's what matters.` : "Missing a day is normal — what matters is returning the next day."}`;
+    explanation = `You're completing about ${Math.round(avgMomentum)}% of your habits this week. ${totalBouncebacks > 0 ? `You've come back ${totalBouncebacks} time${totalBouncebacks !== 1 ? "s" : ""} after a missed day — returning is the part that matters most.` : "Missing a day is part of any real pattern. What counts is continuing."}`;
   } else {
-    headline = "Room to build consistency";
-    explanation = `Habit consistency takes time to develop. Even completing one habit each day builds a foundation. Focusing on just one or two makes follow-through much easier.`;
+    headline = "Building consistency gradually";
+    explanation = `Consistency develops over weeks, not days. Even one habit done regularly is meaningful progress. Focusing on just one or two often makes follow-through much more sustainable.`;
   }
 
   return {
@@ -187,5 +203,55 @@ export function computeHabitScore(): WellnessScore {
     signals,
     trend,
     dataQuality: allEntries.length >= 5 ? "sufficient" : "partial",
+  };
+}
+
+// ── Consistency health profile ────────────────────────────────────────────────
+// Used to surface gentle overcommitment awareness and restart opportunities
+// in the Habits page UI. Never shown as a warning — only as calm context.
+
+export function computeHabitConsistencyProfile(): HabitConsistencyProfile {
+  const habits = listHabits();
+
+  if (habits.length === 0) {
+    return {
+      overloadRisk: false,
+      activeHabitCount: 0,
+      avgConsistency30: 0,
+      lowPerformingHabits: [],
+      hasReturnOpportunity: false,
+    };
+  }
+
+  const allEntries = listAllEntries();
+  const stats = computeHabitStats();
+  const avgConsistency30 = Math.round(
+    stats.reduce((s, h) => s + h.consistency30, 0) / stats.length,
+  );
+
+  const lowPerformingHabits = stats
+    .filter((s) => s.consistency30 < 30)
+    .map((s) => s.habit.title);
+
+  // Overload = many habits AND low average follow-through.
+  // Threshold: 5+ habits AND <40% average consistency.
+  const overloadRisk = habits.length >= 5 && avgConsistency30 < 40;
+
+  // Return opportunity = any habit with no completions in the last 7 days,
+  // giving the UI a chance to offer a gentle restart prompt.
+  const cutoff7 = cutoffIso(7);
+  const hasReturnOpportunity = stats.some((hs) => {
+    const recentCompletions = allEntries.filter(
+      (e) => e.habitLocalId === hs.habit.localId && e.dateIso >= cutoff7 && e.completed,
+    );
+    return recentCompletions.length === 0;
+  });
+
+  return {
+    overloadRisk,
+    activeHabitCount: habits.length,
+    avgConsistency30,
+    lowPerformingHabits,
+    hasReturnOpportunity,
   };
 }

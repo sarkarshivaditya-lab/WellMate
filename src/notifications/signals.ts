@@ -106,10 +106,10 @@ export function dailyCheckinSignal(): NotificationIntent | null {
 }
 
 /* --------------------------------------------------
-   STREAK SUPPORT SIGNAL
-   If user is on an active streak (≥ 2 days) and hasn't
-   logged anything today, fire a calm streak awareness nudge.
-   Only after midday — never pressuring, just informing.
+   RHYTHM SUPPORT SIGNAL
+   If user has been active multiple days in a row and
+   hasn't logged anything today, offer a calm, optional reminder.
+   Only after midday. No streak-loss framing.
    -------------------------------------------------- */
 
 export function streakSupportSignal(): NotificationIntent | null {
@@ -128,8 +128,8 @@ export function streakSupportSignal(): NotificationIntent | null {
       id: `streak_${today}`,
       category: "streak_support",
       tone: "warm",
-      title: `${agg.currentStreak}-day streak`,
-      body: "You've been consistent. No pressure — just a friendly heads-up.",
+      title: "Keeping the rhythm",
+      body: "You've been showing up consistently. Whenever you're ready today.",
       scheduledFor: Date.now(),
       expiresAt: new Date(`${today}T23:59:59`).getTime(),
       metadata: { streak: agg.currentStreak },

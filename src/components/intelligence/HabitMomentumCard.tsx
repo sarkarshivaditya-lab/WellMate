@@ -3,7 +3,7 @@
 // Shows momentum score, streak leaders, consistency, resilience.
 
 import React from "react";
-import { Flame, RotateCcw } from "lucide-react";
+import { Activity, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScoreRing } from "./ScoreRing";
 import { InsightCard, InsightCardHeader } from "@/components/ui/insight-card";
@@ -20,8 +20,10 @@ type Props = {
 };
 
 export function HabitMomentumCard({ habitScore, habitStats, className }: Props) {
+  // Sort by 30-day consistency rather than streak so the primary signal is
+  // sustained follow-through, not recent unbroken runs.
   const topHabits = [...habitStats]
-    .sort((a, b) => b.streak - a.streak)
+    .sort((a, b) => b.consistency30 - a.consistency30)
     .slice(0, 3);
 
   return (
@@ -60,18 +62,18 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
         </div>
       )}
 
-      {/* Top habits by streak */}
+      {/* Top habits by consistency */}
       {topHabits.length > 0 && (
         <div className="space-y-2.5">
           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
-            Streaks
+            Consistency
           </p>
           {topHabits.map((hs) => (
             <div key={hs.habit.localId} className="flex items-center gap-3">
               <div className="flex-1 min-w-0 space-y-1">
                 <p className="text-xs font-medium truncate">{hs.habit.title}</p>
                 <WellnessBar
-                  value={Math.round(hs.consistency30 * 100)}
+                  value={hs.consistency30}
                   max={100}
                   module="habit"
                   height="sm"
@@ -80,8 +82,8 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
               <div className="flex items-center gap-1 shrink-0">
                 {hs.streak > 0 ? (
                   <>
-                    <Flame className="h-3 w-3 text-amber-500" />
-                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+                    <Activity className="h-3 w-3 text-emerald-500" />
+                    <span className="text-xs font-medium text-muted-foreground tabular-nums">
                       {hs.streak}d
                     </span>
                   </>
@@ -89,12 +91,12 @@ export function HabitMomentumCard({ habitScore, habitStats, className }: Props) 
                   <>
                     <RotateCcw className="h-3 w-3 text-sky-500" />
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {Math.round(hs.consistency30 * 100)}%
+                      {hs.consistency30}%
                     </span>
                   </>
                 ) : (
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {Math.round(hs.consistency30 * 100)}%
+                    {hs.consistency30}%
                   </span>
                 )}
               </div>

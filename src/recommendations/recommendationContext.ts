@@ -7,6 +7,7 @@ import {
   computeSleepDebt,
   computeSleepRecoveryReadiness,
 } from "@/intelligence/sleepIntelligence";
+import { listHabits } from "@/data/local/habitsStore";
 import {
   computeRecoveryScore,
   detectOvertraining,
@@ -111,6 +112,7 @@ export function buildRecommendationContext(
     habitsCompletionRate30d: recent30.habits.completionRate,
     habitsTrend,
     habitsBestStreak: recent30.habits.bestStreak,
+    habitsActiveCount: listHabits().length,
 
     moodAvg30d: recent30.mood.avgMood,
     moodVolatility30d: recent30.mood.volatility,

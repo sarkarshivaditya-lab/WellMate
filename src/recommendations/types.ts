@@ -78,6 +78,7 @@ export type RecommendationContext = {
   habitsCompletionRate30d: number; // 0-100
   habitsTrend: "up" | "down" | "stable";
   habitsBestStreak: number;
+  habitsActiveCount: number;       // number of non-archived habits
 
   // Mood
   moodAvg30d: number;             // 1-5, 0 if no data
