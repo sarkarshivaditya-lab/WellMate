@@ -31,9 +31,45 @@ import { useWellnessIntelligence } from "@/hooks/useWellnessIntelligence";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { useWellnessMemory } from "@/hooks/useWellnessMemory";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { useAdaptiveProfile } from "@/hooks/useAdaptiveProfile";
 import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
+import type { ModuleId } from "@/personalization/types";
 
 // ── Quick links ───────────────────────────────────────────────────────────────
+
+type ModuleMeta = {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+};
+
+const MODULE_META: Record<ModuleId, ModuleMeta> = {
+  physical: {
+    to: "/physical",
+    icon: <Activity className="h-4 w-4" />,
+    label: "Physical Health",
+    description: "Activity, nutrition, and body metrics",
+  },
+  mental: {
+    to: "/mental",
+    icon: <Brain className="h-4 w-4" />,
+    label: "Mental Wellbeing",
+    description: "Mood, journal, and mindfulness",
+  },
+  habits: {
+    to: "/habits",
+    icon: <Repeat className="h-4 w-4" />,
+    label: "Habits",
+    description: "Build consistency through daily actions",
+  },
+  sleep: {
+    to: "/sleep",
+    icon: <Moon className="h-4 w-4" />,
+    label: "Sleep",
+    description: "Track rest quality and patterns",
+  },
+};
 
 type QuickLinkProps = {
   to: string;
@@ -179,7 +215,17 @@ export default function Overview() {
   const intelligence = useWellnessIntelligence(profile);
   const relations = useMemo(() => computeWellnessRelations(), []);
   const { memory } = useWellnessMemory();
-  const { recommendations } = useRecommendations(memory);
+  const { recommendations: allRecommendations } = useRecommendations(memory);
+  const { adaptationState } = useAdaptiveProfile();
+
+  // Apply adaptation: cap recs, suppress reflections when affinity is low
+  const visibleRecommendations = useMemo(() => {
+    let recs = allRecommendations;
+    if (!adaptationState.showReflections) {
+      recs = recs.filter((r) => r.category !== "reflection");
+    }
+    return recs.slice(0, adaptationState.maxRecommendations);
+  }, [allRecommendations, adaptationState]);
 
   return (
     <PageLayout title="Overview" subtitle="Your wellness at a glance.">
@@ -187,41 +233,29 @@ export default function Overview() {
         {/* Composite wellness score */}
         <WellnessScoreCard composite={intelligence.composite} />
 
-        {/* Module quick-links */}
+        {/* Module quick-links — ordered by behavioral affinity */}
         <div className="space-y-3">
-          <QuickLink
-            to="/physical"
-            icon={<Activity className="h-4 w-4" />}
-            label="Physical Health"
-            description="Activity, nutrition, and body metrics"
-            accent
-          />
-          <QuickLink
-            to="/mental"
-            icon={<Brain className="h-4 w-4" />}
-            label="Mental Wellbeing"
-            description="Mood, journal, and mindfulness"
-          />
-          <QuickLink
-            to="/habits"
-            icon={<Repeat className="h-4 w-4" />}
-            label="Habits"
-            description="Build consistency through daily actions"
-          />
-          <QuickLink
-            to="/sleep"
-            icon={<Moon className="h-4 w-4" />}
-            label="Sleep"
-            description="Track rest quality and patterns"
-          />
+          {adaptationState.moduleOrder.map((moduleId, idx) => {
+            const meta = MODULE_META[moduleId];
+            return (
+              <QuickLink
+                key={moduleId}
+                to={meta.to}
+                icon={meta.icon}
+                label={meta.label}
+                description={meta.description}
+                accent={idx === 0}
+              />
+            );
+          })}
         </div>
 
-        {/* Contextual guidance — only shown when recommendations are ready */}
-        {recommendations.length > 0 && (
+        {/* Contextual guidance — capped and filtered by adaptation state */}
+        {visibleRecommendations.length > 0 && (
           <section className="space-y-3">
             <SectionHeader label="Guidance" />
             <div className="space-y-2">
-              {recommendations.map((rec) => (
+              {visibleRecommendations.map((rec) => (
                 <RecommendationCard key={rec.id} rec={rec} />
               ))}
             </div>
