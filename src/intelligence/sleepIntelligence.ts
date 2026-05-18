@@ -185,7 +185,7 @@ export function computeSleepScore(): WellnessScore {
 
   if (score >= 75) {
     headline = "Strong sleep foundation";
-    explanation = `Your sleep duration averages ${durationHours}h with ${consistencyLabel.toLowerCase()} timing — a solid recovery base. ${trend === "up" ? "Quality has been improving recently, which is a great sign." : "Keep the consistency going."}`;
+    explanation = `Your sleep duration averages ${durationHours}h with ${consistencyLabel.toLowerCase()} timing — a solid recovery base. ${trend === "up" ? "Sleep quality has been trending up recently." : "Consistent timing is the foundation of good sleep."}`;
   } else if (score >= 55) {
     headline = "Decent sleep with room to grow";
     explanation = `Averaging ${durationHours}h with ${consistencyLabel.toLowerCase()} timing. ${avgQuality < 3.5 ? "Improving sleep quality through a wind-down routine could help." : "Aiming for a more consistent bedtime would strengthen your recovery."}`;

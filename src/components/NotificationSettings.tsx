@@ -29,7 +29,7 @@ const CATEGORY_META: Record<
   { label: string; description: string }
 > = {
   wellness_critical:  { label: "Wellness Alerts",       description: "Important alerts that need your attention" },
-  streak_support:     { label: "Streak Reminders",      description: "Gentle nudge when your streak is at risk" },
+  streak_support:     { label: "Streak Reminders",      description: "A quiet note when you've been logging consistently" },
   habit_support:      { label: "Habit Reminders",       description: "Reminders for habits with a set time" },
   sleep_support:      { label: "Sleep Reminders",       description: "Sleep hygiene nudges" },
   gentle_checkin:     { label: "Daily Check-ins",       description: "Evening prompt if nothing logged today" },

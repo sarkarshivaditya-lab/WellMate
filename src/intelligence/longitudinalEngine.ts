@@ -184,7 +184,7 @@ export function generateWeeklySummaryText(comparison: WeeklyComparison): string 
   const parts: string[] = [];
 
   if (thisWeek.sleepNights === 0 && thisWeek.exerciseSessions === 0 && thisWeek.mealsLogged === 0) {
-    return "No data logged this week yet. Start with anything — even one log builds momentum.";
+    return "No data logged this week yet. Start with anything — even one entry helps.";
   }
 
   // Sleep
@@ -216,7 +216,7 @@ export function generateWeeklySummaryText(comparison: WeeklyComparison): string 
   if (improvingCount > decliningCount && improvingCount >= 2) {
     parts.push("Across the board, this week is trending upward compared to last week.");
   } else if (decliningCount > improvingCount && decliningCount >= 2) {
-    parts.push("A few areas are lower than last week — worth checking what's changed.");
+    parts.push("A few areas are lower than last week — that's normal across most weeks.");
   }
 
   return parts.join(" ");

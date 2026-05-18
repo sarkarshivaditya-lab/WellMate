@@ -220,7 +220,7 @@ export function computeRecoveryScore(): WellnessScore {
     explanation = `Your exercise load and sleep quality suggest your body has recovered well. ${consecutiveDays >= 3 ? "You've been consistently active — a rest day soon will help maintain this momentum." : "You're in a good position for your next session."}`;
   } else if (score >= 50) {
     headline = "Moderate recovery";
-    explanation = `${consecutiveDays >= 3 ? `After ${consecutiveDays} consecutive workout days, ` : ""}Your body is still recovering. Moderate-intensity activity is appropriate — avoid pushing to maximum effort today.`;
+    explanation = `${consecutiveDays >= 3 ? `After ${consecutiveDays} consecutive workout days, ` : ""}your body is still recovering. Moderate-intensity activity fits well here — high-intensity work is best saved for when you're more rested.`;
   } else {
     headline = "Recovery is the priority";
     explanation = `Your recent activity load combined with sleep quality suggests your body would benefit most from rest, light stretching, or a gentle walk today.`;

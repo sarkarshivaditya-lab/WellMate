@@ -135,7 +135,7 @@ export default function Habits() {
   return (
     <PageLayout
       title="Habits"
-      subtitle="Build consistency through daily actions"
+      subtitle="Small, repeatable actions that add up."
       headerRight={
         <Button
           size="sm"

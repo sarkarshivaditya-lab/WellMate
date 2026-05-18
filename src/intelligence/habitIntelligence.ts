@@ -85,7 +85,7 @@ export function computeHabitScore(): WellnessScore {
       score: 0,
       level: "low",
       headline: "No habits set yet",
-      explanation: "Add your first habit to begin tracking consistency. Even one habit, done regularly, builds meaningful momentum over time.",
+      explanation: "Add a habit to start tracking. Even one, done regularly, gives you a clearer picture over time.",
       signals: [],
       trend: "stable",
       dataQuality: "insufficient",
@@ -170,13 +170,13 @@ export function computeHabitScore(): WellnessScore {
 
   if (score >= 70) {
     headline = "Strong habit momentum";
-    explanation = `You're completing ${Math.round(avgMomentum)}% of your habits this week, with ${Math.round(avgConsistency)}% consistency over the past 30 days. ${bestStreak > 0 ? `Your best active streak is ${bestStreak} day${bestStreak !== 1 ? "s" : ""} — keep it going.` : "This level of consistency is genuinely building lasting change."}`;
+    explanation = `You're completing ${Math.round(avgMomentum)}% of your habits this week, with ${Math.round(avgConsistency)}% consistency over the past 30 days. ${bestStreak > 0 ? `Your best active streak is ${bestStreak} day${bestStreak !== 1 ? "s" : ""}.` : "That consistency is building something real."}`;
   } else if (score >= 45) {
     headline = "Habits are taking shape";
-    explanation = `You're completing about ${Math.round(avgMomentum)}% of your habits this week. ${totalBouncebacks > 0 ? `You've bounced back ${totalBouncebacks} time${totalBouncebacks !== 1 ? "s" : ""} after missed days — that resilience is important.` : "Missing a day is normal — what matters is returning the next day."}`;
+    explanation = `You're completing about ${Math.round(avgMomentum)}% of your habits this week. ${totalBouncebacks > 0 ? `You've come back ${totalBouncebacks} time${totalBouncebacks !== 1 ? "s" : ""} after a missed day — that's what matters.` : "Missing a day is normal — what matters is returning the next day."}`;
   } else {
     headline = "Room to build consistency";
-    explanation = `Habit consistency takes time to develop. Even completing one habit each day builds a foundation. Reducing the number of habits and focusing on just one or two makes follow-through much easier.`;
+    explanation = `Habit consistency takes time to develop. Even completing one habit each day builds a foundation. Focusing on just one or two makes follow-through much easier.`;
   }
 
   return {

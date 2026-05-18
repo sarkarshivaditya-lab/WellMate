@@ -213,10 +213,7 @@ export default function TransitionGate({
           className="animate-wm-fade-2 font-semibold tracking-tight leading-snug mb-3"
           style={{ fontSize: "clamp(26px,7vw,32px)", color: "hsl(170,20%,12%)" }}
         >
-          You're all set!{" "}
-          <span aria-hidden role="img">
-            🎉
-          </span>
+          You're all set.
         </h1>
 
         {/* Subtitle */}
@@ -224,7 +221,7 @@ export default function TransitionGate({
           className="animate-wm-fade-3 text-[15px] leading-relaxed mb-10"
           style={{ color: "hsl(166,10%,44%)", maxWidth: "272px" }}
         >
-          We've personalized your experience based on your inputs.
+          WellMate is now set up around what you shared.
         </p>
 
         {/* CTA */}

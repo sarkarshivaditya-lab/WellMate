@@ -85,7 +85,7 @@ function TodayActivitySummary() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground/70">
-            No activity yet today — use the Activity tab to log.
+            Nothing logged yet today.
           </p>
         </CardContent>
       </Card>

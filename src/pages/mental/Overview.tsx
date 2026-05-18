@@ -59,7 +59,7 @@ function getLocalMoods(): LocalMood[] {
 }
 
 const MOOD_EMOJIS = ["😢", "😔", "😐", "😊", "😄"];
-const MOOD_LABELS = ["Very Low", "Low", "Okay", "Good", "Excellent"];
+const MOOD_LABELS = ["Very Low", "Low", "Okay", "Good", "Great"];
 
 /* ======================================================
    JOURNAL DRAFT — persists across editor dismissals

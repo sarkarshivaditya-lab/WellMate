@@ -17,7 +17,7 @@ const moodEmojis = [
   { value: 2, emoji: "😔", label: "Low" },
   { value: 3, emoji: "😐", label: "Okay" },
   { value: 4, emoji: "😊", label: "Good" },
-  { value: 5, emoji: "😄", label: "Excellent" },
+  { value: 5, emoji: "😄", label: "Great" },
 ];
 
 export default function MoodSelector({
@@ -75,7 +75,7 @@ export default function MoodSelector({
           disabled={selectedMood === null}
           className="flex-1"
         >
-          Save Mood
+          Log mood
         </Button>
         {onCancel && (
           <Button onClick={() => { haptics.dismiss(); onCancel(); }} variant="outline">

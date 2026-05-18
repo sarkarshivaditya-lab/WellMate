@@ -86,7 +86,7 @@ export default function Pricing() {
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">Choose Your Plan</h1>
           <p className="text-lg text-muted-foreground">
-            Unlock your full wellness potential with Pro
+            More tools, when you're ready for them.
           </p>
         </div>
 

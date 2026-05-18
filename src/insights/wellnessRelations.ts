@@ -177,7 +177,7 @@ export function computeWellnessRelations(): WellnessRelation[] {
       relations.push({
         id: "sleep-consistency",
         modules: ["sleep"],
-        insight: `Your sleep schedule has been consistent over the past two weeks — that's a strong foundation.`,
+        insight: `Your sleep schedule has been consistent over the past two weeks — consistent timing tends to improve how rested you feel.`,
         trend: "positive",
         confidence: "high",
       });

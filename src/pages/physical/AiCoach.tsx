@@ -49,7 +49,7 @@ export default function AiCoach() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        text: "I apologize, but I'm having trouble responding right now. Please try again.",
+        text: "Something went wrong on our end — give it a moment and try again.",
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -66,7 +66,7 @@ export default function AiCoach() {
             <CardTitle>AI Wellness Coach</CardTitle>
           </div>
           <CardDescription>
-            Ask for personalized meal plans, workout routines, or nutrition advice
+            Ask about meals, movement, or nutrition — WellMate will do its best.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -76,7 +76,7 @@ export default function AiCoach() {
                 <SparklesIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-lg font-medium mb-2">Start a conversation</p>
                 <p className="text-sm">
-                  Try asking: "Help me lose 5 kg" or "Create a workout plan for strength"
+                  Try: "What should I eat this week?" or "Suggest a gentle workout to start with"
                 </p>
               </div>
             ) : (
