@@ -339,14 +339,14 @@ export default function Onboarding() {
               {step === 8 && "Your health snapshot"}
             </h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {step === 1 && "Let's personalize your health experience."}
-              {step === 2 && "These help us estimate your daily energy needs."}
+              {step === 1 && "A few questions — everything you share stays on your device."}
+              {step === 2 && "Used to calculate your daily energy estimate."}
               {step === 3 && "Your activity level shapes your calorie baseline."}
-              {step === 4 && "Daily movement helps refine accuracy."}
-              {step === 5 && "We'll adjust recommendations based on your goal."}
+              {step === 4 && "Helps refine your calorie estimate alongside your activity level."}
+              {step === 5 && "Shifts your calorie target to match your direction."}
               {step === 6 && "This helps prioritize strength vs balance."}
               {step === 7 && "Only if applicable to you."}
-              {step === 8 && "Here's what we've learned about you."}
+              {step === 8 && "A summary of what you've shared."}
             </p>
           </div>
         </div>
@@ -556,12 +556,12 @@ export default function Onboarding() {
 
         {step === 7 && sex !== "female" && (
           <ChoiceGroup
-            label="Do you have any additional health information to add?"
+            label="Anything else you'd like to include?"
             value={additionalHealthChoice}
             onChange={setAdditionalHealthChoice}
             options={[
-              ["yes", "Yes, add details"],
-              ["none", "No, continue"],
+              ["yes", "Yes, I'll add something"],
+              ["none", "No, that's all"],
               ["skip", "Skip for now"],
             ]}
           />
