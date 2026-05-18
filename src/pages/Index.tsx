@@ -16,6 +16,10 @@ import { cn } from "@/lib/utils";
 import { ActivityTimeline } from "@/components/timeline/ActivityTimeline";
 import { computeWellnessRelations } from "@/insights/wellnessRelations";
 import type { WellnessRelation } from "@/insights/wellnessRelations";
+import { WellnessScoreCard } from "@/components/intelligence/WellnessScoreCard";
+import { WeeklySummaryCard } from "@/components/intelligence/WeeklySummaryCard";
+import { useWellnessIntelligence } from "@/hooks/useWellnessIntelligence";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
 
 // ── Quick links ───────────────────────────────────────────────────────────────
 
@@ -94,12 +98,23 @@ function RelationCard({ relation }: { relation: WellnessRelation }) {
 // ── Overview ──────────────────────────────────────────────────────────────────
 
 export default function Overview() {
-  // Computed once per render — all local, no async
+  const localProfile = useLocalProfile();
+  const profile = localProfile
+    ? {
+        ...localProfile,
+        activityLevel: localProfile.activityLevel ?? undefined,
+        goal: localProfile.goal ?? undefined,
+      }
+    : null;
+  const intelligence = useWellnessIntelligence(profile);
   const relations = useMemo(() => computeWellnessRelations(), []);
 
   return (
     <PageLayout title="Overview" subtitle="Your wellness at a glance.">
       <div className="space-y-8">
+        {/* Composite wellness score */}
+        <WellnessScoreCard composite={intelligence.composite} />
+
         {/* Module quick-links */}
         <div className="space-y-3">
           <QuickLink
@@ -142,6 +157,14 @@ export default function Overview() {
             </div>
           </section>
         )}
+
+        {/* Weekly comparison */}
+        <section className="space-y-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
+            Week in review
+          </h2>
+          <WeeklySummaryCard comparison={intelligence.weeklyComparison} />
+        </section>
 
         {/* Recent activity timeline */}
         <section className="space-y-3">

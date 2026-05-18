@@ -2,6 +2,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SleepScoreCard } from "@/components/intelligence/SleepScoreCard";
+import { computeSleepScore, computeSleepDebt, computeSleepRecoveryReadiness } from "@/intelligence/sleepIntelligence";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +41,10 @@ export function SleepTabContent() {
 
   // Reactive — updates immediately when a log is added
   const sleep = useRecentSleepLogs(7);
+
+  const sleepScore = computeSleepScore();
+  const sleepDebt = computeSleepDebt();
+  const recoveryReadiness = computeSleepRecoveryReadiness();
 
   const handleAddSleep = () => {
     const now = new Date();
@@ -141,6 +147,12 @@ export function SleepTabContent() {
             Log Sleep
           </Button>
         </div>
+
+        <SleepScoreCard
+          sleepScore={sleepScore}
+          sleepDebt={sleepDebt}
+          recoveryReadiness={recoveryReadiness}
+        />
 
         <Card>
           <CardHeader>

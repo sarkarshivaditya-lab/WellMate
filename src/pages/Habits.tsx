@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HabitMomentumCard } from "@/components/intelligence/HabitMomentumCard";
+import { computeHabitScore, computeHabitStats } from "@/intelligence/habitIntelligence";
 import PageLayout from "@/components/layout/PageLayout";
 import {
   Empty,
@@ -59,6 +61,9 @@ export default function Habits() {
   const [reminderTime, setReminderTime] = useState("09:00");
 
   const today = localDateIso();
+
+  const habitScore = computeHabitScore();
+  const habitStats = computeHabitStats();
 
   const [habits, setHabits] = useState(() => listHabits());
   const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));
@@ -240,17 +245,21 @@ export default function Habits() {
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="space-y-3">
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.localId}
-              habit={habit as never}
-              isCompletedToday={isCompletedToday(habit.localId)}
-              streak={computeStreak(habit.localId, allEntries)}
-              onToggle={() => handleToggle(habit.localId)}
-              onArchive={() => handleArchive(habit.localId)}
-            />
-          ))}
+        <div className="space-y-4">
+          <HabitMomentumCard habitScore={habitScore} habitStats={habitStats} />
+
+          <div className="space-y-3">
+            {habits.map((habit) => (
+              <HabitCard
+                key={habit.localId}
+                habit={habit as never}
+                isCompletedToday={isCompletedToday(habit.localId)}
+                streak={computeStreak(habit.localId, allEntries)}
+                onToggle={() => handleToggle(habit.localId)}
+                onArchive={() => handleArchive(habit.localId)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </PageLayout>
