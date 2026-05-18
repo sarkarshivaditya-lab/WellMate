@@ -18,6 +18,7 @@ import { getPendingMeals } from "@/data/local/mealsStore";
 import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
 import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import NotificationSettings from "@/components/NotificationSettings";
+import { DataOwnershipCard } from "@/components/profile/DataOwnershipCard";
 
 /**
  * Profile / Settings
@@ -195,21 +196,7 @@ export default function Profile() {
       {/* =========================
           DATA & PRIVACY
          ========================= */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Data & Privacy</CardTitle>
-        </CardHeader>
-
-        <CardContent className="text-xs text-muted-foreground space-y-2">
-          <p>Your data is stored locally on this device by default.</p>
-          <p>
-            Signing in enables secure cloud backup and syncing across devices.
-          </p>
-          <p>
-            You stay in control — signing out will never delete local data.
-          </p>
-        </CardContent>
-      </Card>
+      <DataOwnershipCard />
 
       {/* =========================
           NOTIFICATIONS
