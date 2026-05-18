@@ -13,11 +13,12 @@ import { haptics } from "@/motion/haptics";
 import { emitAnalyticsEvent } from "@/analytics/eventBus";
 import { cn } from "@/lib/utils";
 
-// ── Search FAB ────────────────────────────────────────────────────────────────
-// Positioned bottom-left, mirroring WellMateLauncher on the right.
-// Provides a persistent mobile-friendly palette trigger without modifying nav.
+// ── Top search bar ────────────────────────────────────────────────────────────
+// Sits at the very top of the AppShell flex column, outside the scrollable
+// main container — so it stays visible regardless of scroll position without
+// needing fixed positioning. pt-[env(safe-area-inset-top)] handles notches.
 
-function SearchFab() {
+function TopSearchBar() {
   const { openPalette } = useCommandPalette();
 
   function handleOpen() {
@@ -27,22 +28,38 @@ function SearchFab() {
   }
 
   return (
-    <button
-      onClick={handleOpen}
-      aria-label="Open search"
+    <div
       className={cn(
-        "fixed z-40 left-4",
-        "bottom-[calc(env(safe-area-inset-bottom)+56px+12px)]",
-        "flex items-center gap-1.5 px-3 py-2 rounded-full",
-        "bg-background/90 backdrop-blur-md",
-        "border border-border/50 shadow-sm",
-        "text-muted-foreground text-xs font-medium",
-        "transition-premium active:scale-[0.95] hover:border-border/80 hover:text-foreground",
+        "w-full shrink-0",
+        "bg-background/85 backdrop-blur-xl",
+        "border-b border-border/20",
+        "pt-[env(safe-area-inset-top)]",
       )}
     >
-      <Search className="h-3.5 w-3.5" />
-      <span>Search</span>
-    </button>
+      <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2.5">
+        <button
+          type="button"
+          onClick={handleOpen}
+          aria-label="Search"
+          className={cn(
+            "w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl",
+            "bg-muted/40 hover:bg-muted/60",
+            "border border-border/25 hover:border-border/40",
+            "text-muted-foreground",
+            "transition-premium active:scale-[0.99]",
+          )}
+        >
+          <Search className="h-4 w-4 flex-shrink-0" />
+          <span className="text-[13px] flex-1 text-left">Search</span>
+          <kbd
+            aria-hidden
+            className="hidden sm:inline-flex items-center text-[10px] text-muted-foreground/40 border border-border/30 rounded px-1.5 py-0.5 font-medium"
+          >
+            ⌘K
+          </kbd>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -81,7 +98,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
 
-      {/* Connectivity + sync status strips — always above content */}
+      {/* Global search bar — above all page content, never scrolls */}
+      <TopSearchBar />
+
+      {/* Connectivity + sync status strips */}
       <OfflineBanner />
       <SyncPulse />
 
@@ -98,9 +118,6 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Persistent bottom navigation */}
       <BottomNav />
-
-      {/* Search FAB — bottom-left, above nav */}
-      <SearchFab />
 
       {/* Persistent WellMate launcher — bottom-right, above nav */}
       <WellMateLauncher />
