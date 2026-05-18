@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { X, Dumbbell, ChevronDown } from "lucide-react";
+import { X, Dumbbell, ChevronDown, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import Progress from "./Progress";
@@ -263,6 +263,155 @@ function WelcomeCard() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/* ======================================================
+   NUTRITION AI NOTICE
+   Shown above Progress (Daily Summary) in the Nutrition tab.
+   Communicates AI photo logging, barcode scanning, and
+   future nutrition intelligence. Same visual language as
+   sleep and activity notices. No hype.
+   ====================================================== */
+
+const NUTRITION_AI_FEATURES = [
+  "Photograph a meal to identify foods and estimate macronutrients",
+  "Automatic portion size recognition from image context",
+  "Meal composition breakdown without manual entry",
+  "Ingredient-level recognition for mixed dishes",
+  "Meal history organisation and pattern detection",
+];
+
+const BARCODE_FEATURES = [
+  "Scan packaged food labels for exact nutritional values",
+  "Serving-size-aware macro extraction",
+  "Faster logging with significantly lower friction",
+  "Comprehensive packaged food database integration",
+];
+
+const NUTRITION_INTELLIGENCE = [
+  "Longitudinal nutrition trend analysis across weeks and months",
+  "Correlation of dietary patterns with sleep, energy, and mood",
+  "Personalised macro guidance grounded in your wellness data",
+  "AI-assisted food understanding tailored to your health context",
+];
+
+function NutritionAINotice() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-3.5">
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 rounded-lg bg-primary/8 p-1.5">
+          <Camera className="h-3.5 w-3.5 text-primary/50" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-medium text-foreground/75 leading-snug">
+            AI-powered nutrition logging is in preparation
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
+            Current tracking prioritises simplicity and reliability. Photo-based meal
+            recognition and barcode scanning are being built into the platform.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse details" : "Expand details"}
+          className="mt-0.5 flex-shrink-0 rounded-md p-0.5 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors touch-manipulation"
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="mt-4 space-y-5 border-t border-border/15 pt-4">
+
+          {/* Photo-based logging */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              AI meal recognition
+            </p>
+            <p className="text-[12px] text-muted-foreground/70 leading-relaxed">
+              Future logging will allow you to photograph a meal and have the system
+              identify foods, estimate calories, and extract a macro breakdown — without
+              typing a single word.
+            </p>
+            <ul className="space-y-1.5 pt-0.5">
+              {NUTRITION_AI_FEATURES.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Barcode scanning */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Barcode scanning
+            </p>
+            <ul className="space-y-1.5">
+              {BARCODE_FEATURES.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Nutrition intelligence */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Longitudinal nutrition intelligence
+            </p>
+            <ul className="space-y-1.5">
+              {NUTRITION_INTELLIGENCE.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Closing note */}
+          <div className="rounded-xl bg-muted/20 border border-border/10 px-3 py-3 space-y-1.5">
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              AI meal recognition and barcode scanning require production-level model
+              integration, nutrition database partnerships, and on-device processing
+              infrastructure. WellMate is building these systems carefully — prioritising
+              accuracy, privacy, and local-first data handling where the platform allows.
+            </p>
+            <p className="text-[11px] text-muted-foreground/55 leading-relaxed">
+              Current nutrition tracking is intentionally straightforward. When AI logging
+              is introduced, it will connect directly into the longitudinal wellness
+              intelligence layer — enabling personalised insights that span nutrition,
+              energy, recovery, and long-term health patterns.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -543,6 +692,7 @@ export default function PhysicalDashboard() {
 
       {tab === "nutrition" && (
         <div key="nutrition" className="space-y-6 animate-wm-tab-in">
+          <NutritionAINotice />
           <Progress />
           <FoodLog />
         </div>
