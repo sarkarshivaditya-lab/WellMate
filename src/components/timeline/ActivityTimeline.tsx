@@ -13,54 +13,18 @@ import {
   Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { moduleColors } from "@/design/tokens";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import type { SearchModule } from "@/search/searchTypes";
 import { haptics } from "@/motion/haptics";
 
-const MODULE_CONFIG: Record<
-  SearchModule,
-  { icon: React.ReactNode; color: string; bg: string }
-> = {
-  meal: {
-    icon: <UtensilsCrossed className="h-3.5 w-3.5" />,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-500/10",
-  },
-  exercise: {
-    icon: <Dumbbell className="h-3.5 w-3.5" />,
-    color: "text-blue-600 dark:text-blue-400",
-    bg: "bg-blue-500/10",
-  },
-  sleep: {
-    icon: <Moon className="h-3.5 w-3.5" />,
-    color: "text-indigo-600 dark:text-indigo-400",
-    bg: "bg-indigo-500/10",
-  },
-  mood: {
-    icon: <Smile className="h-3.5 w-3.5" />,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-500/10",
-  },
-  journal: {
-    icon: <BookOpen className="h-3.5 w-3.5" />,
-    color: "text-violet-600 dark:text-violet-400",
-    bg: "bg-violet-500/10",
-  },
-  habit: {
-    icon: <Repeat className="h-3.5 w-3.5" />,
-    color: "text-rose-600 dark:text-rose-400",
-    bg: "bg-rose-500/10",
-  },
-  navigation: {
-    icon: null,
-    color: "text-muted-foreground",
-    bg: "bg-muted",
-  },
-  action: {
-    icon: null,
-    color: "text-muted-foreground",
-    bg: "bg-muted",
-  },
+const MODULE_ICONS: Partial<Record<SearchModule, React.ReactNode>> = {
+  meal:     <UtensilsCrossed className="h-3.5 w-3.5" />,
+  exercise: <Dumbbell className="h-3.5 w-3.5" />,
+  sleep:    <Moon className="h-3.5 w-3.5" />,
+  mood:     <Smile className="h-3.5 w-3.5" />,
+  journal:  <BookOpen className="h-3.5 w-3.5" />,
+  habit:    <Repeat className="h-3.5 w-3.5" />,
 };
 
 function relativeTime(ts: number | undefined): string {
@@ -91,7 +55,8 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
   return (
     <div className={cn("space-y-2", className)}>
       {items.map((item, i) => {
-        const config = MODULE_CONFIG[item.module] ?? MODULE_CONFIG.action;
+        const colors = moduleColors[item.module] ?? moduleColors.action;
+        const icon = MODULE_ICONS[item.module] ?? null;
 
         return (
           <button
@@ -109,7 +74,6 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
               "transition-premium active:scale-[0.98]",
               "text-left",
               item.route ? "cursor-pointer" : "cursor-default",
-              // Staggered entrance
               i === 0 && "animate-wm-fade-1",
               i === 1 && "animate-wm-fade-2",
               i === 2 && "animate-wm-fade-3",
@@ -120,11 +84,11 @@ export function ActivityTimeline({ limit = 6, className }: Props) {
             <span
               className={cn(
                 "flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg",
-                config.bg,
-                config.color,
+                colors.bg,
+                colors.text,
               )}
             >
-              {config.icon}
+              {icon}
             </span>
 
             {/* Content */}

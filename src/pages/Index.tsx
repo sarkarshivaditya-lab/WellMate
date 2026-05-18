@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   ChevronRight,
   Activity,
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { ActivityTimeline } from "@/components/timeline/ActivityTimeline";
 import { computeWellnessRelations } from "@/insights/wellnessRelations";
 import type { WellnessRelation } from "@/insights/wellnessRelations";
+import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { WellnessScoreCard } from "@/components/intelligence/WellnessScoreCard";
 import { WeeklySummaryCard } from "@/components/intelligence/WeeklySummaryCard";
 import { useWellnessIntelligence } from "@/hooks/useWellnessIntelligence";
@@ -95,6 +97,20 @@ function RelationCard({ relation }: { relation: WellnessRelation }) {
   );
 }
 
+// ── Recent activity (gated) ───────────────────────────────────────────────────
+// Returns null — no orphaned section header — when the user has no logged data.
+
+function RecentActivitySection() {
+  const items = useRecentActivity(6);
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-3">
+      <SectionHeader label="Recent activity" />
+      <ActivityTimeline limit={6} />
+    </section>
+  );
+}
+
 // ── Overview ──────────────────────────────────────────────────────────────────
 
 export default function Overview() {
@@ -147,9 +163,7 @@ export default function Overview() {
         {/* Cross-module wellness insights — only shown when enough data exists */}
         {relations.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
-              Patterns
-            </h2>
+            <SectionHeader label="Patterns" />
             <div className="space-y-2">
               {relations.map((r) => (
                 <RelationCard key={r.id} relation={r} />
@@ -160,19 +174,12 @@ export default function Overview() {
 
         {/* Weekly comparison */}
         <section className="space-y-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
-            Week in review
-          </h2>
+          <SectionHeader label="Week in review" />
           <WeeklySummaryCard comparison={intelligence.weeklyComparison} />
         </section>
 
-        {/* Recent activity timeline */}
-        <section className="space-y-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
-            Recent activity
-          </h2>
-          <ActivityTimeline limit={6} />
-        </section>
+        {/* Recent activity timeline — omit section entirely when no items */}
+        <RecentActivitySection />
       </div>
     </PageLayout>
   );
