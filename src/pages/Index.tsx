@@ -1,8 +1,23 @@
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Activity, Brain, Repeat, Moon } from "lucide-react";
+import {
+  ChevronRight,
+  Activity,
+  Brain,
+  Repeat,
+  Moon,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ActivityTimeline } from "@/components/timeline/ActivityTimeline";
+import { computeWellnessRelations } from "@/insights/wellnessRelations";
+import type { WellnessRelation } from "@/insights/wellnessRelations";
+
+// ── Quick links ───────────────────────────────────────────────────────────────
 
 type QuickLinkProps = {
   to: string;
@@ -32,7 +47,9 @@ function QuickLink({ to, icon, label, description, accent }: QuickLinkProps) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold leading-tight">{label}</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5 leading-snug">
+              {description}
+            </p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
         </CardContent>
@@ -41,38 +58,98 @@ function QuickLink({ to, icon, label, description, accent }: QuickLinkProps) {
   );
 }
 
-export default function Overview() {
+// ── Wellness relation card ─────────────────────────────────────────────────────
+
+function RelationCard({ relation }: { relation: WellnessRelation }) {
+  const TrendIcon =
+    relation.trend === "positive"
+      ? TrendingUp
+      : relation.trend === "negative"
+        ? TrendingDown
+        : Minus;
+
+  const trendColor =
+    relation.trend === "positive"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : relation.trend === "negative"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-muted-foreground";
+
   return (
-    <PageLayout
-      title="Overview"
-      subtitle="Everything in one place."
+    <div
+      className={cn(
+        "px-4 py-3.5 rounded-2xl",
+        "bg-card/60 border border-border/30",
+        "flex items-start gap-3",
+      )}
     >
-      <div className="space-y-3">
-        <QuickLink
-          to="/physical"
-          icon={<Activity className="h-4 w-4" />}
-          label="Physical Health"
-          description="Activity, nutrition, and body metrics"
-          accent
-        />
-        <QuickLink
-          to="/mental"
-          icon={<Brain className="h-4 w-4" />}
-          label="Mental Wellbeing"
-          description="Mood, journal, and mindfulness"
-        />
-        <QuickLink
-          to="/habits"
-          icon={<Repeat className="h-4 w-4" />}
-          label="Habits"
-          description="Build consistency through daily actions"
-        />
-        <QuickLink
-          to="/sleep"
-          icon={<Moon className="h-4 w-4" />}
-          label="Sleep"
-          description="Track rest quality and patterns"
-        />
+      <span className={cn("mt-0.5 flex-shrink-0", trendColor)}>
+        <TrendIcon className="h-4 w-4" />
+      </span>
+      <p className="text-[13px] text-foreground/90 leading-snug">{relation.insight}</p>
+    </div>
+  );
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+
+export default function Overview() {
+  // Computed once per render — all local, no async
+  const relations = useMemo(() => computeWellnessRelations(), []);
+
+  return (
+    <PageLayout title="Overview" subtitle="Your wellness at a glance.">
+      <div className="space-y-8">
+        {/* Module quick-links */}
+        <div className="space-y-3">
+          <QuickLink
+            to="/physical"
+            icon={<Activity className="h-4 w-4" />}
+            label="Physical Health"
+            description="Activity, nutrition, and body metrics"
+            accent
+          />
+          <QuickLink
+            to="/mental"
+            icon={<Brain className="h-4 w-4" />}
+            label="Mental Wellbeing"
+            description="Mood, journal, and mindfulness"
+          />
+          <QuickLink
+            to="/habits"
+            icon={<Repeat className="h-4 w-4" />}
+            label="Habits"
+            description="Build consistency through daily actions"
+          />
+          <QuickLink
+            to="/sleep"
+            icon={<Moon className="h-4 w-4" />}
+            label="Sleep"
+            description="Track rest quality and patterns"
+          />
+        </div>
+
+        {/* Cross-module wellness insights — only shown when enough data exists */}
+        {relations.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
+              Patterns
+            </h2>
+            <div className="space-y-2">
+              {relations.map((r) => (
+                <RelationCard key={r.id} relation={r} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recent activity timeline */}
+        <section className="space-y-3">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
+            Recent activity
+          </h2>
+          <ActivityTimeline limit={6} />
+        </section>
       </div>
     </PageLayout>
   );

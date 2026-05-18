@@ -19,7 +19,9 @@ export type FeatureName =
   | "ai_coach"
   | "ai_mental_coach"
   | "profile"
-  | "dashboard";
+  | "dashboard"
+  | "search"
+  | "quick_add";
 
 export type AnalyticsEvent =
   | { type: "session_started"; sessionId: string; ts: number }
@@ -30,7 +32,10 @@ export type AnalyticsEvent =
   | { type: "feature_opened"; feature: FeatureName; ts: number }
   | { type: "onboarding_completed"; ts: number }
   | { type: "connectivity_restored"; ts: number }
-  | { type: "connectivity_lost"; ts: number };
+  | { type: "connectivity_lost"; ts: number }
+  | { type: "command_palette_opened"; ts: number }
+  | { type: "search_performed"; query_length: number; result_count: number; ts: number }
+  | { type: "quick_add_used"; entity: WellnessEntity; ts: number };
 
 export type DailySummary = {
   date: string;             // YYYY-MM-DD
