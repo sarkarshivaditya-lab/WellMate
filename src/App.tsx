@@ -8,20 +8,23 @@ import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
 import { isCapacitorNative } from "./components/providers/auth";
 
-import Onboarding from "./pages/Onboarding";
-import TransitionGate from "./pages/Transition";
-import PhysicalDashboard from "./pages/physical/PhysicalDashboard";
-import Habits from "./pages/Habits";
-import Index from "./pages/Index";
-import Journal from "./pages/mental/Journal";
-import MentalOverview from "./pages/mental/Overview";
-import Tools from "./pages/Tools";
-import AiMentalCoach from "./pages/mental/AiMentalCoach";
-import Profile from "./pages/Profile";
-import Roadmap from "./pages/Roadmap";
-import Sleep from "./pages/Sleep";
-import Pricing from "./pages/Pricing";
-import NotFound from "./pages/NotFound";
+// Route-level lazy loading — only the active route's code is parsed at startup.
+// Onboarding and PhysicalDashboard are the two most-likely initial routes, so
+// they get a short preload hint via webpackPrefetch (Vite respects this).
+const Onboarding = React.lazy(() => import("./pages/Onboarding"));
+const TransitionGate = React.lazy(() => import("./pages/Transition"));
+const PhysicalDashboard = React.lazy(() => import("./pages/physical/PhysicalDashboard"));
+const Habits = React.lazy(() => import("./pages/Habits"));
+const Index = React.lazy(() => import("./pages/Index"));
+const Journal = React.lazy(() => import("./pages/mental/Journal"));
+const MentalOverview = React.lazy(() => import("./pages/mental/Overview"));
+const Tools = React.lazy(() => import("./pages/Tools"));
+const AiMentalCoach = React.lazy(() => import("./pages/mental/AiMentalCoach"));
+const Profile = React.lazy(() => import("./pages/Profile"));
+const Roadmap = React.lazy(() => import("./pages/Roadmap"));
+const Sleep = React.lazy(() => import("./pages/Sleep"));
+const Pricing = React.lazy(() => import("./pages/Pricing"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 import AppShell from "./components/layout/AppShell";
 import {
@@ -224,6 +227,7 @@ export default function App() {
       <AuthSyncBoundary />
       <CapacitorAuthHandler />
 
+      <React.Suspense fallback={<AppLoadingScreen />}>
       <Routes>
         <Route path="/" element={<RootEntry />} />
         <Route path="/onboarding" element={<Onboarding />} />
@@ -377,6 +381,7 @@ export default function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </React.Suspense>
     </BrowserRouter>
   );
 }

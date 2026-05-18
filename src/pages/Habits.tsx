@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HabitMomentumCard } from "@/components/intelligence/HabitMomentumCard";
@@ -62,12 +62,14 @@ export default function Habits() {
 
   const today = localDateIso();
 
-  const habitScore = computeHabitScore();
-  const habitStats = computeHabitStats();
-
   const [habits, setHabits] = useState(() => listHabits());
   const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));
   const [allEntries, setAllEntries] = useState(() => listAllEntries());
+
+  // Memoized so intelligence doesn't recompute on dialog/input re-renders —
+  // only recomputes when actual habit data changes.
+  const habitScore = useMemo(() => computeHabitScore(), [allEntries]);
+  const habitStats = useMemo(() => computeHabitStats(), [allEntries]);
 
   const handleAddHabit = () => {
     if (!title.trim()) {

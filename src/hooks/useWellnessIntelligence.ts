@@ -1,8 +1,10 @@
 // src/hooks/useWellnessIntelligence.ts
 // Reactive hook for all intelligence domain scores.
 // Subscribes to all local stores — recomputes on any wellness data change.
+// Debounced at 250ms so rapid sequential writes (e.g. QuickAdd) only trigger
+// one recompute rather than one per store mutation.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { subscribeToMeals } from "@/data/local/mealsStore";
 import { subscribeToExercises } from "@/data/local/exercises";
 import { subscribeToSleep } from "@/data/local/sleepStore";
@@ -58,9 +60,18 @@ export function useWellnessIntelligence(profile: UserProfile): WellnessIntellige
   const [intelligence, setIntelligence] = useState<WellnessIntelligence>(
     () => compute(profile),
   );
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   useEffect(() => {
-    const refresh = () => setIntelligence(compute(profile));
+    const refresh = () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        setIntelligence(compute(profileRef.current));
+      }, 250);
+    };
 
     const unsubs = [
       subscribeToMeals(refresh),
@@ -70,8 +81,11 @@ export function useWellnessIntelligence(profile: UserProfile): WellnessIntellige
       subscribeToJournal(refresh),
     ];
 
-    return () => unsubs.forEach((u) => u());
-  }, [profile]);
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      unsubs.forEach((u) => u());
+    };
+  }, []);
 
   return intelligence;
 }

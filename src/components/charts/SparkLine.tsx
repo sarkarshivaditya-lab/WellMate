@@ -6,7 +6,7 @@
 //   <SparkLine data={[3,4,4,5,3,4]} />
 //   <SparkLine data={moodHistory} module="mood" height={80} />
 
-import React from "react";
+import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { moduleColors } from "@/design/tokens";
 import type { WellnessModule } from "@/design/tokens";
@@ -60,28 +60,32 @@ export function SparkLine({
     );
   }
 
-  const padding = { x: 8, y: 8 };
-  const chartW = width - padding.x * 2;
-  const chartH = height - padding.y * 2;
+  const { points, linePath, areaPath } = useMemo(() => {
+    const padding = { x: 8, y: 8 };
+    const chartW = width - padding.x * 2;
+    const chartH = height - padding.y * 2;
 
-  const minVal = Math.min(...data);
-  const maxVal = Math.max(...data);
-  const range = maxVal - minVal || 1;
+    const minVal = Math.min(...data);
+    const maxVal = Math.max(...data);
+    const range = maxVal - minVal || 1;
 
-  const points = data.map((v, i) => ({
-    x: padding.x + (i / (data.length - 1)) * chartW,
-    y: padding.y + chartH - ((v - minVal) / range) * chartH,
-  }));
+    const pts = data.map((v, i) => ({
+      x: padding.x + (i / (data.length - 1)) * chartW,
+      y: padding.y + chartH - ((v - minVal) / range) * chartH,
+    }));
 
-  const linePath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
-    .join(" ");
+    const line = pts
+      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(" ");
 
-  const areaPath = [
-    linePath,
-    `L ${points[points.length - 1].x.toFixed(1)},${(height - padding.y).toFixed(1)}`,
-    `L ${points[0].x.toFixed(1)},${(height - padding.y).toFixed(1)} Z`,
-  ].join(" ");
+    const area = [
+      line,
+      `L ${pts[pts.length - 1].x.toFixed(1)},${(height - padding.y).toFixed(1)}`,
+      `L ${pts[0].x.toFixed(1)},${(height - padding.y).toFixed(1)} Z`,
+    ].join(" ");
+
+    return { points: pts, linePath: line, areaPath: area };
+  }, [data, width, height]);
 
   return (
     <svg

@@ -206,21 +206,6 @@ export function WellmateCommandPalette() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddEntity, setQuickAddEntity] = useState<QuickEntity>("mood");
 
-  // Keyboard shortcut — Cmd+K / Ctrl+K
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        if (!open) {
-          emitAnalyticsEvent({ type: "command_palette_opened", ts: Date.now() });
-          // Opened via context — need to call openPalette from consumer
-        }
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-
   // Reset query on open/close
   useEffect(() => {
     if (!open) setQuery("");

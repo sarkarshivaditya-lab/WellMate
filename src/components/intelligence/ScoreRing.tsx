@@ -2,7 +2,7 @@
 // Reusable SVG arc score visualisation.
 // Calm, minimal — not a dashboard widget, a quiet signal.
 
-import React from "react";
+import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { ScoreLevel } from "@/intelligence/types";
 
@@ -35,11 +35,18 @@ export function ScoreRing({
   label,
   className,
 }: Props) {
-  const radius = (size - strokeWidth * 2) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(100, Math.max(0, score));
-  const dashOffset = circumference - (progress / 100) * circumference;
-  const center = size / 2;
+  const { radius, circumference, dashOffset, center, progress } = useMemo(() => {
+    const r = (size - strokeWidth * 2) / 2;
+    const c = 2 * Math.PI * r;
+    const p = Math.min(100, Math.max(0, score));
+    return {
+      radius: r,
+      circumference: c,
+      dashOffset: c - (p / 100) * c,
+      center: size / 2,
+      progress: p,
+    };
+  }, [score, size, strokeWidth]);
 
   return (
     <div className={cn("flex flex-col items-center gap-1", className)}>
