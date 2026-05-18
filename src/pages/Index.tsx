@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { openWellMate } from "@/ai/wellMateEvents";
+import { generateRecommendationFollowUps } from "@/ai/conversationalPrimitives";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -174,6 +176,13 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
     rec.explainability.reason.length > 0 ||
     rec.explainability.contributingSignals.length > 0;
 
+  function handleAskWellMate() {
+    const followUps = generateRecommendationFollowUps(rec);
+    const prompt = followUps[0]?.text ?? `Tell me more about my ${rec.category.replace(/_/g, " ")}`;
+    const grounding = rec.explainability.reason || undefined;
+    openWellMate({ prompt, grounding });
+  }
+
   return (
     <div
       className={cn(
@@ -188,16 +197,25 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         <div className="space-y-0.5 min-w-0 flex-1">
           <p className="text-[13px] font-medium text-foreground/90 leading-snug">{rec.title}</p>
           <p className="text-[12px] text-muted-foreground leading-relaxed">{rec.body}</p>
-          {hasExplainability && (
+          <div className="flex items-center gap-3 mt-1">
+            {hasExplainability && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                aria-expanded={expanded}
+                className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+              >
+                {expanded ? "Less" : "Why?"}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-              className="mt-1 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+              onClick={handleAskWellMate}
+              className="text-[11px] text-primary/50 hover:text-primary/80 transition-colors touch-manipulation"
             >
-              {expanded ? "Less" : "Why?"}
+              Ask WellMate →
             </button>
-          )}
+          </div>
         </div>
       </div>
       {expanded && hasExplainability && (

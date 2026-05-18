@@ -14,6 +14,20 @@ import { SignalPill } from "@/components/ui/signal-pill";
 import { TrendBadge } from "@/components/ui/trend-badge";
 import { ScoreRing } from "./ScoreRing";
 import type { WellnessScore } from "@/intelligence/types";
+import { openWellMate } from "@/ai/wellMateEvents";
+import { generateDomainInvocation } from "@/ai/conversationalPrimitives";
+import type { MemoryDomain } from "@/intelligence/memory/types";
+
+// Domain label → memory domain key for conversation invocation
+const DOMAIN_MAP: Record<string, MemoryDomain> = {
+  Sleep: "sleep",
+  Activity: "activity",
+  Recovery: "activity",
+  Nutrition: "nutrition",
+  Habits: "habits",
+  Mood: "mood",
+  Wellness: "composite",
+};
 
 type Props = {
   open: boolean;
@@ -37,6 +51,14 @@ export function ScoreExplainerSheet({
     score.dataQuality === "partial"
       ? `Accuracy will improve with more ${domainLabel.toLowerCase()} entries. The current score reflects the data logged so far.`
       : null;
+
+  const memoryDomain = DOMAIN_MAP[domainLabel] ?? "composite";
+
+  function handleAskWellMate() {
+    const prompt = generateDomainInvocation(memoryDomain, score.headline);
+    onClose();
+    setTimeout(() => openWellMate({ prompt }), 120);
+  }
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -119,6 +141,22 @@ export function ScoreExplainerSheet({
               </p>
             </div>
           )}
+
+          {/* WellMate conversation entry point */}
+          <div className="pt-1 border-t border-border/20">
+            <button
+              type="button"
+              onClick={handleAskWellMate}
+              className="w-full rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-premium px-4 py-3 text-left flex items-center justify-between gap-2"
+            >
+              <span className="text-[12px] text-muted-foreground">
+                Ask WellMate about your {domainLabel.toLowerCase()}
+              </span>
+              <span className="text-[11px] text-primary/60 font-medium flex-shrink-0">
+                Chat →
+              </span>
+            </button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

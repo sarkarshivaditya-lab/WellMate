@@ -1,3 +1,10 @@
+import { safeRead, safeWrite } from "@/reliability/persistence";
+import {
+  registerStorageKey,
+  mergeVersionedArrays,
+  parseStorageValue,
+} from "@/reliability/storageSync";
+
 export type HabitCadence = "daily" | "weekly" | "custom";
 
 export type LocalHabit = {
@@ -23,57 +30,126 @@ export type LocalHabitEntry = {
 const HABITS_KEY = "local_habits";
 const HABIT_ENTRIES_KEY = "local_habit_entries";
 
-function load<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+/* --------------------------------------------------
+   IN-MEMORY CACHE + SUBSCRIPTION
+   -------------------------------------------------- */
+
+type Listener = () => void;
+const habitListeners = new Set<Listener>();
+const entryListeners = new Set<Listener>();
+
+let cachedHabits: LocalHabit[] = hydrateHabits();
+let cachedEntries: LocalHabitEntry[] = hydrateEntries();
+
+function hydrateHabits(): LocalHabit[] {
+  const raw = safeRead<unknown[]>(HABITS_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    const h = item as Record<string, unknown>;
+    return {
+      localId: String(h.localId ?? ""),
+      title: String(h.title ?? ""),
+      description: h.description !== undefined ? String(h.description) : undefined,
+      cadence: (["daily", "weekly", "custom"].includes(String(h.cadence)) ? h.cadence : "daily") as HabitCadence,
+      remindersEnabled: Boolean(h.remindersEnabled),
+      reminderTime: h.reminderTime !== undefined ? String(h.reminderTime) : undefined,
+      archived: Boolean(h.archived),
+      createdAt: Number(h.createdAt ?? 0),
+      updatedAt: Number(h.updatedAt ?? 0),
+    };
+  }).filter((h) => h.localId && h.title);
 }
 
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
+function hydrateEntries(): LocalHabitEntry[] {
+  const raw = safeRead<unknown[]>(HABIT_ENTRIES_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item) => {
+    const e = item as Record<string, unknown>;
+    return {
+      habitLocalId: String(e.habitLocalId ?? ""),
+      dateIso: String(e.dateIso ?? ""),
+      completed: Boolean(e.completed),
+      note: e.note !== undefined ? String(e.note) : undefined,
+      updatedAt: Number(e.updatedAt ?? 0),
+    };
+  }).filter((e) => e.habitLocalId && e.dateIso);
 }
+
+function flushHabits() {
+  safeWrite(HABITS_KEY, cachedHabits);
+}
+
+function flushEntries() {
+  safeWrite(HABIT_ENTRIES_KEY, cachedEntries);
+}
+
+function notifyHabits() {
+  habitListeners.forEach((l) => { try { l(); } catch { /* never crash */ } });
+}
+
+function notifyEntries() {
+  entryListeners.forEach((l) => { try { l(); } catch { /* never crash */ } });
+}
+
+export function subscribeToHabits(listener: Listener): () => void {
+  habitListeners.add(listener);
+  return () => habitListeners.delete(listener);
+}
+
+export function subscribeToHabitEntries(listener: Listener): () => void {
+  entryListeners.add(listener);
+  return () => entryListeners.delete(listener);
+}
+
+// Cross-tab consistency: when another tab writes habits, merge with our cache
+registerStorageKey(HABITS_KEY, (rawValue) => {
+  const remote = parseStorageValue<LocalHabit[]>(rawValue);
+  if (!Array.isArray(remote)) return;
+  const merged = mergeVersionedArrays(cachedHabits, remote, "localId");
+  if (merged.length !== cachedHabits.length || merged.some((r, i) => r.localId !== cachedHabits[i]?.localId)) {
+    cachedHabits = merged;
+    notifyHabits();
+  }
+});
+
+registerStorageKey(HABIT_ENTRIES_KEY, (rawValue) => {
+  const remote = parseStorageValue<LocalHabitEntry[]>(rawValue);
+  if (!Array.isArray(remote)) return;
+  // Use composite key for entries (habitLocalId + dateIso)
+  const mergedMap = new Map<string, LocalHabitEntry>();
+  for (const e of cachedEntries) mergedMap.set(`${e.habitLocalId}:${e.dateIso}`, e);
+  for (const e of remote) {
+    const key = `${e.habitLocalId}:${e.dateIso}`;
+    const existing = mergedMap.get(key);
+    if (!existing || e.updatedAt > existing.updatedAt) {
+      mergedMap.set(key, e);
+    }
+  }
+  const merged = Array.from(mergedMap.values());
+  if (merged.length !== cachedEntries.length) {
+    cachedEntries = merged;
+    notifyEntries();
+  }
+});
+
+/* --------------------------------------------------
+   QUERIES
+   -------------------------------------------------- */
 
 export function listHabits(): LocalHabit[] {
-  return load<LocalHabit[]>(HABITS_KEY, []).filter((h) => !h.archived);
+  return cachedHabits.filter((h) => !h.archived);
 }
 
-export function addHabit(input: Omit<LocalHabit, "localId" | "createdAt" | "updatedAt" | "archived">) {
-  const habits = load<LocalHabit[]>(HABITS_KEY, []);
-  const now = Date.now();
-  const habit: LocalHabit = {
-    localId: crypto.randomUUID(),
-    archived: false,
-    createdAt: now,
-    updatedAt: now,
-    ...input,
-  };
-  habits.push(habit);
-  save(HABITS_KEY, habits);
-  return habit;
-}
-
-export function updateHabit(localId: string, patch: Partial<LocalHabit>) {
-  const habits = load<LocalHabit[]>(HABITS_KEY, []);
-  const idx = habits.findIndex((h) => h.localId === localId);
-  if (idx === -1) return;
-  habits[idx] = { ...habits[idx], ...patch, updatedAt: Date.now() };
-  save(HABITS_KEY, habits);
-}
-
-export function archiveHabit(localId: string) {
-  updateHabit(localId, { archived: true });
+export function listAllHabits(): LocalHabit[] {
+  return cachedHabits;
 }
 
 export function listEntriesByDate(dateIso: string): LocalHabitEntry[] {
-  const entries = load<LocalHabitEntry[]>(HABIT_ENTRIES_KEY, []);
-  return entries.filter((e) => e.dateIso === dateIso);
+  return cachedEntries.filter((e) => e.dateIso === dateIso);
 }
 
 export function listAllEntries(): LocalHabitEntry[] {
-  return load<LocalHabitEntry[]>(HABIT_ENTRIES_KEY, []);
+  return cachedEntries;
 }
 
 export function computeStreak(habitLocalId: string, entries: LocalHabitEntry[]): number {
@@ -104,25 +180,60 @@ export function computeStreak(habitLocalId: string, entries: LocalHabitEntry[]):
   return streak;
 }
 
-export function toggleEntry(localHabitId: string, dateIso: string) {
-  const entries = load<LocalHabitEntry[]>(HABIT_ENTRIES_KEY, []);
-  const idx = entries.findIndex(
+/* --------------------------------------------------
+   MUTATIONS
+   -------------------------------------------------- */
+
+export function addHabit(input: Omit<LocalHabit, "localId" | "createdAt" | "updatedAt" | "archived">): LocalHabit {
+  const now = Date.now();
+  const habit: LocalHabit = {
+    localId: crypto.randomUUID(),
+    archived: false,
+    createdAt: now,
+    updatedAt: now,
+    ...input,
+  };
+  cachedHabits = [...cachedHabits, habit];
+  flushHabits();
+  notifyHabits();
+  return habit;
+}
+
+export function updateHabit(localId: string, patch: Partial<LocalHabit>): void {
+  const idx = cachedHabits.findIndex((h) => h.localId === localId);
+  if (idx === -1) return;
+  cachedHabits = cachedHabits.map((h, i) =>
+    i === idx ? { ...h, ...patch, updatedAt: Date.now() } : h,
+  );
+  flushHabits();
+  notifyHabits();
+}
+
+export function archiveHabit(localId: string): void {
+  updateHabit(localId, { archived: true });
+}
+
+export function toggleEntry(localHabitId: string, dateIso: string): void {
+  const key = `${localHabitId}:${dateIso}`;
+  const now = Date.now();
+  const existing = cachedEntries.find(
     (e) => e.habitLocalId === localHabitId && e.dateIso === dateIso,
   );
-  const now = Date.now();
-  if (idx !== -1) {
-    entries[idx] = {
-      ...entries[idx],
-      completed: !entries[idx].completed,
-      updatedAt: now,
-    };
+
+  if (existing) {
+    cachedEntries = cachedEntries.map((e) =>
+      e.habitLocalId === localHabitId && e.dateIso === dateIso
+        ? { ...e, completed: !e.completed, updatedAt: now }
+        : e,
+    );
   } else {
-    entries.push({
-      habitLocalId: localHabitId,
-      dateIso,
-      completed: true,
-      updatedAt: now,
-    });
+    cachedEntries = [
+      ...cachedEntries,
+      { habitLocalId: localHabitId, dateIso, completed: true, updatedAt: now },
+    ];
   }
-  save(HABIT_ENTRIES_KEY, entries);
+
+  void key; // suppress unused variable
+  flushEntries();
+  notifyEntries();
 }

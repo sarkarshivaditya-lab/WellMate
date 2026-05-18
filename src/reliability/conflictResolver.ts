@@ -32,6 +32,7 @@
 
 import { recordDiagnosticEvent } from "./diagnostics";
 import { track } from "@/telemetry/telemetry";
+import { safeRead, safeWrite } from "./persistence";
 
 /* --------------------------------------------------
    TYPES
@@ -68,23 +69,51 @@ type ConflictResolution<T> = {
 };
 
 /* --------------------------------------------------
-   CONFLICT LOG (IN-MEMORY RING BUFFER)
+   CONFLICT LOG (PERSISTED RING BUFFER)
+   Survives reloads — essential for debugging conflicts
+   that occur mid-session and for AI memory auditing.
    -------------------------------------------------- */
 
+const CONFLICT_LOG_KEY = "wellmate_conflict_log_v1";
 const MAX_LOG = 50;
-const conflictLog: ConflictRecord[] = [];
+
+let conflictLog: ConflictRecord[] = safeRead<ConflictRecord[]>(CONFLICT_LOG_KEY, []);
+
+type ConflictLogListener = () => void;
+const conflictListeners = new Set<ConflictLogListener>();
+
+export function subscribeToConflictLog(listener: ConflictLogListener): () => void {
+  conflictListeners.add(listener);
+  return () => conflictListeners.delete(listener);
+}
 
 export function getConflictLog(): readonly ConflictRecord[] {
   return conflictLog;
 }
 
+function flushConflictLog(): void {
+  safeWrite(CONFLICT_LOG_KEY, conflictLog);
+}
+
+function notifyConflictListeners(): void {
+  conflictListeners.forEach((l) => { try { l(); } catch { /* never crash */ } });
+}
+
 function logConflict(record: ConflictRecord) {
-  conflictLog.push(record);
-  if (conflictLog.length > MAX_LOG) conflictLog.shift();
+  conflictLog = [...conflictLog, record];
+  if (conflictLog.length > MAX_LOG) conflictLog = conflictLog.slice(conflictLog.length - MAX_LOG);
+  flushConflictLog();
+  notifyConflictListeners();
   recordDiagnosticEvent("conflict_detected", {
     entityType: record.entityType,
     conflictType: record.conflictType,
   });
+}
+
+export function clearConflictLog(): void {
+  conflictLog = [];
+  flushConflictLog();
+  notifyConflictListeners();
 }
 
 /* --------------------------------------------------

@@ -140,13 +140,31 @@ function SyncWorker() {
   // Connectivity-aware online-resume trigger.
   // Unlike the old approach, this runs on EVERY reconnect (not just the first),
   // and only if there is actually pending work — avoiding no-op syncs.
+  //
+  // Debounced by 2 seconds: unstable mobile connections (airplane mode toggle,
+  // brief signal drops) can fire online/offline events rapidly. Without a debounce,
+  // each online event triggers a sync attempt that hits the isSyncing gate and aborts —
+  // harmless but wasteful on battery. The debounce absorbs flapping and fires once
+  // when the connection stabilises.
+  const connectivityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const unsub = subscribeToConnectivity((state) => {
       if (state === "online" && hasPendingWork()) {
-        doSync.current();
+        if (connectivityDebounceRef.current) clearTimeout(connectivityDebounceRef.current);
+        connectivityDebounceRef.current = setTimeout(() => {
+          connectivityDebounceRef.current = null;
+          doSync.current();
+        }, 2000);
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+      if (connectivityDebounceRef.current) {
+        clearTimeout(connectivityDebounceRef.current);
+        connectivityDebounceRef.current = null;
+      }
+    };
   }, []);
 
   // Periodic retry — catches missed online events and long-running pending queues.

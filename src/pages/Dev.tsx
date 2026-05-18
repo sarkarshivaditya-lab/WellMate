@@ -1,4 +1,5 @@
 import { useState, useEffect, useSyncExternalStore } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button.tsx";
@@ -579,6 +580,7 @@ function ReliabilityPanel() {
 }
 
 export default function Dev() {
+  const navigate = useNavigate();
   const user = useQuery(api.users.getCurrentUser);
   const meals = useQuery(api.meals.getRecentMeals, { days: 30 });
   const moods = useQuery(api.moods.listMoods, { limit: 30 });
@@ -658,11 +660,21 @@ export default function Dev() {
   return (
     <PageLayout>
       <div className="w-full space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">Developer Tools</h1>
-          <p className="text-muted-foreground">
-            Debugging and testing utilities
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Developer Tools</h1>
+            <p className="text-muted-foreground">
+              Debugging and testing utilities
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 mt-1"
+            onClick={() => navigate("/dev/state")}
+          >
+            State Inspector →
+          </Button>
         </div>
 
         <Card>

@@ -18,6 +18,7 @@
 
 import { safeRead, safeWrite } from "./persistence";
 import { track, type TelemetryPayload } from "@/telemetry/telemetry";
+import { appendReplayEntry } from "./replayLog";
 
 /* --------------------------------------------------
    TYPES
@@ -162,11 +163,18 @@ export function getDeadLetterQueue(): readonly QueuedOperation[] {
 
 export function getPendingOperations(): QueuedOperation[] {
   const now = Date.now();
-  return queue.filter(
-    (op) =>
-      (op.status === "pending" || op.status === "failed" || op.status === "retry_scheduled") &&
-      (!op.nextRetryAt || op.nextRetryAt <= now),
-  );
+  return queue
+    .filter(
+      (op) =>
+        (op.status === "pending" || op.status === "failed" || op.status === "retry_scheduled") &&
+        (!op.nextRetryAt || op.nextRetryAt <= now),
+    )
+    .sort((a, b) => {
+      // Lower priority number = higher urgency (0 = critical, 10 = normal, 20 = low)
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      // FIFO within same priority tier
+      return a.createdAt - b.createdAt;
+    });
 }
 
 export function getOperationsByEntity(entityId: string): QueuedOperation[] {
@@ -255,17 +263,27 @@ export function markOperationSyncing(operationId: string): void {
 }
 
 export function markOperationSynced(operationId: string, remoteId?: string): void {
-  queue = queue.map((op) =>
-    op.operationId === operationId
+  const op = queue.find((o) => o.operationId === operationId);
+  queue = queue.map((o) =>
+    o.operationId === operationId
       ? {
-          ...op,
+          ...o,
           status: "synced",
           updatedAt: Date.now(),
           ...(remoteId ? { remoteId } : {}),
         }
-      : op,
+      : o,
   );
   flushQueue();
+  if (op) {
+    appendReplayEntry({
+      entityType: op.entityType,
+      entityId: op.entityId,
+      operationType: op.operationType,
+      event: "synced",
+      operationId,
+    });
+  }
   notify();
 }
 
@@ -300,12 +318,23 @@ export function markOperationConflict(
   operationId: string,
   reason: string,
 ): void {
-  queue = queue.map((op) =>
-    op.operationId === operationId
-      ? { ...op, status: "conflict", errorReason: reason, updatedAt: Date.now() }
-      : op,
+  const op = queue.find((o) => o.operationId === operationId);
+  queue = queue.map((o) =>
+    o.operationId === operationId
+      ? { ...o, status: "conflict", errorReason: reason, updatedAt: Date.now() }
+      : o,
   );
   flushQueue();
+  if (op) {
+    appendReplayEntry({
+      entityType: op.entityType,
+      entityId: op.entityId,
+      operationType: op.operationType,
+      event: "conflict",
+      operationId,
+      note: reason,
+    });
+  }
   notify();
 }
 
@@ -339,6 +368,15 @@ export function moveToDeadLetter(operationId: string, reason: string): void {
   flushQueue();
   flushDeadLetter();
 
+  appendReplayEntry({
+    entityType: op.entityType,
+    entityId: op.entityId,
+    operationType: op.operationType,
+    event: "dead_lettered",
+    operationId,
+    note: reason,
+  });
+
   track("deadletter_added", { entity: op.entityType as TelemetryPayload["entity"], taskId: op.operationId });
 
   notify();
@@ -361,6 +399,14 @@ export function restoreFromDeadLetter(operationId: string): void {
 
   flushQueue();
   flushDeadLetter();
+
+  appendReplayEntry({
+    entityType: op.entityType,
+    entityId: op.entityId,
+    operationType: op.operationType,
+    event: "restored",
+    operationId,
+  });
 
   track("deadletter_restored", { taskId: restored.operationId });
 

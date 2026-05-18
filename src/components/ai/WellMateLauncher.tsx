@@ -4,6 +4,17 @@ import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
+import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
+import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
+import { getCachedRecommendations } from "@/recommendations/recommendationEngine";
+import { buildWellnessContext } from "@/intelligence/wellnessScore";
+import {
+  generateScoreFollowUps,
+  generateMemoryFollowUps,
+  generateRecommendationFollowUps,
+} from "@/ai/conversationalPrimitives";
+import type { FollowUpPrompt } from "@/ai/types";
 
 type Message = {
   id: string;
@@ -44,10 +55,17 @@ function WellMateLauncher() {
   const [thinking, setThinking] = React.useState(false);
   const [clarify, setClarify] = React.useState<ClarifyPayload | null>(null);
   const [showSafetyNotice, setShowSafetyNotice] = React.useState(false);
+  const [starterPrompts, setStarterPrompts] = React.useState<FollowUpPrompt[]>([]);
+  const hasSentMessage = React.useRef(false);
 
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const bottomRef = React.useRef<HTMLDivElement | null>(null);
+
+  const localProfile = useLocalProfile();
+  const profile = localProfile
+    ? { ...localProfile, activityLevel: localProfile.activityLevel ?? undefined, goal: localProfile.goal ?? undefined }
+    : null;
 
   const wellmateChat = useAction(api.wellmateChat.chat);
 
@@ -117,7 +135,45 @@ function WellMateLauncher() {
     } catch { /* ignore quota errors */ }
   }, [messages]);
 
+  // Subscribe to external open requests (from "Ask WellMate" buttons in cards).
+  React.useEffect(() => {
+    return subscribeToWellMateOpen(({ prompt }) => {
+      setOpen(true);
+      if (prompt) setInput(prompt);
+    });
+  }, []);
+
+  // Compute grounded starter prompts when the panel first opens.
+  React.useEffect(() => {
+    if (!open || hasSentMessage.current || starterPrompts.length > 0) return;
+
+    const raf = requestAnimationFrame(() => {
+      const memory = getCachedMemoryContext();
+      const recs = getCachedRecommendations() ?? [];
+      const wellness = buildWellnessContext(profile);
+
+      const scorePrompts = generateScoreFollowUps(wellness);
+      const memoryPrompts = memory ? generateMemoryFollowUps(memory) : [];
+      const recPrompts = recs.length > 0 ? generateRecommendationFollowUps(recs[0]).slice(0, 1) : [];
+
+      const combined = [...scorePrompts, ...memoryPrompts, ...recPrompts];
+      // Deduplicate by text prefix and cap at 3
+      const seen = new Set<string>();
+      const deduped = combined.filter((p) => {
+        const key = p.text.slice(0, 30);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setStarterPrompts(deduped.slice(0, 3));
+    });
+
+    return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   async function handleSend(text: string) {
+    hasSentMessage.current = true;
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -284,6 +340,27 @@ function WellMateLauncher() {
                 </div>
               </div>
             ))}
+
+            {/* Contextual starter prompts — only shown before any message is sent */}
+            {!hasSentMessage.current && starterPrompts.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide px-0.5">
+                  Suggested
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {starterPrompts.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSend(p.text)}
+                      className="rounded-xl border border-border/60 px-3 py-2 text-[12px] text-left bg-background/60 hover:bg-muted/80 transition-premium min-h-[36px] text-foreground/80"
+                    >
+                      {p.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {clarify && clarify.options && (
               <div className="flex flex-wrap gap-2">

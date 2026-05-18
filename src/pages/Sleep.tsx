@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { PlusIcon, MoonIcon } from "lucide-react";
+import { PlusIcon, MoonIcon, Watch, ChevronDown } from "lucide-react";
 import {
   Empty,
   EmptyHeader,
@@ -30,6 +30,123 @@ import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 import { haptics } from "@/motion";
 
 const ratingEmojis = ["😫", "😴", "😐", "😊", "😄"];
+
+// ── Wearable integration notice ───────────────────────────────────────────────
+
+const WEARABLE_SIGNALS = [
+  "REM, light, and deep sleep stage breakdown",
+  "Overnight HRV and resting heart rate",
+  "Recovery readiness from continuous biometric signals",
+  "Automatic sleep imports — no manual entry required",
+  "Movement and restlessness patterns during sleep",
+  "Long-term sleep architecture grounded in device data",
+];
+
+const WEARABLE_PLATFORMS = [
+  "Apple Health",
+  "Google Health Connect",
+  "Fitbit",
+  "Garmin",
+  "Samsung Health",
+  "Oura",
+  "WHOOP",
+  "& others",
+];
+
+function WearableIntegrationNotice() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-3.5">
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 rounded-lg bg-primary/8 p-1.5">
+          <Watch className="h-3.5 w-3.5 text-primary/50" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-medium text-foreground/75 leading-snug">
+            Deeper sleep insights are in preparation
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
+            Current analysis uses manually logged data. Wearable integrations will unlock sleep-stage
+            precision and automatic imports.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse details" : "Expand details"}
+          className="mt-0.5 flex-shrink-0 rounded-md p-0.5 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors touch-manipulation"
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="mt-4 space-y-4 border-t border-border/15 pt-4">
+
+          {/* What will improve */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              What becomes more precise
+            </p>
+            <ul className="space-y-1.5">
+              {WEARABLE_SIGNALS.map((signal) => (
+                <li
+                  key={signal}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {signal}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Planned integrations */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Planned integrations at launch
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {WEARABLE_PLATFORMS.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full border border-border/25 bg-background/40 px-2.5 py-0.5 text-[11px] text-muted-foreground/60"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Why not yet */}
+          <div className="rounded-xl bg-muted/20 border border-border/10 px-3 py-3 space-y-1.5">
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              Wearable integrations require production licensing agreements and finalized platform
+              partnerships with each ecosystem. WellMate is building the synchronization and
+              intelligence infrastructure now — privacy-first, with data remaining local and
+              on-device where the platform allows.
+            </p>
+            <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+              Current sleep insights are intentionally conservative. Once device integrations are
+              live, sleep-stage data, HRV trends, and overnight recovery signals will feed directly
+              into the longitudinal wellness intelligence layer — including future AI-powered
+              recovery insights.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SleepTabContent() {
   useFeatureTracker("sleep");
@@ -141,6 +258,8 @@ export function SleepTabContent() {
       </Dialog>
 
       <div className="space-y-6">
+        <WearableIntegrationNotice />
+
         <div className="flex justify-end">
           <Button size="sm" onClick={() => setShowDialog(true)}>
             <PlusIcon className="h-4 w-4" />

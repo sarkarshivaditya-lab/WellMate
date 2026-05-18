@@ -153,6 +153,71 @@ export function clearQuarantine(): void {
 }
 
 /* --------------------------------------------------
+   STORAGE QUOTA MONITORING
+   -------------------------------------------------- */
+
+export type StorageHealthReport = {
+  estimatedUsedBytes: number;
+  estimatedUsedKb: number;
+  wellmateKeyCount: number;
+  isNearCapacity: boolean;
+  warning?: string;
+};
+
+/**
+ * Estimates localStorage usage for WellMate keys.
+ * Uses byte length of key + value strings as a rough proxy for storage consumed.
+ * Does not scan the full localStorage — only WellMate-prefixed keys.
+ */
+export function estimateWellmateStorageUsage(): number {
+  try {
+    let bytes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key?.startsWith("wellmate") && !key?.startsWith("local_") && !key?.startsWith("onboard")) continue;
+      const val = localStorage.getItem(key) ?? "";
+      bytes += (key.length + val.length) * 2; // UTF-16 = 2 bytes per char
+    }
+    return bytes;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Returns a storage health report.
+ * localStorage has a typical quota of 5–10 MB per origin.
+ * Warns when WellMate-owned keys exceed 3 MB.
+ */
+export function getStorageHealth(): StorageHealthReport {
+  const estimatedUsedBytes = estimateWellmateStorageUsage();
+  const estimatedUsedKb = Math.round(estimatedUsedBytes / 1024);
+  const WARNING_THRESHOLD_BYTES = 3 * 1024 * 1024; // 3 MB
+
+  let wellmateKeyCount = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("wellmate") || key?.startsWith("local_") || key?.startsWith("onboard")) {
+        wellmateKeyCount++;
+      }
+    }
+  } catch { /* ignore */ }
+
+  const isNearCapacity = estimatedUsedBytes > WARNING_THRESHOLD_BYTES;
+
+  return {
+    estimatedUsedBytes,
+    estimatedUsedKb,
+    wellmateKeyCount,
+    isNearCapacity,
+    warning: isNearCapacity
+      ? `Storage usage (${estimatedUsedKb} KB) is approaching browser limits. Consider exporting and clearing old data.`
+      : undefined,
+  };
+}
+
+/* --------------------------------------------------
    SCHEMA MIGRATION HELPERS
    -------------------------------------------------- */
 

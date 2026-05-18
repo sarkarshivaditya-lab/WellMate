@@ -59,11 +59,15 @@ export function clearAllWellnessData(): void {
   // Also clear op/sync queues — no point replaying deleted data
   [
     "wellmate_op_queue_v2",
+    "wellmate_op_deadletter_v2",
     "wellmate_sync_queue_v1",
     "wellmate_sync_deadletter_v1",
     "wellmate_notif_fatigue",
     "wellmate_notif_queue",
     "wellmate_notif_history",
+    "wellmate_replay_log_v1",
+    "wellmate_conflict_log_v1",
+    "wellmate_quarantine_v1",
   ].forEach((k) => localStorage.removeItem(k));
 
   // Intentionally preserved: onboarding_profile, onboarding_draft, onboarded,

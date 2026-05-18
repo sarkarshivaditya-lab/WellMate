@@ -26,6 +26,11 @@ const Sleep = React.lazy(() => import("./pages/Sleep"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
+// Development-only routes — tree-shaken from production by import.meta.env.DEV
+// These modules are never bundled when building for production (Vite dead-code elimination).
+const DevPage = import.meta.env.DEV ? React.lazy(() => import("./pages/Dev")) : null;
+const StateInspectorPage = import.meta.env.DEV ? React.lazy(() => import("./pages/StateInspector")) : null;
+
 import AppShell from "./components/layout/AppShell";
 import {
   init as initLifecycle,
@@ -378,6 +383,14 @@ export default function App() {
             </RequireAuth>
           }
         />
+
+        {/* Development-only routes — excluded from production builds */}
+        {import.meta.env.DEV && DevPage && (
+          <Route path="/dev" element={<DevPage />} />
+        )}
+        {import.meta.env.DEV && StateInspectorPage && (
+          <Route path="/dev/state" element={<StateInspectorPage />} />
+        )}
 
         <Route path="*" element={<NotFound />} />
       </Routes>

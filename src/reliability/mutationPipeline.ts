@@ -42,6 +42,7 @@ import {
 } from "./operationQueue";
 import { atomicWrite } from "./transactionGuard";
 import { recordDiagnosticEvent } from "./diagnostics";
+import { appendReplayEntry } from "./replayLog";
 
 /* --------------------------------------------------
    ANALYTICS HOOK
@@ -164,6 +165,12 @@ export function commitMutation<T extends Record<string, unknown>>(
     input.commitLocal();
     localCommitted = true;
     notifyAnalyticsHooks(input.entityType, input.operationType);
+    appendReplayEntry({
+      entityType: input.entityType,
+      entityId: input.entityId,
+      operationType: input.operationType,
+      event: "committed",
+    });
   } catch (err) {
     recordDiagnosticEvent("storage_failure", {
       entityType: input.entityType,

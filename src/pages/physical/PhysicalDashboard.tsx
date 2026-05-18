@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { X } from "lucide-react";
+import { X, Dumbbell, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import Progress from "./Progress";
 import ExerciseLog from "./ExerciseLog";
@@ -266,6 +267,198 @@ function WelcomeCard() {
 }
 
 /* ======================================================
+   FITNESS ECOSYSTEM NOTICE
+   Shown above ExerciseLog in the Activity tab.
+   Communicates platform ambition, explains current lightweight state.
+   Premium, calm, expandable. No hype.
+   ====================================================== */
+
+const FITNESS_SPLITS = [
+  "Push / Pull / Legs",
+  "Upper / Lower",
+  "Strength",
+  "Hypertrophy",
+  "CrossFit-style",
+  "Bro Split",
+  "Beginner",
+  "Recovery-aware",
+];
+
+const FITNESS_FEATURES = [
+  "Structured exercise database with muscle-group targeting",
+  "Equipment filtering and guided exercise flows",
+  "Set, rep, and weight logging with history",
+  "Progressive overload tracking and weekly volume visibility",
+  "Personal record detection and strength trend analysis",
+  "Recovery-aware workout analysis grounded in biometric signals",
+];
+
+const ACTIVITY_PLATFORMS = [
+  "Apple Health",
+  "Google Health Connect",
+  "Fitbit",
+  "Garmin",
+  "Samsung Health",
+  "WHOOP",
+  "Oura",
+  "& others",
+];
+
+const WEARABLE_SIGNALS = [
+  "Automatic workout detection and activity imports",
+  "Heart-rate-aware training intensity analysis",
+  "Recovery-aware readiness signals before each session",
+  "Calorie synchronization from device sensors",
+  "Passive activity tracking without manual logging",
+];
+
+function FitnessEcosystemNotice() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-3.5">
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 rounded-lg bg-primary/8 p-1.5">
+          <Dumbbell className="h-3.5 w-3.5 text-primary/50" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-medium text-foreground/75 leading-snug">
+            Building toward a complete fitness platform
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
+            Current activity logging is intentionally lightweight. The system it will
+            evolve into is significantly more comprehensive.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Collapse details" : "Expand details"}
+          className="mt-0.5 flex-shrink-0 rounded-md p-0.5 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors touch-manipulation"
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="mt-4 space-y-5 border-t border-border/15 pt-4">
+
+          {/* Structured training systems */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Structured training systems
+            </p>
+            <p className="text-[12px] text-muted-foreground/70 leading-relaxed">
+              Planned workout programs will cover the full spectrum of training structures —
+              from beginner-friendly routines to periodized strength and hypertrophy systems.
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {FITNESS_SPLITS.map((split) => (
+                <span
+                  key={split}
+                  className="rounded-full border border-border/25 bg-background/40 px-2.5 py-0.5 text-[11px] text-muted-foreground/60"
+                >
+                  {split}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Exercise library + progression */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Exercise library & progression tracking
+            </p>
+            <ul className="space-y-1.5">
+              {FITNESS_FEATURES.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Creator + coach ecosystem */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Creator & coach ecosystem
+            </p>
+            <div className="rounded-xl bg-muted/20 border border-border/10 px-3 py-2.5">
+              <p className="text-[12px] text-muted-foreground/75 leading-relaxed">
+                WellMate is designed to support third-party fitness content — allowing certified
+                coaches, fitness creators, and program publishers to distribute structured workout
+                systems directly inside the app. Users will be able to follow creator-designed
+                training plans, guided program templates, and coach-published progressions within
+                the same privacy-first environment.
+              </p>
+              <p className="text-[11px] text-muted-foreground/55 leading-relaxed mt-1.5">
+                This positions WellMate as a fitness content ecosystem, not only a personal tracker.
+              </p>
+            </div>
+          </div>
+
+          {/* Wearable + activity intelligence */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+              Connected activity intelligence
+            </p>
+            <ul className="space-y-1.5 mb-2">
+              {WEARABLE_SIGNALS.map((signal) => (
+                <li
+                  key={signal}
+                  className="flex items-start gap-2 text-[12px] text-muted-foreground/80 leading-snug"
+                >
+                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-primary/30" />
+                  {signal}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-1.5">
+              {ACTIVITY_PLATFORMS.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full border border-border/25 bg-background/40 px-2.5 py-0.5 text-[11px] text-muted-foreground/60"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Why now / closing note */}
+          <div className="rounded-xl bg-muted/20 border border-border/10 px-3 py-3 space-y-1.5">
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              The current activity logger prioritizes calmness and low-friction entry during
+              pre-launch development. Wearable integrations and creator partnerships require
+              finalized licensing agreements, platform compliance, and production-level
+              infrastructure — all of which WellMate is actively preparing.
+            </p>
+            <p className="text-[11px] text-muted-foreground/55 leading-relaxed">
+              The synchronization and intelligence infrastructure being built today is the
+              foundation the full fitness system will run on. When integrations go live,
+              wearable data will feed directly into the longitudinal wellness and AI recovery
+              intelligence layers.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ======================================================
    PHYSICAL SUMMARY
    ====================================================== */
 
@@ -357,6 +550,7 @@ export default function PhysicalDashboard() {
 
       {tab === "activity" && (
         <div key="activity" className="space-y-6 animate-wm-tab-in">
+          <FitnessEcosystemNotice />
           <ExerciseLog />
           <PeriodTracker />
         </div>
