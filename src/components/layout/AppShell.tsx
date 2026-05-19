@@ -30,21 +30,22 @@ function TopSearchBar() {
   return (
     <div
       className={cn(
-        "w-full shrink-0",
-        "bg-background/85 backdrop-blur-xl",
-        "border-b border-border/20",
+        "relative z-20 w-full shrink-0",
+        "bg-secondary/70 backdrop-blur-md",
+        "border-b border-border/50",
         "pt-[env(safe-area-inset-top)]",
       )}
     >
-      <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2.5">
+      <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2">
         <button
           type="button"
           onClick={handleOpen}
           aria-label="Search"
           className={cn(
-            "w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl",
-            "bg-muted/40 hover:bg-muted/60",
-            "border border-border/25 hover:border-border/40",
+            "w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl",
+            "bg-background hover:bg-card",
+            "border border-border/70 hover:border-border",
+            "shadow-sm",
             "text-muted-foreground",
             "transition-premium active:scale-[0.99]",
           )}
@@ -53,7 +54,7 @@ function TopSearchBar() {
           <span className="text-[13px] flex-1 text-left">Search</span>
           <kbd
             aria-hidden
-            className="hidden sm:inline-flex items-center text-[10px] text-muted-foreground/40 border border-border/30 rounded px-1.5 py-0.5 font-medium"
+            className="hidden sm:inline-flex items-center text-[10px] text-muted-foreground/60 border border-border/50 rounded px-1.5 py-0.5 font-medium"
           >
             ⌘K
           </kbd>

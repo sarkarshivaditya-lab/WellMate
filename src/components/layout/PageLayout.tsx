@@ -102,7 +102,7 @@ function PageLayout({
         className={cn(
           "relative z-10 w-full mx-auto pb-8",
           "px-4 sm:px-6 sm:max-w-4xl",
-          hasHeader ? "pt-16" : "pt-8",
+          hasHeader ? "pt-5" : "pt-4",
         )}
       >
         {hasHeader && (
