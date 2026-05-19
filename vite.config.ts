@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // Treat WASM binaries as static assets so ?url imports resolve correctly.
+  // Required for @wllama/wllama which delivers its llama.cpp binary this way.
+  assetsInclude: ["**/*.wasm"],
   server: {
     host: "0.0.0.0",
     port: 5173,

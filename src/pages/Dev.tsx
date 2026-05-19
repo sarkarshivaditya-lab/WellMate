@@ -1,4 +1,5 @@
 import { useState, useEffect, useSyncExternalStore } from "react";
+import { AIDevPanel } from "@/components/dev/AIDevPanel";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
@@ -849,6 +850,8 @@ export default function Dev() {
         <NotificationPanel />
 
         <ReliabilityPanel />
+
+        <AIDevPanel />
 
         <div className="text-xs text-muted-foreground">
           <p>WellMate Developer Tools v1.0</p>

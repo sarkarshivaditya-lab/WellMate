@@ -41,6 +41,10 @@ import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
+import {
+  initAIRuntime,
+  disposeAIRuntime,
+} from "./ai/runtime/aiRuntime";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
@@ -182,10 +186,15 @@ function useAppStartup() {
     // Initialize calm notification system (must come after analytics init)
     initNotifications();
 
+    // Initialize AI runtime — post-hydration, non-blocking, failure-tolerant.
+    // Uses Promise.resolve() scheduling so it never runs before the first paint.
+    void Promise.resolve().then(() => initAIRuntime());
+
     return () => {
       disposeLifecycle();
       disposeAnalytics();
       disposeNotifications();
+      void disposeAIRuntime();
     };
   }, []);
 }

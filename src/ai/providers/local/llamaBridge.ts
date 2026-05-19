@@ -37,21 +37,32 @@ export type LlamaBridgeHandle = {
 // ── Environment detection ─────────────────────────────────────────────────────
 
 export function detectBridgeEnvironment(): BridgeEnvironment {
-  // TODO: check for registered Capacitor plugin (window.Capacitor?.Plugins?.LlamaCpp)
-  // TODO: check for llama-wasm module availability (dynamic import probe)
+  // Native Capacitor plugin — highest priority when registered
+  if (
+    typeof window !== "undefined" &&
+    // @ts-expect-error — Capacitor is injected at runtime, not typed here
+    window.Capacitor?.Plugins?.LlamaCpp
+  ) {
+    return "native";
+  }
+
+  // WASM via wllama — works in modern browser WebViews and desktop browsers
+  if (typeof WebAssembly !== "undefined") {
+    return "wasm";
+  }
+
   return "none";
 }
 
 export function getBridgeStatus(): BridgeStatus {
   const env = detectBridgeEnvironment();
-  if (env === "none") {
-    return {
-      env: "none",
-      reason:
-        "No llama.cpp runtime detected. Register the WASM bundle or Capacitor plugin.",
-    };
+  if (env === "wasm") {
+    return { env: "wasm", version: "wllama", ready: true };
   }
-  return { env: "none", reason: "Bridge environment detected but not yet configured" };
+  if (env === "native") {
+    return { env: "native", pluginVersion: "unknown", ready: true };
+  }
+  return { env: "none", reason: "WebAssembly not supported in this environment" };
 }
 
 // ── Bridge factory ────────────────────────────────────────────────────────────
@@ -59,19 +70,16 @@ export function getBridgeStatus(): BridgeStatus {
 export async function createLlamaBridge(): Promise<LlamaBridgeHandle | null> {
   const env = detectBridgeEnvironment();
 
-  if (env === "none") return null;
+  if (env === "wasm") {
+    const { createWasmBridge } = await import("./bridges/wasmBridge");
+    return createWasmBridge();
+  }
 
-  // WASM path — activate when llama.cpp WASM bundle is available:
-  // if (env === "wasm") {
-  //   const { createWasmBridge } = await import("./bridges/wasmBridge");
-  //   return createWasmBridge();
-  // }
-
-  // Native path — activate when Capacitor plugin is registered:
-  // if (env === "native") {
-  //   const { createNativeBridge } = await import("./bridges/nativeBridge");
-  //   return createNativeBridge();
-  // }
+  if (env === "native") {
+    // Native Capacitor plugin path — activate when plugin is registered
+    // const { createNativeBridge } = await import("./bridges/nativeBridge");
+    // return createNativeBridge();
+  }
 
   return null;
 }
