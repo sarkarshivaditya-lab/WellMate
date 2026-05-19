@@ -359,7 +359,7 @@ function TagInput({
 function SheetSaveBar({
   onCancel,
   onSave,
-  disabled?: boolean,
+  disabled,
 }: {
   onCancel: () => void;
   onSave: () => void;
