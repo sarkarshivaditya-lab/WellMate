@@ -5,8 +5,8 @@ import {
   Brain,
   Home,
   LayoutGrid,
+  MessageCircle,
   Repeat,
-  User,
 } from "lucide-react";
 
 function NavItem({
@@ -110,9 +110,9 @@ export default function BottomNav() {
           icon={<Repeat className="h-5 w-5" />}
         />
         <NavItem
-          to="/profile"
-          label="Profile"
-          icon={<User className="h-5 w-5" />}
+          to="/chat"
+          label="Support"
+          icon={<MessageCircle className="h-5 w-5" />}
         />
       </div>
     </nav>

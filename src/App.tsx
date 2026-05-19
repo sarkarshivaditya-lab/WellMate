@@ -21,6 +21,7 @@ const MentalOverview = React.lazy(() => import("./pages/mental/Overview"));
 const Tools = React.lazy(() => import("./pages/Tools"));
 const AiMentalCoach = React.lazy(() => import("./pages/mental/AiMentalCoach"));
 const Profile = React.lazy(() => import("./pages/Profile"));
+const Chat = React.lazy(() => import("./pages/Chat"));
 const Roadmap = React.lazy(() => import("./pages/Roadmap"));
 const Sleep = React.lazy(() => import("./pages/Sleep"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
@@ -339,6 +340,19 @@ export default function App() {
               <RequireOnboarding>
                 <AppShell>
                   <Profile />
+                </AppShell>
+              </RequireOnboarding>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/chat"
+          element={
+            <RequireAuth>
+              <RequireOnboarding>
+                <AppShell>
+                  <Chat />
                 </AppShell>
               </RequireOnboarding>
             </RequireAuth>
