@@ -22,6 +22,9 @@ const CRITICAL_COOLDOWN_MS = 3_000;
 
 const _timestamps: number[] = [];
 let _appVisible = true;
+// Debounce emergency — only fire once per 60-second window.
+// Prevents re-triggering on stub inferences after fallback.
+let _lastEmergencyAt = 0;
 
 type EmergencyListener = () => void;
 const _emergencyListeners = new Set<EmergencyListener>();
@@ -47,11 +50,16 @@ export function recordInference(): void {
   const level = computeThermalLevel();
   patchRuntimeState({ thermal: level });
 
-  // Emergency: fire listeners to signal orchestrator to unload model
+  // Emergency: fire listeners to signal orchestrator to unload model.
+  // Debounced to once per 60s — prevents re-triggering on stub inferences post-fallback.
   if (_timestamps.length >= EMERGENCY_THRESHOLD) {
-    _emergencyListeners.forEach((fn) => {
-      try { fn(); } catch { /* never crash */ }
-    });
+    const now = Date.now();
+    if (now - _lastEmergencyAt > WINDOW_MS) {
+      _lastEmergencyAt = now;
+      _emergencyListeners.forEach((fn) => {
+        try { fn(); } catch { /* never crash */ }
+      });
+    }
   }
 }
 
@@ -86,8 +94,15 @@ export function isAppVisible(): boolean {
   return _appVisible;
 }
 
+// Returns inferences per minute in the current rolling window
+export function getInferenceRate(): number {
+  pruneWindow();
+  return _timestamps.length;
+}
+
 export function resetThermal(): void {
   _timestamps.length = 0;
+  _lastEmergencyAt = 0;
   patchRuntimeState({ thermal: "nominal" });
 }
 

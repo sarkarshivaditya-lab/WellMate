@@ -36,6 +36,7 @@ import { useWellnessMemory } from "@/hooks/useWellnessMemory";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { useAdaptiveProfile } from "@/hooks/useAdaptiveProfile";
 import { WeeklyInsightCard } from "@/components/ai/WeeklyInsightCard";
+import { DailyReflectionCard } from "@/components/ai/DailyReflectionCard";
 import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
 import type { ModuleId } from "@/personalization/types";
 
@@ -334,7 +335,10 @@ export default function Overview() {
           </section>
         )}
 
-        {/* AI weekly insight — renders only when there is meaningful data */}
+        {/* AI daily reflection — inference-powered, only shows when meaningful continuity exists */}
+        <DailyReflectionCard />
+
+        {/* Deterministic weekly summary — always available when longitudinal data exists */}
         <WeeklyInsightCard />
 
         {/* Weekly comparison */}

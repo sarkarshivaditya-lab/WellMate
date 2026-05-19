@@ -1,5 +1,6 @@
 import React from "react";
 import AiMentalCoach from "./AiMentalCoach";
+import { JournalReflectionCard } from "@/components/ai/JournalReflectionCard";
 
 export default function Journal() {
   return (
@@ -42,16 +43,10 @@ export default function Journal() {
       </div>
 
       {/* ======================================================
-         Future Journal Section (Placeholder)
+         Journal Pattern — AI reflection on recurring themes
+         Renders only when enough journal data exists.
          ====================================================== */}
-      <div className="pt-6 border-t space-y-2 text-sm text-muted-foreground">
-        <p>
-          Journaling and reflections will live here soon.
-        </p>
-        <p>
-          For now, you can talk to WellMate above whenever you need support.
-        </p>
-      </div>
+      <JournalReflectionCard />
     </div>
   );
 }

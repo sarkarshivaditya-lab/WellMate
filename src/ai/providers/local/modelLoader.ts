@@ -10,7 +10,10 @@ import {
   isModelStored as storageIsModelStored,
   getResumeOffset,
   deleteModel as storageDeleteModel,
+  validateModelIntegrity,
 } from "./modelStorage";
+
+export { validateModelIntegrity };
 import {
   downloadModel,
   InsufficientStorageError,
@@ -102,10 +105,18 @@ export async function downloadAndStoreModel(
 
   emit({ phase: "verifying" });
 
-  // Checksum verification — future: compute SHA-256 and compare to manifest.checksum
-  // Skipped for now (checksum not yet available for HuggingFace CDN model)
+  // GGUF integrity check — reads first 4 bytes, confirms magic header.
+  // Catches truncated downloads before they reach the WASM runtime.
+  const integrity = await validateModelIntegrity(manifest.id);
+  if (!integrity.valid) {
+    // Auto-delete corrupted file so the next attempt starts fresh
+    await storageDeleteModel(manifest.id).catch(() => null);
+    const reason = `Downloaded file is corrupted: ${integrity.reason ?? "invalid"}. Deleted — please try again.`;
+    emit({ phase: "failed", reason });
+    throw new Error(reason);
+  }
 
-  emit({ phase: "not_loaded" }); // stored but not yet loaded into inference engine
+  emit({ phase: "not_loaded" }); // stored and verified — not yet loaded into inference engine
 }
 
 export async function deleteStoredModel(manifest: ModelManifest): Promise<void> {

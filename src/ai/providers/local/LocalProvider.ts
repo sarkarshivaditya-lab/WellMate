@@ -10,7 +10,7 @@ import type { AIProvider } from "../types";
 import type { InferenceRequest, InferenceResult, ProviderType } from "../../runtime/types";
 import type { ModelManifest } from "./modelMetadata";
 import { createLlamaBridge, type LlamaBridgeHandle } from "./llamaBridge";
-import { isModelStored, getModelBlobUrl } from "./modelStorage";
+import { isModelStored, getModelBlobUrl, validateModelIntegrity, deleteModel } from "./modelStorage";
 import { patchRuntimeState } from "../../runtime/runtimeState";
 import { recordModelLoadDuration } from "../../runtime/performanceMonitor";
 
@@ -52,6 +52,16 @@ export class LocalProvider implements AIProvider {
       throw new Error("llama.cpp bridge unavailable");
     }
 
+    // Validate GGUF magic bytes before handing to WASM — avoids cryptic crashes
+    const integrity = await validateModelIntegrity(this.manifest.id);
+    if (!integrity.valid) {
+      // Auto-delete the corrupted file so UI shows "idle" not "stored"
+      await deleteModel(this.manifest.id).catch(() => null);
+      const msg = `Model file is corrupted (${integrity.reason ?? "invalid header"}) — deleted. Please re-download.`;
+      patchRuntimeState({ status: "error", modelLoad: "failed", lastError: msg });
+      throw new Error(msg);
+    }
+
     // Create blob URL from storage (OPFS = memory-efficient, IDB = loads into RAM)
     const blobUrl = await getModelBlobUrl(this.manifest.id);
     if (!blobUrl) {
@@ -77,6 +87,18 @@ export class LocalProvider implements AIProvider {
         bridge.loadFromBlobUrl(this.manifest, blobUrl),
         loadTimeout,
       ]);
+    } catch (err) {
+      // Classify low-memory errors vs other failures for better UX messages
+      const msg = err instanceof Error ? err.message : String(err);
+      const isOOM = /out of memory|allocation failed|oom|enomem/i.test(msg);
+      const isTimeout = /timeout/i.test(msg);
+      const friendlyMsg = isOOM
+        ? "Not enough RAM to load model — close other apps and try again"
+        : isTimeout
+          ? "Model load timed out — device may be overloaded. Try again when cooler."
+          : `Model load failed: ${msg}`;
+      patchRuntimeState({ status: "error", modelLoad: "failed", lastError: friendlyMsg });
+      throw new Error(friendlyMsg);
     } finally {
       // Always revoke — wllama has its own internal copy after loadModelFromUrl
       URL.revokeObjectURL(blobUrl);

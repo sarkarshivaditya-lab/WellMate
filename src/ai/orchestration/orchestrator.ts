@@ -17,6 +17,7 @@ import {
   recordInference,
   isAppVisible,
   subscribeToThermalEmergency,
+  resetThermal,
 } from "../runtime/thermalGuard";
 import { patchRuntimeState } from "../runtime/runtimeState";
 
@@ -44,6 +45,8 @@ export async function initOrchestrator(): Promise<void> {
     if (local?.isReady()) {
       void local.dispose().catch(() => null);
       setActiveProvider("stub");
+      // Reset thermal timestamps so stub inference doesn't immediately re-trigger emergency
+      resetThermal();
       patchRuntimeState({
         provider: "stub",
         modelLoad: "not_loaded",

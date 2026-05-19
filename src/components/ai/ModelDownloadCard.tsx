@@ -1,9 +1,9 @@
 // Model download UI — "Enable Offline Intelligence" flow.
 // Premium, calm, intentional. Handles: not-downloaded, partial, downloading,
-// stored, storage-full, and error states.
+// stored, activating, active, storage-full, and error states.
 
 import React from "react";
-import { Brain, Download, CheckCircle2, AlertCircle, X, RefreshCw } from "lucide-react";
+import { Sparkles, Brain, CheckCircle2, AlertCircle, X, RefreshCw, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PHI3_MINI_MANIFEST } from "@/ai/providers/local/modelMetadata";
@@ -16,6 +16,8 @@ import {
   deleteStoredModel,
 } from "@/ai/providers/local/modelLoader";
 import { checkStorageAvailability } from "@/ai/providers/local/modelStorage";
+import { tryActivateLocalProvider } from "@/ai/orchestration/orchestrator";
+import { useAIRuntime } from "@/ai/hooks/useAIRuntime";
 import { cn } from "@/lib/utils";
 import type { ModelLoadState } from "@/ai/providers/local/modelMetadata";
 
@@ -26,16 +28,15 @@ type CardPhase =
   | "idle"               // not downloaded, ready to download
   | "resumable"          // partial download detected
   | "downloading"
-  | "stored"
+  | "stored"             // downloaded, not yet loaded into memory
+  | "activating"         // loading model into WASM runtime
+  | "active"             // model loaded and running
   | "error";
 
 function formatGB(bytes: number): string {
   return `${(bytes / 1e9).toFixed(1)} GB`;
 }
 
-function formatPct(received: number, total: number): string {
-  return total > 0 ? `${Math.round((received / total) * 100)}%` : "0%";
-}
 
 export function ModelDownloadCard() {
   const [phase, setPhase] = React.useState<CardPhase>("checking");
@@ -44,6 +45,14 @@ export function ModelDownloadCard() {
   const [errorReason, setErrorReason] = React.useState<string | null>(null);
   const [availableStorage, setAvailableStorage] = React.useState<number | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  const runtime = useAIRuntime();
+
+  // Sync with runtime — if local provider becomes active externally, reflect it
+  React.useEffect(() => {
+    if (runtime.provider === "local" && runtime.modelLoad === "ready") {
+      setPhase("active");
+    }
+  }, [runtime.provider, runtime.modelLoad]);
 
   // ── Initial state probe ───────────────────────────────────────────────────
   React.useEffect(() => {
@@ -157,28 +166,36 @@ export function ModelDownloadCard() {
     setResumeBytes(0);
   }
 
+  async function handleActivate() {
+    setPhase("activating");
+    try {
+      const ok = await tryActivateLocalProvider(PHI3_MINI_MANIFEST);
+      setPhase(ok ? "active" : "stored");
+      if (!ok) setErrorReason("Model failed to load — try again or restart the app");
+    } catch (err) {
+      setPhase("stored");
+      setErrorReason(err instanceof Error ? err.message : "Failed to load model");
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (phase === "checking") return null;
 
-  if (phase === "stored") {
+  // ── Active — companion running ────────────────────────────────────────────
+  if (phase === "active") {
     return (
       <Card className="border-emerald-500/20 bg-emerald-500/4">
         <CardContent className="py-4 px-5 flex items-center gap-3">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500/60 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-foreground/70">
-              Offline intelligence enabled
-            </p>
-            <p className="text-[11.5px] text-muted-foreground/55 mt-0.5">
-              {PHI3_MINI_MANIFEST.name} · {formatGB(PHI3_MINI_MANIFEST.sizeBytes)} · stored on device
-            </p>
-          </div>
+          <Zap className="h-3.5 w-3.5 text-emerald-500/55 flex-shrink-0" />
+          <p className="flex-1 text-[13px] font-medium text-foreground/70">
+            Offline support active
+          </p>
           <button
             type="button"
             onClick={handleDelete}
-            aria-label="Remove model"
-            className="text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+            aria-label="Remove offline support"
+            className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -187,104 +204,154 @@ export function ModelDownloadCard() {
     );
   }
 
-  if (phase === "unavailable") {
+  // ── Activating — loading into runtime ────────────────────────────────────
+  if (phase === "activating") {
     return (
-      <Card className="border-border/20 bg-muted/8">
-        <CardContent className="py-5 px-5">
-          <div className="flex items-start gap-3">
-            <Brain className="h-4 w-4 text-foreground/25 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-[13.5px] font-medium text-foreground/55">
-                Offline intelligence — coming soon
-              </p>
-              <p className="text-[12px] text-muted-foreground/45 leading-snug">
-                On-device AI that runs without a network connection is on the roadmap.
-              </p>
-            </div>
+      <Card className="border-border/20">
+        <CardContent className="py-4 px-5 flex items-center gap-3">
+          <Brain className="h-3.5 w-3.5 text-foreground/25 flex-shrink-0 animate-pulse" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-foreground/65">
+              Getting ready…
+            </p>
+            <p className="text-[11.5px] text-muted-foreground/40 mt-0.5">
+              This takes about a minute.
+            </p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (phase === "storage_full") {
-    const available = availableStorage ?? 0;
+  // ── Stored — downloaded, awaiting activation ──────────────────────────────
+  if (phase === "stored") {
     return (
-      <Card className="border-amber-500/20 bg-amber-500/3">
-        <CardContent className="py-5 px-5 space-y-2">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-amber-500/60 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-[13.5px] font-medium text-foreground/65">
-                Not enough storage
-              </p>
-              <p className="text-[12px] text-muted-foreground/55 leading-snug">
-                {formatGB(PHI3_MINI_MANIFEST.sizeBytes)} required
-                {available > 0 ? ` · ${formatGB(available)} available` : ""}.
-                Free up space and try again.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (phase === "downloading") {
-    return (
-      <Card className="border-primary/12 bg-primary/3">
+      <Card className="border-border/25">
         <CardContent className="py-5 px-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="space-y-0.5 min-w-0">
-              <p className="text-[13.5px] font-medium text-foreground/70">
-                Downloading AI model
+            <div className="space-y-1 min-w-0">
+              <p className="text-[13.5px] font-medium text-foreground/65">
+                Offline support ready
               </p>
-              <p className="text-[11.5px] text-muted-foreground/50">
-                {PHI3_MINI_MANIFEST.name} · {progressPct}% of {formatGB(PHI3_MINI_MANIFEST.sizeBytes)}
+              <p className="text-[12px] text-muted-foreground/45 leading-snug">
+                Your wellness companion is saved to this device.
               </p>
             </div>
             <button
               type="button"
-              onClick={handleCancel}
-              aria-label="Pause download"
-              className="flex-shrink-0 p-1 rounded-lg text-muted-foreground/35 hover:text-muted-foreground/65 transition-colors"
+              onClick={handleDelete}
+              aria-label="Remove offline support"
+              className="flex-shrink-0 text-muted-foreground/20 hover:text-muted-foreground/50 transition-colors mt-0.5"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="h-1 w-full bg-border/25 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary/40 rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
+          {errorReason && (
+            <p className="text-[11.5px] text-red-400/60">
+              Something went wrong. Please try again.
+            </p>
+          )}
 
-          <p className="text-[10.5px] text-muted-foreground/35">
-            Keep this page open. You can pause and resume — progress is saved.
-          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleActivate}
+            className="gap-1.5 text-[12.5px]"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Turn On
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
-  if (phase === "error") {
+  // ── Unavailable — no download URL configured ──────────────────────────────
+  if (phase === "unavailable") {
     return (
-      <Card className="border-red-500/18 bg-red-500/3">
-        <CardContent className="py-5 px-5 space-y-3">
+      <Card className="border-border/15 bg-muted/6">
+        <CardContent className="py-5 px-5">
+          <div className="space-y-1">
+            <p className="text-[13.5px] font-medium text-foreground/50">
+              Offline support — coming soon
+            </p>
+            <p className="text-[12px] text-muted-foreground/40 leading-snug">
+              Personalised support without an internet connection is in the works.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Storage full ──────────────────────────────────────────────────────────
+  if (phase === "storage_full") {
+    const available = availableStorage ?? 0;
+    return (
+      <Card className="border-amber-500/18 bg-amber-500/3">
+        <CardContent className="py-5 px-5">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-red-400/60 flex-shrink-0 mt-0.5" />
-            <div className="space-y-0.5 min-w-0">
+            <AlertCircle className="h-4 w-4 text-amber-500/55 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
               <p className="text-[13.5px] font-medium text-foreground/65">
-                Download failed
+                Not enough space
               </p>
-              {errorReason && (
-                <p className="text-[11.5px] text-muted-foreground/50 leading-snug">
-                  {errorReason}
-                </p>
-              )}
+              <p className="text-[12px] text-muted-foreground/50 leading-snug">
+                {available > 0
+                  ? `${formatGB(available)} available — free up a bit more space to continue.`
+                  : "Free up some space on your device and try again."}
+              </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Downloading ───────────────────────────────────────────────────────────
+  if (phase === "downloading") {
+    return (
+      <Card className="border-border/20">
+        <CardContent className="py-5 px-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] font-medium text-foreground/65">
+              Enabling offline support
+            </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="text-[11.5px] text-muted-foreground/40 tabular-nums">
+                {progressPct}%
+              </span>
+              <button
+                type="button"
+                onClick={handleCancel}
+                aria-label="Pause"
+                className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="h-0.5 w-full bg-border/15 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-foreground/20 rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (phase === "error") {
+    return (
+      <Card className="border-border/20">
+        <CardContent className="py-5 px-5 space-y-3">
+          <p className="text-[13.5px] font-medium text-foreground/60">
+            Something went wrong
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -299,27 +366,24 @@ export function ModelDownloadCard() {
     );
   }
 
-  // ── resumable — partial download exists ───────────────────────────────────
+  // ── Resumable — partial download saved ────────────────────────────────────
   if (phase === "resumable") {
     const pct = PHI3_MINI_MANIFEST.sizeBytes > 0
       ? Math.round((resumeBytes / PHI3_MINI_MANIFEST.sizeBytes) * 100)
       : 0;
     return (
-      <Card className="border-border/35">
+      <Card className="border-border/25">
         <CardContent className="py-5 px-5 space-y-4">
-          <div className="flex items-start gap-3">
-            <Brain className="h-4 w-4 text-foreground/30 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1 min-w-0">
-              <p className="text-[13.5px] font-medium text-foreground/65">
-                Resume offline intelligence
-              </p>
-              <p className="text-[12px] text-muted-foreground/50 leading-snug">
-                {pct}% already downloaded ({formatGB(resumeBytes)} of {formatGB(PHI3_MINI_MANIFEST.sizeBytes)})
-              </p>
-            </div>
+          <div className="space-y-1">
+            <p className="text-[13.5px] font-medium text-foreground/65">
+              Continue setup
+            </p>
+            <p className="text-[12px] text-muted-foreground/45 leading-snug">
+              {pct > 0 ? `${pct}% complete — ` : ""}Pick up right where you left off.
+            </p>
           </div>
 
-          <div className="h-0.5 w-full bg-border/25 rounded-full">
+          <div className="h-0.5 w-full bg-border/20 rounded-full">
             <div
               className="h-full bg-foreground/20 rounded-full"
               style={{ width: `${pct}%` }}
@@ -330,29 +394,28 @@ export function ModelDownloadCard() {
             size="sm"
             onClick={handleDownload}
             variant="outline"
-            className="gap-1.5 text-[12.5px]"
+            className="text-[12.5px]"
           >
-            <Download className="h-3.5 w-3.5" />
-            Resume download
+            Continue
           </Button>
         </CardContent>
       </Card>
     );
   }
 
-  // ── idle — ready to download ──────────────────────────────────────────────
+  // ── Idle — ready to set up ────────────────────────────────────────────────
   return (
-    <Card className="border-border/35">
+    <Card className="border-border/25">
       <CardContent className="py-5 px-5 space-y-4">
         <div className="flex items-start gap-3">
-          <Brain className="h-4 w-4 text-foreground/30 flex-shrink-0 mt-0.5" />
+          <Sparkles className="h-4 w-4 text-foreground/25 flex-shrink-0 mt-0.5" />
           <div className="space-y-1 min-w-0">
             <p className="text-[13.5px] font-medium text-foreground/65">
-              Enable offline intelligence
+              Your companion, everywhere
             </p>
             <p className="text-[12px] text-muted-foreground/50 leading-snug">
-              Download {PHI3_MINI_MANIFEST.name} ({formatGB(PHI3_MINI_MANIFEST.sizeBytes)}) to your device.
-              Runs fully offline — no data ever leaves your phone.
+              Thoughtful reflections and support — available offline, fully private,
+              running directly on your device.
             </p>
           </div>
         </div>
@@ -362,13 +425,12 @@ export function ModelDownloadCard() {
             size="sm"
             onClick={handleDownload}
             variant="outline"
-            className={cn("gap-2 text-[12.5px]")}
+            className={cn("text-[12.5px]")}
           >
-            <Download className="h-3.5 w-3.5" />
-            Download · {formatGB(PHI3_MINI_MANIFEST.sizeBytes)}
+            Enable Offline Support
           </Button>
-          <p className="text-[10.5px] text-muted-foreground/35">
-            Recommended on Wi-Fi. Progress saves automatically — pause any time.
+          <p className="text-[10.5px] text-muted-foreground/30">
+            {formatGB(PHI3_MINI_MANIFEST.sizeBytes)} · Best on Wi-Fi · Resumes if interrupted
           </p>
         </div>
       </CardContent>

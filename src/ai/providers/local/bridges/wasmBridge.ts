@@ -68,18 +68,16 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
       let fullText = "";
       let tokenCount = 0;
 
-      // Cap max tokens conservatively — prevents runaway generation on weak devices
-      const maxTokens = Math.min(
-        request.maxTokens,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (request as any).manifest?.maxGenerationTokens ?? 256,
-        512, // hard ceiling regardless of request
-      );
+      // Conservative token ceiling — prevents runaway generation on weak devices.
+      // 256 tokens ≈ 3-4 sentences at typical generation speed — right for wellness reflections.
+      const maxTokens = Math.min(request.maxTokens, 256);
 
       const generatePromise = wllama.createCompletion({
         prompt,
         max_tokens: maxTokens,
-        temperature: Math.min(request.temperature, 0.9), // clamp: prevent unhinged outputs
+        temperature: Math.min(request.temperature, 0.9), // clamp: prevent incoherent outputs
+        top_p: 0.9,          // nucleus sampling — natural, non-repetitive text
+        repeat_penalty: 1.1, // discourage looping phrases common in small models
         stop: ["<|end|>", "<|endoftext|>", "<|im_end|>", "<|user|>"],
         stream: true,
         onData: (chunk) => {
@@ -87,6 +85,7 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
           const piece = (chunk as any).choices?.[0]?.text ?? "";
           fullText += piece;
           tokenCount++;
+          if (piece) request.onToken?.(piece);
         },
         abortSignal: request.controller.signal,
       });

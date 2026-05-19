@@ -31,6 +31,9 @@ export type InferenceRequest = {
   temperature: number;
   priority: InferencePriority;
   controller: AbortController;
+  // Called with each token as it is generated — enables streaming UI.
+  // Optional: callers that don't need streaming can omit it.
+  onToken?: (token: string) => void;
 };
 
 export type InferenceResult = {

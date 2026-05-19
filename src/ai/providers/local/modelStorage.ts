@@ -291,6 +291,54 @@ export async function getModelBlobUrl(modelId: string): Promise<string | null> {
   }
 }
 
+// GGUF magic bytes: ASCII "GGUF" = 0x47 0x47 0x55 0x46
+const GGUF_MAGIC = [0x47, 0x47, 0x55, 0x46];
+
+export type IntegrityResult = {
+  valid: boolean;
+  reason?: string;
+};
+
+// Reads first 4 bytes of the stored model and confirms GGUF magic.
+// Catches truncated downloads and silent storage corruption before
+// passing to WASM — avoids cryptic llama.cpp panics.
+export async function validateModelIntegrity(modelId: string): Promise<IntegrityResult> {
+  try {
+    if (await isOPFSAvailable()) {
+      const dir = await opfsDir();
+      const fh = await dir.getFileHandle(`${modelId}.gguf`).catch(() => null);
+      if (!fh) return { valid: false, reason: "file not found in OPFS" };
+      const file = await fh.getFile();
+      if (file.size < 4) return { valid: false, reason: `file too small (${file.size} bytes)` };
+      const header = await file.slice(0, 4).arrayBuffer();
+      const bytes = new Uint8Array(header);
+      const ok = GGUF_MAGIC.every((b, i) => bytes[i] === b);
+      return ok ? { valid: true } : { valid: false, reason: "invalid GGUF header — file may be corrupted" };
+    }
+
+    // IDB path — check first chunk's first 4 bytes
+    const meta = await readIdbMeta(modelId);
+    if (!meta?.complete) return { valid: false, reason: "no complete IDB record" };
+    const db = await openIdb();
+    const firstChunk: Uint8Array | null = await new Promise((resolve) => {
+      const tx = db.transaction(IDB_CHUNKS, "readonly");
+      const req = tx.objectStore(IDB_CHUNKS).get(idbChunkKey(modelId, 0));
+      req.onsuccess = () => {
+        const raw = req.result as { data: ArrayBuffer } | undefined;
+        resolve(raw ? new Uint8Array(raw.data) : null);
+      };
+      req.onerror = () => resolve(null);
+    });
+    if (!firstChunk || firstChunk.length < 4) {
+      return { valid: false, reason: "first chunk missing or too small" };
+    }
+    const ok = GGUF_MAGIC.every((b, i) => firstChunk[i] === b);
+    return ok ? { valid: true } : { valid: false, reason: "invalid GGUF header — IDB data corrupted" };
+  } catch (err) {
+    return { valid: false, reason: err instanceof Error ? err.message : "unknown validation error" };
+  }
+}
+
 export async function deleteModel(modelId: string): Promise<void> {
   if (await isOPFSAvailable()) {
     try {
