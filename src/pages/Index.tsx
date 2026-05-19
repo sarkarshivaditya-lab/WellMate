@@ -35,6 +35,7 @@ import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { useWellnessMemory } from "@/hooks/useWellnessMemory";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { useAdaptiveProfile } from "@/hooks/useAdaptiveProfile";
+import { WeeklyInsightCard } from "@/components/ai/WeeklyInsightCard";
 import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
 import type { ModuleId } from "@/personalization/types";
 
@@ -332,6 +333,9 @@ export default function Overview() {
             </div>
           </section>
         )}
+
+        {/* AI weekly insight — renders only when there is meaningful data */}
+        <WeeklyInsightCard />
 
         {/* Weekly comparison */}
         <section className="space-y-3">

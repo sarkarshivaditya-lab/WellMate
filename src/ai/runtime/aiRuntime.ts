@@ -10,6 +10,9 @@ import { resetThermal } from "./thermalGuard";
 import { clearSessionMemory } from "../memory/runtimeMemory";
 import { warmEmbeddingPipeline } from "../embeddings/embeddingPipeline";
 import { bootstrapWellnessIndex } from "../retrieval/wellnessRetrieval";
+import { indexJournalEntries } from "../retrieval/journalIndexer";
+import { bootstrapBehavioralIndex } from "../retrieval/behavioralIndexer";
+import { generateLongitudinalSummary, isSummaryStale } from "../memory/longitudinalSummary";
 
 let _started = false;
 
@@ -29,10 +32,15 @@ export async function initAIRuntime(): Promise<void> {
     return;
   }
 
-  // Phase 2: warm embeddings + index wellness data in background — never blocks startup
+  // Phase 2+3: warm embeddings → index all wellness domains — never blocks startup
   Promise.resolve()
     .then(() => warmEmbeddingPipeline())
     .then(() => bootstrapWellnessIndex())
+    .then(() => indexJournalEntries())
+    .then(() => bootstrapBehavioralIndex())
+    .then(() => {
+      if (isSummaryStale()) generateLongitudinalSummary();
+    })
     .catch(() => {
       // Non-fatal — retrieval degrades gracefully without embeddings
     });

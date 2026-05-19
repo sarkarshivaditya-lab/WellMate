@@ -12,6 +12,11 @@ import { getEmbeddingModelState } from "@/ai/embeddings/embeddingPipeline";
 import { getVectorStoreStats } from "@/ai/embeddings/vectorStore";
 import { retrievalBridge } from "@/ai/retrieval/retrievalBridge";
 import { getBridgeStatus } from "@/ai/providers/local/llamaBridge";
+import {
+  getLongitudinalSummary,
+  generateLongitudinalSummary,
+  isSummaryStale,
+} from "@/ai/memory/longitudinalSummary";
 import { cn } from "@/lib/utils";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -354,6 +359,88 @@ function SessionMemoryCard() {
   );
 }
 
+// ── Longitudinal memory panel ─────────────────────────────────────────────────
+
+function LongitudinalMemoryCard() {
+  const [summary, setSummary] = React.useState(getLongitudinalSummary);
+  const [stale, setStale] = React.useState(isSummaryStale);
+  const [indexing, setIndexing] = React.useState(false);
+
+  function refresh() {
+    setSummary(getLongitudinalSummary());
+    setStale(isSummaryStale());
+  }
+
+  async function handleRegenerate() {
+    const s = generateLongitudinalSummary();
+    setSummary(s);
+    setStale(false);
+  }
+
+  async function handleReindex() {
+    setIndexing(true);
+    try {
+      const { indexJournalEntries } = await import("@/ai/retrieval/journalIndexer");
+      const { bootstrapBehavioralIndex } = await import("@/ai/retrieval/behavioralIndexer");
+      await indexJournalEntries();
+      await bootstrapBehavioralIndex();
+    } catch { /* non-fatal */ }
+    setIndexing(false);
+    refresh();
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Longitudinal Memory</CardTitle>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={refresh} className="text-[11px] h-7 px-2">
+            Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleReindex}
+            disabled={indexing}
+            className="text-[11px] h-7 px-2"
+          >
+            {indexing ? "Indexing…" : "Re-index"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {stale && (
+          <div className="flex items-center justify-between bg-amber-500/8 border border-amber-500/15 rounded-lg px-3 py-2">
+            <p className="text-[11px] text-amber-600/80">Weekly summary is stale or missing</p>
+            <Button size="sm" variant="outline" onClick={handleRegenerate} className="text-[10px] h-6 px-2">
+              Generate
+            </Button>
+          </div>
+        )}
+
+        {summary ? (
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              {summary.weekWindow}
+            </p>
+            <div className="space-y-1.5 text-[11px] text-foreground/65">
+              <p>{summary.overallWellnessSentence}</p>
+              <p>{summary.moodSentence}</p>
+              <p>{summary.sleepSentence}</p>
+              <p>{summary.habitSentence}</p>
+              <p className="text-[10.5px] text-muted-foreground/50 italic">{summary.journalHighlight}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground/60 text-[11px]">
+            No summary yet. Use "Generate" to create one from current data.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -363,6 +450,7 @@ export function AIDevPanel() {
         AI Runtime — Dev Tools
       </div>
       <RuntimeStatusCard />
+      <LongitudinalMemoryCard />
       <InferenceTestCard />
       <RetrievalTestCard />
       <SessionMemoryCard />
