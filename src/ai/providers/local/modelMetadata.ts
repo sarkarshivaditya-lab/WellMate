@@ -3,6 +3,10 @@
 export type ModelFamily = "phi3" | "llama" | "mistral" | "gemma";
 export type QuantizationLevel = "q4_0" | "q4_k_m" | "q5_0" | "q8_0" | "f16";
 export type ModelCapability = "generate" | "embed" | "summarize";
+export type ReleaseChannel = "stable" | "beta" | "experimental" | "internal";
+export type CapabilityTier = "lightweight" | "standard" | "flagship";
+export type DeviceTier = "low" | "mid" | "high" | "flagship";
+export type MigrationStrategy = "replace" | "staged" | "parallel";
 
 export type ModelManifest = {
   id: string;
@@ -10,11 +14,27 @@ export type ModelManifest = {
   family: ModelFamily;
   sizeBytes: number;
   quantization: QuantizationLevel;
-  contextLength: number;      // tokens — should be ≤2048 for mobile safety
+  contextLength: number;       // tokens — should be ≤2048 for mobile safety
   maxGenerationTokens: number; // conservative per-response ceiling
   capabilities: ModelCapability[];
   downloadUrl?: string;
   checksum?: string;           // sha256 hex — verified before load when present
+  // Device requirements
+  minRamMB?: number;
+  minStorageMB?: number;
+  // Deployment control
+  capabilityTier?: CapabilityTier;
+  targetDeviceTiers?: DeviceTier[];
+  releaseChannel?: ReleaseChannel;
+  rolloutPct?: number;         // 0–100; which fraction of users get this model
+  deprecated?: boolean;
+  deprecatedAt?: string;       // ISO date
+  // Migration
+  migrationStrategy?: MigrationStrategy;
+  fallbackModelId?: string;    // model to use if this one cannot activate
+  // Metadata
+  releasedAt?: string;
+  changeNotes?: string;
 };
 
 export type ModelLoadState =
@@ -25,8 +45,8 @@ export type ModelLoadState =
   | { phase: "ready"; loadedAt: number }
   | { phase: "failed"; reason: string };
 
-// Production model: Phi-3 Mini 4K Instruct Q4_0 — smallest viable reasoning
-// model for wellness context. 2.39 GB on-device.
+// Static fallback manifest — used when remote manifest is unavailable.
+// Production deployments should always have this superseded by the remote manifest.
 //
 // Conservative settings tuned for mid-range mobile (Snapdragon 7 Gen / A15+):
 //   - contextLength 2048: halves KV cache vs 4096 (critical for RAM)
@@ -46,5 +66,11 @@ export const PHI3_MINI_MANIFEST: ModelManifest = {
   capabilities: ["generate", "summarize"],
   downloadUrl:
     "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
-  // checksum: add sha256 after CDN migration for integrity verification
+  minRamMB: 4096,
+  minStorageMB: 3000,
+  capabilityTier: "standard",
+  targetDeviceTiers: ["mid", "high", "flagship"],
+  releaseChannel: "stable",
+  rolloutPct: 100,
+  releasedAt: "2025-05-01",
 };

@@ -56,6 +56,39 @@ export async function initOrchestrator(): Promise<void> {
   });
 
   _initialised = true;
+
+  // Non-blocking startup tasks — run after orchestrator is fully initialised.
+  void _startupTasks();
+}
+
+async function _startupTasks(): Promise<void> {
+  // 1. Recover any interrupted migration from a prior session
+  try {
+    const { recoverInterruptedMigration } = await import("../models/migrationEngine");
+    await recoverInterruptedMigration();
+  } catch { /* non-fatal */ }
+
+  // 2. Fetch remote manifest and hydrate registry (background, non-blocking)
+  void (async () => {
+    try {
+      const { fetchManifest } = await import("../models/remoteManifest");
+      const { hydrateFromRemote } = await import("../models/modelRegistry");
+      const result = await fetchManifest();
+      if (result.models.length) hydrateFromRemote(result.models);
+    } catch { /* non-fatal — static fallback remains active */ }
+  })();
+
+  // 3. Auto-activate local model if already installed
+  try {
+    const { checkLifecycleState } = await import("../models/modelLifecycle");
+    const { getRecommendedManifest } = await import("../models/modelRegistry");
+
+    const state = await checkLifecycleState();
+    if (state === "installed") {
+      const manifest = getRecommendedManifest();
+      await tryActivateLocalProvider(manifest);
+    }
+  } catch { /* silent — startup activation is best-effort */ }
 }
 
 async function executeInference(

@@ -24,7 +24,12 @@ import {
 } from "@/ai/runtime/performanceMonitor";
 import { getThermalState, getInferenceRate, resetThermal } from "@/ai/runtime/thermalGuard";
 import { validateModelIntegrity } from "@/ai/providers/local/modelLoader";
-import { PHI3_MINI_MANIFEST } from "@/ai/providers/local/modelMetadata";
+import { getRecommendedManifest } from "@/ai/models/modelRegistry";
+import { getManifestResult, getReleaseChannel, setReleaseChannel, getRolloutSeed, type ReleaseChannel as ReleaseChannelType } from "@/ai/models/remoteManifest";
+import { getDeviceProfile, type DeviceProfile } from "@/ai/platform/deviceProfile";
+import { evaluateModelUpdate, type UpdateEvaluation } from "@/ai/models/modelUpdateService";
+import { getStorageInventory, evictInactiveModels, type StorageInventory } from "@/ai/storage/storageAccountant";
+import { getMigrationHistory } from "@/ai/models/migrationEngine";
 import { filterOutput } from "@/ai/safety/outputFilter";
 import { evaluatePresence, clearPresenceSuppression } from "@/ai/presence/presenceRules";
 import {
@@ -637,7 +642,7 @@ function PerformanceMetricsCard() {
     thermal === "warm" ? "text-yellow-500" :
     "text-emerald-500";
 
-  const ramEstimate = estimateModelRamMB(PHI3_MINI_MANIFEST.sizeBytes, 2048);
+  const ramEstimate = estimateModelRamMB(getRecommendedManifest().sizeBytes, 2048);
 
   return (
     <Card>
@@ -715,7 +720,7 @@ function ModelHealthCard() {
   async function handleValidate() {
     setChecking(true);
     try {
-      const result = await validateModelIntegrity(PHI3_MINI_MANIFEST.id);
+      const result = await validateModelIntegrity(getRecommendedManifest().id);
       setIntegrityResult(result);
     } catch (err) {
       setIntegrityResult({ valid: false, reason: err instanceof Error ? err.message : "check failed" });
@@ -723,7 +728,8 @@ function ModelHealthCard() {
     setChecking(false);
   }
 
-  const ramEstimate = estimateModelRamMB(PHI3_MINI_MANIFEST.sizeBytes, 2048);
+  const manifest = getRecommendedManifest();
+  const ramEstimate = estimateModelRamMB(manifest.sizeBytes, 2048);
 
   return (
     <Card>
@@ -734,25 +740,25 @@ function ModelHealthCard() {
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-0.5">
             <p className="text-muted-foreground">Model</p>
-            <p className="text-foreground/70 font-mono text-[10.5px]">{PHI3_MINI_MANIFEST.id}</p>
+            <p className="text-foreground/70 font-mono text-[10.5px]">{manifest.id}</p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground">Size</p>
             <p className="font-mono text-foreground/70">
-              {(PHI3_MINI_MANIFEST.sizeBytes / 1e9).toFixed(2)} GB
+              {(manifest.sizeBytes / 1e9).toFixed(2)} GB
             </p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground">Quantization</p>
-            <p className="font-mono text-foreground/70">{PHI3_MINI_MANIFEST.quantization}</p>
+            <p className="font-mono text-foreground/70">{manifest.quantization}</p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground">Context window</p>
-            <p className="font-mono text-foreground/70">{PHI3_MINI_MANIFEST.contextLength} tok</p>
+            <p className="font-mono text-foreground/70">{manifest.contextLength} tok</p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground">Max generation</p>
-            <p className="font-mono text-foreground/70">{PHI3_MINI_MANIFEST.maxGenerationTokens} tok</p>
+            <p className="font-mono text-foreground/70">{manifest.maxGenerationTokens} tok</p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground">RAM estimate</p>
@@ -1050,6 +1056,293 @@ function IntelligenceObservabilityCard() {
   );
 }
 
+// ── Platform observability panel (Phase 9) ────────────────────────────────────
+
+function PlatformObservabilityCard() {
+  const [device, setDevice] = React.useState<DeviceProfile | null>(null);
+  const [manifest, setManifest] = React.useState(() => getManifestResult());
+  const [update, setUpdate] = React.useState<UpdateEvaluation | null>(null);
+  const [inventory, setInventory] = React.useState<StorageInventory | null>(null);
+  const [channel, setChannelState] = React.useState<ReleaseChannelType>(() => getReleaseChannel());
+  const [history] = React.useState(() => getMigrationHistory());
+  const [loading, setLoading] = React.useState(false);
+  const [evicting, setEvicting] = React.useState(false);
+  const [evictedBytes, setEvictedBytes] = React.useState<number | null>(null);
+
+  async function refresh() {
+    setLoading(true);
+    const [d, u, inv] = await Promise.all([
+      getDeviceProfile({ refresh: true }),
+      evaluateModelUpdate(),
+      getStorageInventory(),
+    ]);
+    setDevice(d);
+    setUpdate(u);
+    setInventory(inv);
+    setManifest(getManifestResult());
+    setLoading(false);
+  }
+
+  async function handleEvict() {
+    setEvicting(true);
+    const freed = await evictInactiveModels();
+    setEvictedBytes(freed);
+    const inv = await getStorageInventory();
+    setInventory(inv);
+    setEvicting(false);
+  }
+
+  function handleChannelChange(ch: ReleaseChannelType) {
+    setReleaseChannel(ch);
+    setChannelState(ch);
+  }
+
+  const updateColor =
+    update?.decision === "update_required" ? "text-red-500" :
+    update?.decision === "update_available" ? "text-amber-500" :
+    update?.decision === "no_update" ? "text-emerald-500" :
+    "text-muted-foreground";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Platform Observability</CardTitle>
+        <Button
+          size="sm" variant="outline"
+          onClick={refresh}
+          disabled={loading}
+          className="text-[10px] h-6 px-2"
+        >
+          {loading ? "Loading…" : "Refresh"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Remote manifest */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Remote Manifest
+          </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Source</p>
+              <p className={cn(
+                "font-mono",
+                manifest?.source === "remote" ? "text-emerald-600" :
+                manifest?.source === "cached" ? "text-amber-600" :
+                "text-muted-foreground",
+              )}>
+                {manifest?.source ?? "not fetched"}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Models listed</p>
+              <p className="font-mono text-foreground/70">
+                {manifest?.models.length ?? 0}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Fetched</p>
+              <p className="font-mono text-foreground/70 text-[10.5px]">
+                {manifest?.fetchedAt
+                  ? new Date(manifest.fetchedAt).toLocaleTimeString()
+                  : "—"}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Emergency disable</p>
+              <p className={cn(
+                "font-mono",
+                manifest?.platform?.emergencyDisable ? "text-red-500" : "text-emerald-600",
+              )}>
+                {manifest?.platform?.emergencyDisable ? "ACTIVE" : "off"}
+              </p>
+            </div>
+          </div>
+          {manifest?.error && (
+            <p className="text-[10.5px] text-amber-600/70 bg-amber-500/5 rounded px-2 py-1">
+              {manifest.error}
+            </p>
+          )}
+        </div>
+
+        {/* Device profile */}
+        {device && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Device Profile
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Tier</p>
+                <p className="font-mono text-foreground/70">{device.tier}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">RAM</p>
+                <p className="font-mono text-foreground/70">
+                  {device.estimatedRamGB != null ? `${device.estimatedRamGB} GB` : "unknown"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Platform</p>
+                <p className="font-mono text-foreground/70">{device.platform}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Wi-Fi</p>
+                <p className="font-mono text-foreground/70">
+                  {device.isOnWifi === null ? "unknown" : device.isOnWifi ? "yes" : "no"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Battery</p>
+                <p className="font-mono text-foreground/70">
+                  {device.batteryPct != null
+                    ? `${device.batteryPct}% ${device.batteryCharging ? "(charging)" : ""}`
+                    : "unknown"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Storage free</p>
+                <p className="font-mono text-foreground/70">
+                  {device.availableStorageMB != null
+                    ? `${(device.availableStorageMB / 1000).toFixed(1)} GB`
+                    : "unknown"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Update evaluation */}
+        {update && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Update Evaluation
+            </p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className={cn("font-mono font-semibold text-[10.5px] uppercase", updateColor)}>
+                  {update.decision.replace("_", " ")}
+                </span>
+              </div>
+              <p className="text-foreground/55 text-[11px]">{update.reason}</p>
+              {update.targetManifest && (
+                <p className="text-muted-foreground/50 text-[10.5px] font-mono">
+                  target: {update.targetManifest.id}
+                </p>
+              )}
+              <p className="text-muted-foreground/40 text-[10.5px]">
+                rollout seed: {getRolloutSeed()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Storage inventory */}
+        {inventory && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+                Storage Inventory
+              </p>
+              {inventory.evictableBytes > 0 && (
+                <Button
+                  size="sm" variant="outline"
+                  onClick={handleEvict}
+                  disabled={evicting}
+                  className="text-[10px] h-6 px-2"
+                >
+                  {evicting ? "Evicting…" : "Evict unused"}
+                </Button>
+              )}
+            </div>
+            {inventory.entries.length === 0 ? (
+              <p className="text-muted-foreground/50 text-[11px]">No models on disk</p>
+            ) : (
+              <div className="space-y-1">
+                {inventory.entries.map((e) => (
+                  <div key={e.modelId} className="flex items-center justify-between">
+                    <span className="font-mono text-[10.5px] text-foreground/60 truncate">
+                      {e.modelId}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] font-semibold ml-2 flex-shrink-0",
+                      e.state === "active" ? "text-emerald-600" :
+                      e.state === "staged" ? "text-amber-600" :
+                      e.state === "corrupted" ? "text-red-500" :
+                      "text-muted-foreground/50",
+                    )}>
+                      {e.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-muted-foreground/40 text-[10.5px]">
+              total: {(inventory.totalUsedBytes / 1e9).toFixed(2)} GB
+              {inventory.evictableBytes > 0 && ` · evictable: ${(inventory.evictableBytes / 1e9).toFixed(2)} GB`}
+            </p>
+            {evictedBytes !== null && (
+              <p className="text-emerald-600/70 text-[10.5px]">
+                Freed {(evictedBytes / 1e9).toFixed(2)} GB
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Release channel */}
+        <div className="space-y-1.5 border-t border-border/15 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Release Channel
+          </p>
+          <div className="flex gap-1.5 flex-wrap">
+            {(["stable", "beta", "experimental", "internal"] as ReleaseChannelType[]).map((ch) => (
+              <button
+                key={ch}
+                type="button"
+                onClick={() => handleChannelChange(ch)}
+                className={cn(
+                  "text-[10.5px] px-2 py-0.5 rounded border transition-colors",
+                  channel === ch
+                    ? "border-foreground/30 text-foreground/80 bg-foreground/5"
+                    : "border-border/20 text-muted-foreground/40 hover:border-border/40",
+                )}
+              >
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Migration history */}
+        {history.length > 0 && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Migration History
+            </p>
+            <div className="space-y-1">
+              {history.slice(-5).reverse().map((r, i) => (
+                <div key={i} className="flex items-center gap-2 text-[10.5px]">
+                  <span className={r.success ? "text-emerald-600" : "text-red-500"}>
+                    {r.success ? "✓" : "✗"}
+                  </span>
+                  <span className="text-muted-foreground/50 font-mono truncate">
+                    {r.from ?? "none"} → {r.to}
+                  </span>
+                  <span className="text-muted-foreground/30 flex-shrink-0">
+                    {new Date(r.completedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -1061,6 +1354,7 @@ export function AIDevPanel() {
       <RuntimeStatusCard />
       <ModelHealthCard />
       <PerformanceMetricsCard />
+      <PlatformObservabilityCard />
       <LongitudinalMemoryCard />
       <IntelligenceObservabilityCard />
       <StructuredTestsCard />

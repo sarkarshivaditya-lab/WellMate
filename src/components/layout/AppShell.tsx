@@ -109,7 +109,8 @@ function KeyboardShortcut() {
   return null;
 }
 
-// ── Shell inner (requires palette context) ─────────────────────────────────────
+// ── Shell inner (requires palette context) ───────────────────────
+// ──────────────
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const location = useLocation();

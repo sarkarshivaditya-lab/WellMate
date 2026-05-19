@@ -1,7 +1,6 @@
 import { Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/layout/PageLayout";
-import { ModelDownloadCard } from "@/components/ai/ModelDownloadCard";
 import { cn } from "@/lib/utils";
 
 export default function Chat() {
@@ -97,14 +96,6 @@ export default function Chat() {
               </a>
             </CardContent>
           </Card>
-        </div>
-
-        {/* ── Offline AI ── */}
-        <div className="space-y-3">
-          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
-            Intelligent support
-          </p>
-          <ModelDownloadCard />
         </div>
 
         {/* ── Closing note ── */}
