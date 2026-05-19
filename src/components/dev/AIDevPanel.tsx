@@ -17,6 +17,11 @@ import {
   generateLongitudinalSummary,
   isSummaryStale,
 } from "@/ai/memory/longitudinalSummary";
+import {
+  subscribeToPerformance,
+  getPerformanceSnapshot,
+} from "@/ai/runtime/performanceMonitor";
+import { getThermalState } from "@/ai/runtime/thermalGuard";
 import { cn } from "@/lib/utils";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
@@ -359,6 +364,66 @@ function SessionMemoryCard() {
   );
 }
 
+// ── Performance metrics panel ─────────────────────────────────────────────────
+
+function PerformanceMetricsCard() {
+  const [metrics, setMetrics] = React.useState(getPerformanceSnapshot);
+  const [thermal, setThermal] = React.useState(getThermalState);
+
+  React.useEffect(() => {
+    const unsub = subscribeToPerformance(setMetrics);
+    // Poll thermal every 5s (it has no pub/sub)
+    const interval = setInterval(() => setThermal(getThermalState()), 5_000);
+    return () => { unsub(); clearInterval(interval); };
+  }, []);
+
+  const thermalColor =
+    thermal === "critical" ? "text-red-500" :
+    thermal === "hot" ? "text-amber-500" :
+    thermal === "warm" ? "text-yellow-500" :
+    "text-emerald-500";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Inference Performance</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-0.5">
+            <p className="text-muted-foreground">Token speed</p>
+            <p className="font-mono text-foreground">
+              {metrics.tokensPerSec > 0 ? `${metrics.tokensPerSec} tok/s` : "—"}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-muted-foreground">Avg latency</p>
+            <p className="font-mono text-foreground">
+              {metrics.avgInferenceMs > 0 ? `${metrics.avgInferenceMs}ms` : "—"}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-muted-foreground">Model load</p>
+            <p className="font-mono text-foreground">
+              {metrics.lastLoadDurationMs > 0 ? `${(metrics.lastLoadDurationMs / 1000).toFixed(1)}s` : "—"}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-muted-foreground">Inferences</p>
+            <p className="font-mono text-foreground">{metrics.inferenceCount}</p>
+          </div>
+        </div>
+        <div className="border-t border-border/25 pt-2 flex items-center gap-2">
+          <p className="text-muted-foreground">Thermal</p>
+          <span className={cn("font-semibold text-[11px] uppercase", thermalColor)}>
+            {thermal}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Longitudinal memory panel ─────────────────────────────────────────────────
 
 function LongitudinalMemoryCard() {
@@ -450,6 +515,7 @@ export function AIDevPanel() {
         AI Runtime — Dev Tools
       </div>
       <RuntimeStatusCard />
+      <PerformanceMetricsCard />
       <LongitudinalMemoryCard />
       <InferenceTestCard />
       <RetrievalTestCard />

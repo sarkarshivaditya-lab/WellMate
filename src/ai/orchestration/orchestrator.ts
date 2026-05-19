@@ -16,6 +16,7 @@ import {
   awaitThermalClearance,
   recordInference,
   isAppVisible,
+  subscribeToThermalEmergency,
 } from "../runtime/thermalGuard";
 import { patchRuntimeState } from "../runtime/runtimeState";
 
@@ -35,6 +36,20 @@ export async function initOrchestrator(): Promise<void> {
     provider: "stub",
     modelId: stub.modelId,
     offlineCapable: true,
+  });
+
+  // Emergency thermal shutdown — unload local model if device is overheating
+  subscribeToThermalEmergency(() => {
+    const local = getProvider("local");
+    if (local?.isReady()) {
+      void local.dispose().catch(() => null);
+      setActiveProvider("stub");
+      patchRuntimeState({
+        provider: "stub",
+        modelLoad: "not_loaded",
+        lastError: "Model unloaded: thermal emergency. Restart when device cools.",
+      });
+    }
   });
 
   _initialised = true;

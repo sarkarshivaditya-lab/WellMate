@@ -1,4 +1,4 @@
-// Model manifest types and the Phase-1 target model definition.
+// Model manifest types and the production local model definition.
 
 export type ModelFamily = "phi3" | "llama" | "mistral" | "gemma";
 export type QuantizationLevel = "q4_0" | "q4_k_m" | "q5_0" | "q8_0" | "f16";
@@ -10,30 +10,41 @@ export type ModelManifest = {
   family: ModelFamily;
   sizeBytes: number;
   quantization: QuantizationLevel;
-  contextLength: number;
+  contextLength: number;      // tokens — should be ≤2048 for mobile safety
+  maxGenerationTokens: number; // conservative per-response ceiling
   capabilities: ModelCapability[];
   downloadUrl?: string;
-  checksum?: string; // sha256 hex — for integrity verification before load
+  checksum?: string;           // sha256 hex — verified before load when present
 };
 
 export type ModelLoadState =
   | { phase: "not_loaded" }
-  | { phase: "downloading"; progressBytes: number; totalBytes: number }
+  | { phase: "downloading"; progressBytes: number; totalBytes: number; resumedFrom: number }
   | { phase: "verifying" }
   | { phase: "loading"; progressPct: number }
   | { phase: "ready"; loadedAt: number }
   | { phase: "failed"; reason: string };
 
-// Phase-1 local model target: Phi-3 Mini (3.8B, Q4_K_M quantization).
-// ~2.3 GB on-device — smallest viable reasoning model for wellness context.
-// Context: 4096 tokens (sufficient for assembled wellness context + response).
+// Production model: Phi-3 Mini 4K Instruct Q4_0 — smallest viable reasoning
+// model for wellness context. 2.39 GB on-device.
+//
+// Conservative settings tuned for mid-range mobile (Snapdragon 7 Gen / A15+):
+//   - contextLength 2048: halves KV cache vs 4096 (critical for RAM)
+//   - maxGenerationTokens 256: ~20-60s generation at 4-12 tok/s on mobile
+//   - Q4_0: fast decode, broad quantization hardware support
+//
+// downloadUrl: official Microsoft GGUF release via HuggingFace CDN.
+// Replace with dedicated CDN URL before production deployment.
 export const PHI3_MINI_MANIFEST: ModelManifest = {
-  id: "phi3-mini-4k-instruct-q4km",
-  name: "Phi-3 Mini (4K, Q4_K_M)",
+  id: "phi3-mini-4k-instruct-q4",
+  name: "Phi-3 Mini",
   family: "phi3",
-  sizeBytes: 2_300_000_000,
-  quantization: "q4_k_m",
-  contextLength: 4096,
+  sizeBytes: 2_390_000_000,
+  quantization: "q4_0",
+  contextLength: 2048,
+  maxGenerationTokens: 256,
   capabilities: ["generate", "summarize"],
-  // downloadUrl: filled in when model hosting is configured
+  downloadUrl:
+    "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
+  // checksum: add sha256 after CDN migration for integrity verification
 };

@@ -1,18 +1,30 @@
 // Thermal and performance guard.
 // Tracks inference frequency and enforces cooldowns to protect device thermals,
 // battery, and app responsiveness. Inference must never degrade core UX.
+//
+// Thresholds:
+//   WARM     (5/min)   — emit warning state, no throttle yet
+//   HOT      (10/min)  — 1.5s mandatory pause between inferences
+//   CRITICAL (18/min)  — 3s mandatory pause between inferences
+//   EMERGENCY(25/min)  — signal model unload; something is very wrong
 
 import type { ThermalState } from "./types";
 import { patchRuntimeState } from "./runtimeState";
 
-const WINDOW_MS         = 60_000; // rolling 1-minute measurement window
-const WARM_THRESHOLD    = 5;      // inferences/min → warm state
-const HOT_THRESHOLD     = 10;     // inferences/min → hot state
-const CRITICAL_THRESHOLD = 18;    // inferences/min → critical state
-const CRITICAL_COOLDOWN_MS = 3_000; // mandatory pause when critical
+const WINDOW_MS            = 60_000;
+const WARM_THRESHOLD       = 5;
+const HOT_THRESHOLD        = 10;
+const CRITICAL_THRESHOLD   = 18;
+const EMERGENCY_THRESHOLD  = 25;
+
+const HOT_THROTTLE_MS      = 1_500;
+const CRITICAL_COOLDOWN_MS = 3_000;
 
 const _timestamps: number[] = [];
 let _appVisible = true;
+
+type EmergencyListener = () => void;
+const _emergencyListeners = new Set<EmergencyListener>();
 
 function pruneWindow(): void {
   const cutoff = Date.now() - WINDOW_MS;
@@ -32,16 +44,42 @@ function computeThermalLevel(): ThermalState {
 
 export function recordInference(): void {
   _timestamps.push(Date.now());
-  patchRuntimeState({ thermal: computeThermalLevel() });
+  const level = computeThermalLevel();
+  patchRuntimeState({ thermal: level });
+
+  // Emergency: fire listeners to signal orchestrator to unload model
+  if (_timestamps.length >= EMERGENCY_THRESHOLD) {
+    _emergencyListeners.forEach((fn) => {
+      try { fn(); } catch { /* never crash */ }
+    });
+  }
 }
 
 export async function awaitThermalClearance(): Promise<void> {
   pruneWindow();
-  if (computeThermalLevel() === "critical") {
+  const level = computeThermalLevel();
+
+  if (level === "critical") {
     await new Promise<void>((resolve) =>
       setTimeout(resolve, CRITICAL_COOLDOWN_MS),
     );
+  } else if (level === "hot") {
+    // Soft throttle — slightly slows down rapid-fire inference without hard blocking
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, HOT_THROTTLE_MS),
+    );
   }
+}
+
+// Subscribe to thermal emergency events — orchestrator uses this to unload
+export function subscribeToThermalEmergency(fn: EmergencyListener): () => void {
+  _emergencyListeners.add(fn);
+  return () => _emergencyListeners.delete(fn);
+}
+
+export function getThermalState(): ThermalState {
+  pruneWindow();
+  return computeThermalLevel();
 }
 
 export function isAppVisible(): boolean {

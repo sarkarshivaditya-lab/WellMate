@@ -29,7 +29,9 @@ export type BridgeStatus =
 
 export type LlamaBridgeHandle = {
   generate(request: InferenceRequest): Promise<InferenceResult>;
-  loadModel(manifest: ModelManifest, modelData: ArrayBuffer): Promise<void>;
+  // Takes a blob URL — caller creates it from OPFS/IDB, revokes after loading.
+  // Blob URL approach avoids holding 2+ GB in RAM simultaneously.
+  loadFromBlobUrl(manifest: ModelManifest, blobUrl: string): Promise<void>;
   unloadModel(): Promise<void>;
   isModelLoaded(): boolean;
 };
