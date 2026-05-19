@@ -30,6 +30,11 @@ import { getDeviceProfile, type DeviceProfile } from "@/ai/platform/deviceProfil
 import { evaluateModelUpdate, type UpdateEvaluation } from "@/ai/models/modelUpdateService";
 import { getStorageInventory, evictInactiveModels, type StorageInventory } from "@/ai/storage/storageAccountant";
 import { getMigrationHistory } from "@/ai/models/migrationEngine";
+import { getCapabilitiesSync, detectCapabilities, type RuntimeCapabilities } from "@/ai/platform/capabilityClassifier";
+import { getDetailedSnapshot, subscribeToProfile, type DetailedSnapshot } from "@/ai/runtime/performanceProfiler";
+import { getCurrentPolicy, subscribeToPolicy, type RuntimePolicy } from "@/ai/runtime/runtimeGovernor";
+import { getThermalIncidents, getFailureEvents, getDailyRecords, getHistoryStorageBytes, clearAllHistory } from "@/ai/runtime/performanceHistory";
+import { runBenchmarkSuite, getBenchmarkHistory, subscribeToProgress, type BenchmarkSuite } from "@/ai/runtime/benchmarkEngine";
 import { filterOutput } from "@/ai/safety/outputFilter";
 import { evaluatePresence, clearPresenceSuppression } from "@/ai/presence/presenceRules";
 import {
@@ -40,6 +45,35 @@ import {
 import { generateDailyReflection } from "@/ai/reflection/reflectionEngine";
 import { serializeSummaryForPrompt } from "@/ai/memory/longitudinalSummary";
 import { cn } from "@/lib/utils";
+import {
+  getWorkerHealth,
+  subscribeToWorkerHealth,
+  spawnWorker,
+  restartWorker,
+  cleanupOrphanedWorkers,
+  type WorkerHealthReport,
+} from "@/ai/workers/workerOrchestrator";
+import { getLifecycleState, subscribeToLifecycle, type AppLifecycleState } from "@/ai/runtime/appLifecycle";
+import { getCognitionProfile, subscribeToCognitionProfile, type CognitionProfile } from "@/ai/cognition/cognitionScaler";
+import { getBatteryScheduleState, getBatteryScheduleStateSync, type BatteryScheduleState } from "@/ai/runtime/batteryScheduler";
+import {
+  getAllSubsystemHealth,
+  getFaultLog,
+  resetSubsystem,
+  resetAllSubsystems,
+  subscribeToFaults,
+  type SubsystemHealth,
+  type SubsystemId,
+} from "@/ai/runtime/faultContainment";
+import {
+  runStressSuite,
+  getStressHistory,
+  subscribeToStressProgress,
+  ALL_STRESS_SCENARIOS,
+  type StressScenarioId,
+  type StressScenarioResult,
+  type StressProgress,
+} from "@/ai/runtime/stressSuite";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -708,6 +742,186 @@ function PerformanceMetricsCard() {
   );
 }
 
+// ── Runtime governor panel (Phase 10) ────────────────────────────────────────
+
+function RuntimeGovernorCard() {
+  const [caps, setCaps] = React.useState<RuntimeCapabilities | null>(getCapabilitiesSync);
+  const [policy, setPolicy] = React.useState<RuntimePolicy>(() => getCurrentPolicy());
+  const [profilerSnap, setProfilerSnap] = React.useState<DetailedSnapshot | null>(null);
+  const [detecting, setDetecting] = React.useState(false);
+
+  React.useEffect(() => {
+    const unsubPolicy = subscribeToPolicy(setPolicy);
+    const unsubProfile = subscribeToProfile((snap) => setProfilerSnap(snap));
+    setProfilerSnap(getDetailedSnapshot());
+    return () => { unsubPolicy(); unsubProfile(); };
+  }, []);
+
+  async function handleDetect() {
+    setDetecting(true);
+    const c = await detectCapabilities({ refresh: true });
+    setCaps(c);
+    setDetecting(false);
+  }
+
+  const modeColor =
+    policy.mode === "suspended" ? "text-red-500" :
+    policy.mode === "minimal" ? "text-red-400" :
+    policy.mode === "conservative" ? "text-amber-500" :
+    policy.mode === "efficient" ? "text-yellow-500" :
+    "text-emerald-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Runtime Governor</CardTitle>
+        <Button
+          size="sm" variant="outline"
+          onClick={handleDetect}
+          disabled={detecting}
+          className="text-[10px] h-6 px-2"
+        >
+          {detecting ? "Detecting…" : "Re-detect"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Capability class */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Device Classification
+          </p>
+          {caps ? (
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Class</p>
+                <p className="font-mono text-foreground/80 font-semibold">{caps.capabilityClass}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">RAM</p>
+                <p className="font-mono text-foreground/70">{caps.estimatedRamGB != null ? `${caps.estimatedRamGB} GB` : "unknown"}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">CPU cores</p>
+                <p className="font-mono text-foreground/70">{caps.hardwareConcurrency}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">WASM SIMD</p>
+                <StatusBadge ok={caps.hasWasmSimd} label={caps.hasWasmSimd ? "yes" : "no"} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">WASM threads</p>
+                <StatusBadge ok={caps.hasWasmThreads} label={caps.hasWasmThreads ? "yes" : "no"} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Background tasks</p>
+                <StatusBadge ok={caps.params.backgroundTasksAllowed} label={caps.params.backgroundTasksAllowed ? "allowed" : "blocked"} />
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground/50 text-[11px]">Not yet classified. Press Re-detect.</p>
+          )}
+        </div>
+
+        {/* Active policy */}
+        <div className="space-y-1.5 border-t border-border/15 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Active Policy
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={cn("font-mono font-semibold uppercase text-[11px]", modeColor)}>
+              {policy.mode}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="text-foreground/55 text-[11px]">{policy.reason}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Max context</p>
+              <p className="font-mono text-foreground/70">{policy.maxContextTokens} tok</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Max generation</p>
+              <p className="font-mono text-foreground/70">{policy.maxGenerationTokens} tok</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Retrieval depth</p>
+              <p className="font-mono text-foreground/70">{policy.retrievalDepth}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Stream throttle</p>
+              <p className="font-mono text-foreground/70">
+                {policy.streamingThrottleMs > 0 ? `${policy.streamingThrottleMs}ms` : "none"}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Heavy cognition</p>
+              <StatusBadge ok={!policy.deferHeavyCognition} label={policy.deferHeavyCognition ? "deferred" : "allowed"} />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Background</p>
+              <StatusBadge ok={policy.allowBackgroundTasks} label={policy.allowBackgroundTasks ? "yes" : "no"} />
+            </div>
+          </div>
+        </div>
+
+        {/* Profiler snapshot */}
+        {profilerSnap && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Profiler Snapshot
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Avg tok/s</p>
+                <p className="font-mono text-foreground/70">
+                  {profilerSnap.avgTokPerSec > 0 ? profilerSnap.avgTokPerSec.toFixed(1) : "—"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Peak tok/s</p>
+                <p className="font-mono text-foreground/70">
+                  {profilerSnap.peakTokPerSec > 0 ? profilerSnap.peakTokPerSec.toFixed(1) : "—"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">p50 latency</p>
+                <p className="font-mono text-foreground/70">
+                  {profilerSnap.p50LatencyMs > 0 ? `${profilerSnap.p50LatencyMs}ms` : "—"}
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">p90 latency</p>
+                <p className="font-mono text-foreground/70">
+                  {profilerSnap.p90LatencyMs > 0 ? `${profilerSnap.p90LatencyMs}ms` : "—"}
+                </p>
+              </div>
+              {profilerSnap.memoryPressure && (
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground">Heap pressure</p>
+                  <p className={cn(
+                    "font-mono text-[11px]",
+                    profilerSnap.memoryPressure.level === "high" ? "text-red-500" :
+                    profilerSnap.memoryPressure.level === "moderate" ? "text-amber-500" :
+                    "text-emerald-600",
+                  )}>
+                    {profilerSnap.memoryPressure.level} ({(profilerSnap.memoryPressure.ratio * 100).toFixed(0)}%)
+                  </p>
+                </div>
+              )}
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Sample count</p>
+                <p className="font-mono text-foreground/70">{profilerSnap.sampleCount}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Model health + integrity panel ────────────────────────────────────────────
 
 function ModelHealthCard() {
@@ -1343,6 +1557,786 @@ function PlatformObservabilityCard() {
   );
 }
 
+// ── Benchmark panel (Phase 10) ────────────────────────────────────────────────
+
+function BenchmarkCard() {
+  const [running, setRunning] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
+  const [currentType, setCurrentType] = React.useState<string | null>(null);
+  const [latest, setLatest] = React.useState<BenchmarkSuite | null>(null);
+  const [history, setHistory] = React.useState<BenchmarkSuite[]>(() => getBenchmarkHistory());
+  const abortRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    const h = getBenchmarkHistory();
+    setHistory(h);
+    if (h.length > 0) setLatest(h[h.length - 1]);
+  }, []);
+
+  async function handleRun() {
+    setRunning(true);
+    setProgress(0);
+    setCurrentType(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const unsub = subscribeToProgress((type, pct) => {
+      setCurrentType(type === "complete" ? null : type);
+      setProgress(pct);
+    });
+
+    try {
+      const suite = await runBenchmarkSuite({ signal: controller.signal });
+      setLatest(suite);
+      setHistory(getBenchmarkHistory());
+    } catch { /* aborted or failed */ }
+
+    unsub();
+    setRunning(false);
+    setCurrentType(null);
+  }
+
+  function handleStop() {
+    abortRef.current?.abort();
+  }
+
+  const scoreColor = (score: number) =>
+    score >= 75 ? "text-emerald-600" :
+    score >= 50 ? "text-amber-500" :
+    "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Inference Benchmark</CardTitle>
+        <div className="flex gap-1">
+          {running ? (
+            <Button size="sm" variant="outline" onClick={handleStop} className="text-[10px] h-6 px-2">
+              Stop
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={handleRun} className="text-[10px] h-6 px-2">
+              Run suite
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Progress */}
+        {running && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">
+                {currentType ? `Running: ${currentType.replace("_", " ")}` : "Starting…"}
+              </span>
+              <span className="font-mono text-foreground/60">{progress}%</span>
+            </div>
+            <div className="h-1 bg-muted/30 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary/50 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Latest results */}
+        {latest && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+                Latest Suite — {latest.deviceClass}
+              </p>
+              <span className={cn("font-mono font-bold text-[13px]", scoreColor(latest.overallScore))}>
+                {latest.overallScore}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {latest.results.map((r) => (
+                <div key={r.type} className="flex items-center justify-between text-[11px]">
+                  <span className="text-foreground/55 w-32">{r.type.replace(/_/g, " ")}</span>
+                  <span className="font-mono text-muted-foreground/60 w-16 text-right">
+                    {r.tokPerSec > 0 ? `${r.tokPerSec} t/s` : "—"}
+                  </span>
+                  <span className={cn("font-mono font-semibold w-12 text-right", scoreColor(r.score))}>
+                    {r.score}
+                  </span>
+                  <StatusBadge ok={r.passed} label={r.passed ? "pass" : "fail"} />
+                </div>
+              ))}
+            </div>
+            <p className="text-muted-foreground/35 text-[10px]">
+              {new Date(latest.ranAt).toLocaleString()} · {(latest.durationMs / 1000).toFixed(1)}s total
+            </p>
+          </div>
+        )}
+
+        {/* History summary */}
+        {history.length > 1 && (
+          <div className="space-y-1 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              History ({history.length} suites)
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {history.slice(-8).map((s) => (
+                <div key={s.suiteId} className="text-center">
+                  <div className={cn("font-mono text-[11px] font-semibold", scoreColor(s.overallScore))}>
+                    {s.overallScore}
+                  </div>
+                  <div className="text-muted-foreground/30 text-[9px]">
+                    {new Date(s.ranAt).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!latest && !running && (
+          <p className="text-muted-foreground/50 text-[11px]">
+            No benchmarks run yet. Press "Run suite" to characterize this device.
+          </p>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Performance history panel (Phase 10) ─────────────────────────────────────
+
+function PerformanceHistoryCard() {
+  const [thermalIncidents] = React.useState(() => getThermalIncidents(10));
+  const [failures] = React.useState(() => getFailureEvents(10));
+  const [daily] = React.useState(() => {
+    const records = getDailyRecords();
+    return Object.values(records)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-7);
+  });
+  const [storageBytes] = React.useState(() => getHistoryStorageBytes());
+  const [cleared, setCleared] = React.useState(false);
+
+  function handleClear() {
+    clearAllHistory();
+    setCleared(true);
+  }
+
+  const stabilityColor = (score: number) =>
+    score >= 90 ? "text-emerald-600" :
+    score >= 70 ? "text-amber-500" :
+    "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Performance History</CardTitle>
+        <Button
+          size="sm" variant="outline"
+          onClick={handleClear}
+          disabled={cleared}
+          className="text-[10px] h-6 px-2"
+        >
+          {cleared ? "Cleared" : "Clear all"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Daily records */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Daily Records (last 7 days)
+          </p>
+          {daily.length === 0 ? (
+            <p className="text-muted-foreground/50 text-[11px]">No daily records yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {daily.map((d) => (
+                <div key={d.date} className="flex items-center gap-2 text-[11px]">
+                  <span className="text-muted-foreground/50 font-mono w-20 flex-shrink-0">{d.date.slice(5)}</span>
+                  <span className="text-foreground/60 w-16 font-mono">
+                    {d.inferenceCount} inf
+                  </span>
+                  <span className="text-foreground/50 w-16 font-mono">
+                    {d.avgTokPerSec > 0 ? `${d.avgTokPerSec.toFixed(1)} t/s` : "—"}
+                  </span>
+                  <span className={cn("font-mono font-semibold ml-auto", stabilityColor(d.modelStabilityScore))}>
+                    {d.modelStabilityScore}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Thermal incidents */}
+        <div className="space-y-1.5 border-t border-border/15 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Thermal Incidents (last 10)
+          </p>
+          {thermalIncidents.length === 0 ? (
+            <p className="text-muted-foreground/50 text-[11px]">None recorded.</p>
+          ) : (
+            <div className="space-y-1">
+              {thermalIncidents.slice().reverse().map((t, i) => (
+                <div key={i} className="flex items-center gap-2 text-[10.5px]">
+                  <span className="text-red-500/70 font-semibold w-20 flex-shrink-0">{t.thermalState}</span>
+                  <span className="text-muted-foreground/50 font-mono">{t.inferencesPerMin}/min</span>
+                  <span className="text-muted-foreground/40 font-mono ml-auto">
+                    {new Date(t.occurredAt).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Failure events */}
+        <div className="space-y-1.5 border-t border-border/15 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Failure Events (last 10)
+          </p>
+          {failures.length === 0 ? (
+            <p className="text-muted-foreground/50 text-[11px]">None recorded.</p>
+          ) : (
+            <div className="space-y-1">
+              {failures.slice().reverse().map((f, i) => (
+                <div key={i} className="text-[10.5px] space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-500/70 font-mono">{f.provider}</span>
+                    <StatusBadge ok={f.recoveredSuccessfully} label={f.recoveredSuccessfully ? "recovered" : "failed"} />
+                    <span className="text-muted-foreground/30 ml-auto">
+                      {new Date(f.occurredAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="text-foreground/40 truncate pl-2">{f.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Storage */}
+        <div className="border-t border-border/15 pt-3">
+          <p className="text-muted-foreground/40 text-[10.5px]">
+            History storage: {(storageBytes / 1024).toFixed(1)} KB
+          </p>
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Worker health + lifecycle panel (Phase 11) ────────────────────────────────
+
+function WorkerHealthCard() {
+  const [workers, setWorkers] = React.useState<WorkerHealthReport[]>(() => getWorkerHealth());
+  const [lifecycle, setLifecycle] = React.useState<AppLifecycleState>(() => getLifecycleState());
+  const [orphansCleaned, setOrphansCleaned] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    const unsubW = subscribeToWorkerHealth(setWorkers);
+    const unsubL = subscribeToLifecycle((_, state) => setLifecycle(state));
+    return () => { unsubW(); unsubL(); };
+  }, []);
+
+  function handleSpawn(role: "inference" | "retrieval" | "indexing" | "summarization") {
+    spawnWorker(role);
+  }
+
+  function handleCleanup() {
+    const cleaned = cleanupOrphanedWorkers();
+    setOrphansCleaned(cleaned);
+  }
+
+  const lifecycleColor =
+    lifecycle === "active" ? "text-emerald-500" :
+    lifecycle === "backgrounded" ? "text-amber-500" :
+    lifecycle === "paused" ? "text-yellow-500" :
+    "text-red-500";
+
+  const statusColor = (s: WorkerHealthReport["status"]) =>
+    s === "idle" ? "text-emerald-600" :
+    s === "busy" ? "text-sky-500" :
+    s === "degraded" ? "text-amber-500" :
+    s === "restarting" ? "text-yellow-500" :
+    "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Workers + Lifecycle</CardTitle>
+        <Button size="sm" variant="outline" onClick={handleCleanup} className="text-[10px] h-6 px-2">
+          Cleanup orphans
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Lifecycle state */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            App Lifecycle
+          </p>
+          <div className="flex items-center gap-2">
+            <span className={cn("font-mono font-semibold uppercase", lifecycleColor)}>
+              {lifecycle}
+            </span>
+            {orphansCleaned !== null && (
+              <span className="text-muted-foreground/50 text-[10.5px]">
+                · {orphansCleaned} orphan{orphansCleaned !== 1 ? "s" : ""} cleaned
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Worker pool */}
+        <div className="space-y-1.5 border-t border-border/15 pt-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Worker Pool ({workers.length})
+            </p>
+            <div className="flex gap-1">
+              {(["inference", "retrieval"] as const).map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => handleSpawn(role)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-border/20 text-muted-foreground/50 hover:border-border/40 transition-colors"
+                >
+                  + {role}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {workers.length === 0 ? (
+            <p className="text-muted-foreground/45 text-[11px]">No workers spawned yet.</p>
+          ) : (
+            <div className="space-y-1">
+              {workers.map((w) => (
+                <div key={w.workerId} className="flex items-center gap-2">
+                  <span className="font-mono text-[10.5px] text-foreground/50 w-28 truncate">{w.workerId}</span>
+                  <span className={cn("font-semibold text-[10px] uppercase w-16", statusColor(w.status))}>
+                    {w.status}
+                  </span>
+                  <span className="text-muted-foreground/35 text-[10px]">
+                    {w.tasksCompleted}✓ {w.tasksFailed}✗
+                  </span>
+                  <span className="text-muted-foreground/30 text-[10px] ml-auto">
+                    {Math.round(w.uptimeMs / 1000)}s
+                  </span>
+                  {(w.status === "crashed" || w.status === "degraded") && (
+                    <button
+                      type="button"
+                      onClick={() => restartWorker(w.workerId)}
+                      className="text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-600 hover:bg-amber-500/5"
+                    >
+                      Restart
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Cognition quality + battery schedule panel (Phase 11) ─────────────────────
+
+function CognitionQualityCard() {
+  const [profile, setProfile] = React.useState<CognitionProfile>(() => getCognitionProfile());
+  const [battery, setBattery] = React.useState<BatteryScheduleState | null>(() => getBatteryScheduleStateSync());
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  React.useEffect(() => {
+    const unsub = subscribeToCognitionProfile(setProfile);
+    getBatteryScheduleState().then(setBattery).catch(() => null);
+    return unsub;
+  }, []);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    const b = await getBatteryScheduleState({ refresh: true });
+    setBattery(b);
+    setProfile(getCognitionProfile({ batteryPct: b.batteryPct }));
+    setRefreshing(false);
+  }
+
+  const qualityColor = (q: CognitionProfile["quality"]) =>
+    q === "deep_reflection" ? "text-emerald-600" :
+    q === "reflective" ? "text-sky-500" :
+    q === "balanced" ? "text-foreground/80" :
+    q === "efficient" ? "text-amber-500" :
+    "text-red-500";
+
+  const batteryModeColor = (m: BatteryScheduleState["mode"]) =>
+    m === "unrestricted" ? "text-emerald-600" :
+    m === "conservative" ? "text-amber-500" :
+    m === "minimal" ? "text-orange-500" :
+    "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Cognition Quality</CardTitle>
+        <Button size="sm" variant="outline" onClick={handleRefresh} disabled={refreshing} className="text-[10px] h-6 px-2">
+          {refreshing ? "..." : "Refresh"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Quality profile */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Active Quality
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={cn("font-mono font-bold text-[13px]", qualityColor(profile.quality))}>
+              {profile.quality.replace("_", " ")}
+            </span>
+          </div>
+          <p className="text-muted-foreground/50 text-[10.5px]">{profile.reason}</p>
+          <div className="grid grid-cols-2 gap-1.5 mt-2">
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Max tokens</p>
+              <p className="font-mono text-foreground/70">{profile.maxTokens}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Retrieval depth</p>
+              <p className="font-mono text-foreground/70">{profile.retrievalDepth}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Summarization</p>
+              <StatusBadge ok={profile.enableSummarization} label={profile.enableSummarization ? "on" : "off"} />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Memory synthesis</p>
+              <StatusBadge ok={profile.enableMemorySynthesis} label={profile.enableMemorySynthesis ? "on" : "off"} />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground">Journal analysis</p>
+              <StatusBadge ok={profile.enableJournalAnalysis} label={profile.enableJournalAnalysis ? "on" : "off"} />
+            </div>
+          </div>
+        </div>
+
+        {/* Battery schedule */}
+        {battery && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Battery Schedule
+            </p>
+            <div className="flex items-center gap-2">
+              <span className={cn("font-mono font-semibold uppercase text-[11px]", batteryModeColor(battery.mode))}>
+                {battery.mode}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-foreground/55 text-[11px]">{battery.reason}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Heavy tasks</p>
+                <StatusBadge ok={battery.heavyTasksAllowed} label={battery.heavyTasksAllowed ? "allowed" : "blocked"} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Background</p>
+                <StatusBadge ok={battery.backgroundTasksAllowed} label={battery.backgroundTasksAllowed ? "allowed" : "blocked"} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-muted-foreground">Max quality</p>
+                <p className={cn("font-mono text-[10.5px]", qualityColor(battery.maxCognitionQuality))}>
+                  {battery.maxCognitionQuality.replace("_", " ")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Fault containment panel (Phase 11) ────────────────────────────────────────
+
+function FaultContainmentCard() {
+  const [health, setHealth] = React.useState<SubsystemHealth[]>(() => getAllSubsystemHealth());
+  const [faultLog, setFaultLog] = React.useState(() => getFaultLog(10));
+  const [resetting, setResetting] = React.useState<SubsystemId | "all" | null>(null);
+
+  React.useEffect(() => {
+    const unsub = subscribeToFaults(() => {
+      setHealth(getAllSubsystemHealth());
+      setFaultLog(getFaultLog(10));
+    });
+    return unsub;
+  }, []);
+
+  async function handleReset(id: SubsystemId | "all") {
+    setResetting(id);
+    if (id === "all") resetAllSubsystems();
+    else resetSubsystem(id);
+    setHealth(getAllSubsystemHealth());
+    await new Promise<void>((r) => setTimeout(r, 300));
+    setResetting(null);
+  }
+
+  const circuitColor = (h: SubsystemHealth) =>
+    h.quarantined ? "text-red-600 font-bold" :
+    h.circuitState === "open" ? "text-red-500" :
+    h.circuitState === "half_open" ? "text-amber-500" :
+    "text-emerald-600";
+
+  const anyFault = health.some((h) => h.circuitState !== "closed" || h.quarantined);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Fault Containment</CardTitle>
+        {anyFault && (
+          <Button
+            size="sm" variant="outline"
+            onClick={() => handleReset("all")}
+            disabled={resetting === "all"}
+            className="text-[10px] h-6 px-2"
+          >
+            {resetting === "all" ? "Resetting…" : "Reset all"}
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Circuit breaker grid */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Circuit Breakers
+          </p>
+          <div className="space-y-1">
+            {health.map((h) => (
+              <div key={h.subsystem} className="flex items-center gap-2">
+                <span className="text-foreground/55 w-24 text-[11px]">{h.subsystem}</span>
+                <span className={cn("font-mono text-[10px] uppercase w-16", circuitColor(h))}>
+                  {h.quarantined ? "quarantined" : h.circuitState.replace("_", " ")}
+                </span>
+                <span className="text-muted-foreground/35 text-[10px]">
+                  {h.failureCount}✗
+                </span>
+                {h.circuitState !== "closed" && !h.quarantined && (
+                  <button
+                    type="button"
+                    onClick={() => void handleReset(h.subsystem)}
+                    className="text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30 text-amber-600 hover:bg-amber-500/5 ml-auto"
+                  >
+                    Reset
+                  </button>
+                )}
+                {h.quarantined && (
+                  <button
+                    type="button"
+                    onClick={() => void handleReset(h.subsystem)}
+                    className="text-[9px] px-1.5 py-0.5 rounded border border-red-500/30 text-red-600 hover:bg-red-500/5 ml-auto"
+                  >
+                    Unquarantine
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Fault log */}
+        {faultLog.length > 0 && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Fault Log (last 10)
+            </p>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {faultLog.slice().reverse().map((f, i) => (
+                <div key={i} className="text-[10.5px] space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-red-500/70 font-mono">{f.subsystem}</span>
+                    <span className="text-muted-foreground/30 ml-auto flex-shrink-0">
+                      {new Date(f.occurredAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="text-foreground/40 truncate pl-2">{f.error}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!anyFault && faultLog.length === 0 && (
+          <p className="text-muted-foreground/45 text-[11px]">All subsystems healthy. No faults recorded.</p>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Runtime stress suite panel (Phase 11) ─────────────────────────────────────
+
+const STRESS_LABELS: Record<StressScenarioId, string> = {
+  sustained_inference: "Sustained inference (10×)",
+  rapid_cancel_restart: "Rapid cancel/restart (8×)",
+  retrieval_burst: "Retrieval burst (15×)",
+  long_context: "Long context (3×)",
+  thermal_escalation: "Thermal escalation (12×)",
+  memory_pressure: "Memory pressure (5×)",
+  low_storage: "Low storage check",
+  worker_fault: "Worker fault recovery",
+};
+
+function StressTestCard() {
+  const [selected, setSelected] = React.useState<Set<StressScenarioId>>(
+    new Set(["sustained_inference", "rapid_cancel_restart"]),
+  );
+  const [running, setRunning] = React.useState(false);
+  const [progress, setProgress] = React.useState<StressProgress | null>(null);
+  const [results, setResults] = React.useState<StressScenarioResult[]>([]);
+  const [history] = React.useState<StressScenarioResult[][]>(() => getStressHistory());
+  const abortRef = React.useRef<AbortController | null>(null);
+
+  React.useEffect(() => {
+    const unsub = subscribeToStressProgress(setProgress);
+    return unsub;
+  }, []);
+
+  function toggleScenario(id: StressScenarioId) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleRun() {
+    if (selected.size === 0) return;
+    setRunning(true);
+    setResults([]);
+    setProgress(null);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const ids = ALL_STRESS_SCENARIOS.filter((id) => selected.has(id));
+    const r = await runStressSuite(ids, ctrl.signal);
+    setResults(r);
+    setRunning(false);
+    setProgress(null);
+  }
+
+  function handleStop() {
+    abortRef.current?.abort();
+  }
+
+  const passColor = (r: StressScenarioResult) =>
+    r.passed ? "text-emerald-600" : "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Runtime Stress Suite</CardTitle>
+        <div className="flex gap-1">
+          {running ? (
+            <Button size="sm" variant="outline" onClick={handleStop} className="text-[10px] h-6 px-2">
+              Stop
+            </Button>
+          ) : (
+            <Button
+              size="sm" variant="outline"
+              onClick={() => void handleRun()}
+              disabled={selected.size === 0}
+              className="text-[10px] h-6 px-2"
+            >
+              Run selected
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 text-[12px]">
+
+        {/* Scenario selection */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+            Scenarios
+          </p>
+          <div className="space-y-1">
+            {ALL_STRESS_SCENARIOS.map((id) => (
+              <label key={id} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.has(id)}
+                  onChange={() => toggleScenario(id)}
+                  disabled={running}
+                  className="w-3 h-3"
+                />
+                <span className={cn(
+                  "text-[11px]",
+                  selected.has(id) ? "text-foreground/75" : "text-muted-foreground/40",
+                )}>
+                  {STRESS_LABELS[id]}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress */}
+        {running && progress && (
+          <div className="space-y-1 border-t border-border/15 pt-3">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">{STRESS_LABELS[progress.scenario]}</span>
+              <span className="font-mono text-foreground/50">{progress.iteration}/{progress.total}</span>
+            </div>
+            <p className="text-[10.5px] text-muted-foreground/45 italic">{progress.phase}</p>
+          </div>
+        )}
+
+        {/* Results */}
+        {results.length > 0 && (
+          <div className="space-y-1.5 border-t border-border/15 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/50">
+              Results
+            </p>
+            <div className="space-y-1.5">
+              {results.map((r) => (
+                <div key={r.id} className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className={cn("font-semibold w-8", passColor(r))}>
+                      {r.passed ? "PASS" : "FAIL"}
+                    </span>
+                    <span className="text-foreground/60 truncate">{STRESS_LABELS[r.id]}</span>
+                    <span className="text-muted-foreground/35 ml-auto flex-shrink-0">
+                      {(r.durationMs / 1000).toFixed(1)}s
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/45 pl-10 truncate">{r.notes}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!running && results.length === 0 && history.length > 0 && (
+          <div className="border-t border-border/15 pt-3">
+            <p className="text-[10px] text-muted-foreground/35">
+              Last run: {history[history.length - 1].filter((r) => r.passed).length}/{history[history.length - 1].length} passed
+            </p>
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -1354,7 +2348,14 @@ export function AIDevPanel() {
       <RuntimeStatusCard />
       <ModelHealthCard />
       <PerformanceMetricsCard />
+      <RuntimeGovernorCard />
+      <CognitionQualityCard />
+      <WorkerHealthCard />
       <PlatformObservabilityCard />
+      <BenchmarkCard />
+      <PerformanceHistoryCard />
+      <FaultContainmentCard />
+      <StressTestCard />
       <LongitudinalMemoryCard />
       <IntelligenceObservabilityCard />
       <StructuredTestsCard />

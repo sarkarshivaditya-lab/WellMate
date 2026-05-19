@@ -18,10 +18,24 @@ import {
   isAppVisible,
   subscribeToThermalEmergency,
   resetThermal,
+  getInferenceRate,
 } from "../runtime/thermalGuard";
 import { patchRuntimeState } from "../runtime/runtimeState";
+import { getCurrentPolicy, applyGovernorPolicy, initGovernor } from "../runtime/runtimeGovernor";
+import { recordInferenceProfile } from "../runtime/performanceProfiler";
+import {
+  withStuckStreamDetection,
+  withInferenceTimeout,
+  cleanupStaleDownloadMarkers,
+  recordInferenceFailure,
+} from "../runtime/executionRecovery";
+import { recordThermalIncident, updateDailyPerformance } from "../runtime/performanceHistory";
+import { initAppLifecycle } from "../runtime/appLifecycle";
+import { startSessionGuard, recordSessionInference } from "../runtime/sessionGuard";
+import { initCognitionScaler } from "../cognition/cognitionScaler";
 
 let _initialised = false;
+let _sessionInferenceCount = 0;
 
 export async function initOrchestrator(): Promise<void> {
   if (_initialised) return;
@@ -45,8 +59,13 @@ export async function initOrchestrator(): Promise<void> {
     if (local?.isReady()) {
       void local.dispose().catch(() => null);
       setActiveProvider("stub");
-      // Reset thermal timestamps so stub inference doesn't immediately re-trigger emergency
       resetThermal();
+      recordThermalIncident({
+        occurredAt: Date.now(),
+        thermalState: "emergency",
+        inferencesPerMin: getInferenceRate(),
+        action: "emergency_unload",
+      });
       patchRuntimeState({
         provider: "stub",
         modelLoad: "not_loaded",
@@ -62,6 +81,17 @@ export async function initOrchestrator(): Promise<void> {
 }
 
 async function _startupTasks(): Promise<void> {
+  // 0. App lifecycle tracking + cognition scaler + session guard
+  initAppLifecycle();
+  initCognitionScaler();
+  startSessionGuard();
+
+  // 1. Initialize governor (begins device capability detection in background)
+  initGovernor();
+
+  // 1b. Cleanup any stale download markers from prior sessions
+  cleanupStaleDownloadMarkers();
+
   // 1. Recover any interrupted migration from a prior session
   try {
     const { recoverInterruptedMigration } = await import("../models/migrationEngine");
@@ -114,14 +144,64 @@ async function executeInference(
   const provider = getActiveProvider();
   if (!provider) throw new Error("No active AI provider");
 
+  // Apply governor policy — adjusts maxTokens based on device state
+  const policy = getCurrentPolicy();
+  const governedRequest = applyGovernorPolicy(request, policy);
+
+  if (governedRequest.controller.signal.aborted) {
+    throw new Error("Inference suspended by runtime governor");
+  }
+
+  // Wrap streaming with stuck-stream watchdog
+  const stuckGuard = withStuckStreamDetection(
+    governedRequest.onToken,
+    governedRequest.controller,
+  );
+  const finalRequest: InferenceRequest = {
+    ...governedRequest,
+    onToken: stuckGuard.wrappedOnToken,
+  };
+
   patchRuntimeState({ status: "inferencing" });
+  const inferenceStart = Date.now();
 
   try {
-    const result = await provider.generate(request);
+    const result = await withInferenceTimeout(
+      provider.generate(finalRequest),
+      finalRequest.controller,
+    );
+
+    stuckGuard.cancel();
     recordInference();
-    patchRuntimeState({ status: "ready" });
+    recordSessionInference();
+
+    const durationMs = Date.now() - inferenceStart;
+    const tokPerSec = result.durationMs > 0
+      ? (result.tokensGenerated / result.durationMs) * 1_000
+      : 0;
+
+    recordInferenceProfile(durationMs, tokPerSec, result.tokensGenerated);
+
+    _sessionInferenceCount++;
+    if (_sessionInferenceCount % 5 === 0) {
+      // Periodic daily record update every 5 inferences
+      const { getDetailedSnapshot } = await import("../runtime/performanceProfiler");
+      const snap = getDetailedSnapshot();
+      updateDailyPerformance(_sessionInferenceCount, snap.avgTokPerSec, snap.p90LatencyMs);
+    }
+
+    patchRuntimeState({ status: "ready", totalInferences: _sessionInferenceCount });
     return result;
   } catch (err) {
+    stuckGuard.cancel();
+    const isAbort = err instanceof Error && (
+      err.message.includes("Cancelled") ||
+      err.message.includes("aborted") ||
+      err.message.includes("suspended")
+    );
+    if (!isAbort) {
+      recordInferenceFailure(err, provider.type, false, false);
+    }
     patchRuntimeState({ status: "ready" });
     throw err;
   }
