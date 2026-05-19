@@ -1,106 +1,107 @@
-import { Brain, Heart, MessageCircle, Salad } from "lucide-react";
+import { Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/layout/PageLayout";
 import { cn } from "@/lib/utils";
 
-const SUPPORT_TYPES = [
-  {
-    icon: Brain,
-    title: "Mental Health",
-    description: "Therapists and counsellors for emotional wellbeing and resilience.",
-    color: "text-violet-500",
-    bg: "bg-violet-500/8",
-  },
-  {
-    icon: Salad,
-    title: "Nutrition",
-    description: "Registered dietitians and nutritionists for personalised food guidance.",
-    color: "text-emerald-600",
-    bg: "bg-emerald-500/8",
-  },
-  {
-    icon: Heart,
-    title: "Wellness Coaching",
-    description: "Holistic coaches for movement, sleep, stress, and lifestyle balance.",
-    color: "text-rose-500",
-    bg: "bg-rose-500/8",
-  },
-  {
-    icon: MessageCircle,
-    title: "AI Wellness Guide",
-    description: "24/7 intelligent support drawing on your complete wellness history.",
-    color: "text-primary",
-    bg: "bg-primary/8",
-  },
-] as const;
-
 export default function Chat() {
   return (
     <PageLayout title="Support" subtitle="Wellness guidance and care">
-      <div className="space-y-8">
+      <div className="space-y-10 pt-2 pb-6">
 
-        {/* Hero */}
-        <div className="text-center pt-4 pb-2 space-y-4">
-          <div className="flex justify-center">
-            <div
-              className={cn(
-                "h-[72px] w-[72px] rounded-[22px] flex items-center justify-center",
-                "bg-primary/8 ring-1 ring-primary/12",
-              )}
-            >
-              <MessageCircle className="h-9 w-9 text-primary/65" strokeWidth={1.6} />
-            </div>
+        {/* ── Launch headline ── */}
+        <div className="space-y-4 pt-2">
+          <span
+            className={cn(
+              "inline-block text-[10.5px] font-semibold tracking-[0.1em] uppercase",
+              "text-primary/55 bg-primary/8 rounded-full px-3 py-1",
+            )}
+          >
+            Coming Soon
+          </span>
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground leading-[1.25]">
+            Human wellness guidance is coming to WellMate.
+          </h1>
+          <p className="text-[14px] text-muted-foreground/80 leading-relaxed">
+            We are building a platform where verified mental wellness professionals,
+            dietitians, and nutritionists work alongside WellMate's intelligent
+            support systems — giving you care that understands your complete
+            wellness history.
+          </p>
+        </div>
+
+        {/* ── What is being built ── */}
+        <div className="space-y-4">
+          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
+            Planned platform
+          </p>
+          <div className="space-y-3">
+            {[
+              "Mental wellness professionals, therapists & counsellors",
+              "Registered dietitians & nutritionists",
+              "Longitudinal care informed by your full wellness history",
+              "Intelligent support available between sessions",
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <div className="mt-[6px] h-1 w-1 rounded-full bg-primary/35 flex-shrink-0" />
+                <p className="text-[13.5px] text-foreground/65 leading-snug">{item}</p>
+              </div>
+            ))}
           </div>
-          <div className="space-y-2 px-4">
-            <h2 className="text-[22px] font-semibold tracking-tight text-foreground">
-              Your care team, in one place
-            </h2>
-            <p className="text-[14px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-              Real specialists and intelligent support — informed by your wellness
-              data, available when you need them.
+        </div>
+
+        {/* ── Philosophy ── */}
+        <Card className="border-border/25 bg-muted/15">
+          <CardContent className="py-5 px-5">
+            <p className="text-[13px] text-foreground/50 leading-relaxed">
+              WellMate is designed from the ground up to combine longitudinal
+              wellness understanding with human expertise — so that every
+              consultation begins with context, not a blank page.
             </p>
-          </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Founder contact ── */}
+        <div className="space-y-4">
+          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
+            Early access & consultation
+          </p>
+          <Card className="border-border/40">
+            <CardContent className="py-5 px-5 space-y-4">
+              <div className="space-y-0.5">
+                <p className="text-[15px] font-semibold text-foreground tracking-tight">
+                  Dr. Anuradha Palta
+                </p>
+                <p className="text-[12.5px] text-muted-foreground/70">
+                  Founder, WellMate
+                </p>
+              </div>
+              <p className="text-[12.5px] text-muted-foreground/65 leading-relaxed">
+                For wellness consultations, early access enquiries, or platform
+                partnership discussions, you are welcome to reach out directly.
+              </p>
+              <a
+                href="tel:+917061486520"
+                className={cn(
+                  "inline-flex items-center gap-2.5",
+                  "px-4 py-2.5 rounded-xl",
+                  "bg-muted/40 hover:bg-muted/70",
+                  "border border-border/35 hover:border-border/60",
+                  "transition-premium active:scale-[0.97]",
+                )}
+              >
+                <Phone className="h-3.5 w-3.5 text-foreground/40" strokeWidth={2} />
+                <span className="text-[13px] font-medium text-foreground/65">
+                  +91 70614 86520
+                </span>
+              </a>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Support type cards */}
-        <div className="space-y-3">
-          {SUPPORT_TYPES.map(({ icon: Icon, title, description, color, bg }) => (
-            <Card
-              key={title}
-              className="border-border/40 opacity-80"
-            >
-              <CardContent className="py-4 px-4 flex items-start gap-3.5">
-                <div className={cn("mt-0.5 h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0", bg)}>
-                  <Icon className={cn("h-[18px] w-[18px]", color)} strokeWidth={1.8} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[14px] font-medium text-foreground leading-snug">
-                      {title}
-                    </p>
-                    <span
-                      className={cn(
-                        "text-[10px] font-semibold tracking-[0.06em] uppercase",
-                        "px-1.5 py-0.5 rounded-md",
-                        "bg-muted/60 text-muted-foreground/60",
-                      )}
-                    >
-                      Soon
-                    </span>
-                  </div>
-                  <p className="text-[12.5px] text-muted-foreground/70 leading-relaxed">
-                    {description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Grounding note */}
-        <p className="text-center text-[11.5px] text-muted-foreground/45 leading-relaxed px-6 pb-4">
-          WellMate connects you with verified professionals. Your wellness data
-          stays private and is only shared with your explicit permission.
+        {/* ── Closing note ── */}
+        <p className="text-[11px] text-muted-foreground/35 leading-relaxed pb-2">
+          The WellMate Support platform is currently in development. Clinical and
+          wellness professionals interested in joining the network are invited to connect.
         </p>
 
       </div>
