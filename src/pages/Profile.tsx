@@ -19,6 +19,7 @@ import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
 import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import NotificationSettings from "@/components/NotificationSettings";
 import { DataOwnershipCard } from "@/components/profile/DataOwnershipCard";
+import { HealthProfileSection } from "@/components/profile/HealthProfileSection";
 
 /**
  * Profile / Settings
@@ -83,6 +84,11 @@ export default function Profile() {
   return (
     <PageLayout title="Profile" subtitle="Account and preferences">
     <div className="space-y-6">
+      {/* =========================
+          HEALTH PROFILE
+         ========================= */}
+      <HealthProfileSection />
+
       {/* =========================
           ACCOUNT
          ========================= */}
