@@ -16,7 +16,9 @@ import {
   subscribeToModelLoad,
 } from "@/ai/providers/local/modelLoader";
 import { getRecommendedManifest } from "@/ai/models/modelRegistry";
-import { getBridgeStatus, createLlamaBridge } from "@/ai/providers/local/llamaBridge";
+import { getBridgeStatus } from "@/ai/providers/local/llamaBridge";
+import { LocalProvider } from "@/ai/providers/local/LocalProvider";
+import { getRuntimeState } from "@/ai/runtime/runtimeState";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -89,8 +91,9 @@ async function tryLoadModel(): Promise<void> {
   const state = loadPersistedState();
   if (_degraded || state.crashRecoveries >= MAX_CRASH_RECOVERIES) return;
 
-  const currentLoadState = getModelLoadState();
-  if (currentLoadState.phase === "ready" || currentLoadState.phase === "loading") return;
+  // runtimeState is the authoritative source — modelLoader never emits "ready"
+  const rtState = getRuntimeState();
+  if (rtState.modelLoad === "ready" || rtState.modelLoad === "loading") return;
 
   const manifest = getRecommendedManifest();
   const stored = await isModelStored(manifest);
@@ -100,8 +103,8 @@ async function tryLoadModel(): Promise<void> {
   savePersistedState(state);
 
   try {
-    const bridge = await createLlamaBridge();
-    if (!bridge) return;
+    const provider = new LocalProvider(manifest);
+    await provider.initialize();
   } catch {
     state.crashRecoveries++;
     savePersistedState(state);
@@ -126,7 +129,7 @@ async function tryAutoDownload(): Promise<void> {
   if (stored) return;
 
   const bridgeStatus = getBridgeStatus();
-  if (bridgeStatus === "none") return;  // no WASM/native — download would be unusable
+  if (bridgeStatus.env === "none") return;  // no WASM/native — download would be unusable
 
   const currentLoadState = getModelLoadState();
   if (currentLoadState.phase === "downloading") return;
@@ -188,10 +191,9 @@ export function initAutoModelLifecycle(): void {
 
 export function getAutoModelLifecycleReport(): AutoModelLifecycleReport {
   const state = loadPersistedState();
-  const loadState = getModelLoadState();
   return {
     downloadedModelId: state.downloadedModelId,
-    isLoaded: loadState.phase === "ready",
+    isLoaded: getRuntimeState().modelLoad === "ready",
     crashRecoveries: state.crashRecoveries,
     degraded: _degraded,
     lastLoadAttemptAt: state.lastLoadAttemptAt,

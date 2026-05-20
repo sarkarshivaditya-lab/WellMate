@@ -5,7 +5,9 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
-import { getModelLoadState } from "@/ai/providers/local/modelLoader";
+import { LAUNCH_STATE } from "@/ai/launchState";
+import { getModelLoadState, subscribeToModelLoad } from "@/ai/providers/local/modelLoader";
+import { getRuntimeState, subscribeToRuntimeState } from "@/ai/runtime/runtimeState";
 import { assistantRequest } from "@/ai/assistant/unifiedAssistantOrchestrator";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
@@ -59,6 +61,30 @@ function WellMateLauncher() {
   const [showSafetyNotice, setShowSafetyNotice] = React.useState(false);
   const [starterPrompts, setStarterPrompts] = React.useState<FollowUpPrompt[]>([]);
   const hasSentMessage = React.useRef(false);
+
+  type ModelStatus = "ready" | "downloading" | "activating" | "unavailable";
+  const [modelStatus, setModelStatus] = React.useState<ModelStatus>(() => {
+    const rt = getRuntimeState();
+    const dl = getModelLoadState();
+    if (rt.modelLoad === "ready") return "ready";
+    if (rt.modelLoad === "loading") return "activating";
+    if (dl.phase === "downloading" || dl.phase === "verifying") return "downloading";
+    return "unavailable";
+  });
+
+  React.useEffect(() => {
+    function update() {
+      const rt = getRuntimeState();
+      const dl = getModelLoadState();
+      if (rt.modelLoad === "ready") setModelStatus("ready");
+      else if (rt.modelLoad === "loading") setModelStatus("activating");
+      else if (dl.phase === "downloading" || dl.phase === "verifying") setModelStatus("downloading");
+      else setModelStatus("unavailable");
+    }
+    const unsubRt = subscribeToRuntimeState(update);
+    const unsubLoad = subscribeToModelLoad(update);
+    return () => { unsubRt(); unsubLoad(); };
+  }, []);
 
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -191,8 +217,8 @@ function WellMateLauncher() {
     }
 
     try {
-      // Offline-first: use local AI when the model is loaded
-      if (getModelLoadState().phase === "ready") {
+      // Offline-first: use local AI when the model is in memory and ready
+      if (getRuntimeState().modelLoad === "ready") {
         let streamed = "";
         const response = await assistantRequest(text, {
           surface: "ai_chat",
@@ -341,6 +367,27 @@ function WellMateLauncher() {
               AI guidance only — not medical advice
             </p>
           </div>
+
+          {/* Model status notice */}
+          {modelStatus !== "ready" && (
+            <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/30 border-b border-border/30 leading-snug">
+              {modelStatus === "downloading" && "Downloading offline AI model…"}
+              {modelStatus === "activating" && "Loading offline AI into memory…"}
+              {modelStatus === "unavailable" && (
+                <span className="text-primary/80">
+                  Download Offline AI from the Overview page for offline use.
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Launch readiness notice — shown until cloud AI infrastructure is enabled.
+              To remove: set LAUNCH_STATE.mentalCoachingAvailable = true in src/ai/launchState.ts */}
+          {!LAUNCH_STATE.mentalCoachingAvailable && (
+            <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/30 border-b border-border/30 leading-snug">
+              Advanced mental wellbeing support is being prepared for launch.
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3 text-sm">

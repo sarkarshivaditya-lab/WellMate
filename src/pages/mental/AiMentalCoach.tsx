@@ -18,6 +18,7 @@ import {
 import type { AiMentalResponse } from "@/services/aiMentalTypes";
 import { haptics } from "@/motion";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { LAUNCH_STATE } from "@/ai/launchState";
 
 /* ======================================================
    EMOTION CONFIG
@@ -114,6 +115,24 @@ export function CoachTabContent() {
 
   return (
     <div className="space-y-4">
+      {/* Launch readiness notice — shown until cloud AI infrastructure is enabled.
+          To remove: set LAUNCH_STATE.mentalCoachingAvailable = true in src/ai/launchState.ts */}
+      {!LAUNCH_STATE.mentalCoachingAvailable && (
+        <div className="rounded-xl border border-border/40 bg-muted/20 px-4 py-4">
+          <p className="text-[13px] font-semibold text-foreground/85 leading-snug">
+            Advanced wellbeing coaching is being prepared for launch
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+            Mental wellbeing coaching draws on deep reasoning and cloud intelligence
+            capabilities that extend beyond the current offline AI runtime. These features
+            are being finalized and will be available in the full release.
+          </p>
+          <p className="mt-2 text-[11px] text-muted-foreground/65">
+            Journaling, mood tracking, and wellbeing tools are fully available.
+          </p>
+        </div>
+      )}
+
       {/* Compact orientation strip */}
       <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/8 px-4 py-3">
         <Heart className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />

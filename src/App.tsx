@@ -11,6 +11,7 @@ import { isCapacitorNative } from "./components/providers/auth";
 // Route-level lazy loading — only the active route's code is parsed at startup.
 // Onboarding and PhysicalDashboard are the two most-likely initial routes, so
 // they get a short preload hint via webpackPrefetch (Vite respects this).
+const WelcomePage = React.lazy(() => import("./pages/Welcome"));
 const Onboarding = React.lazy(() => import("./pages/Onboarding"));
 const TransitionGate = React.lazy(() => import("./pages/Transition"));
 const PhysicalDashboard = React.lazy(() => import("./pages/physical/PhysicalDashboard"));
@@ -145,6 +146,8 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
+
 function RootEntry() {
   const { isAuthenticated, isLoading } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
@@ -154,17 +157,20 @@ function RootEntry() {
     return <AppLoadingScreen onTimeout={handleTimeout} />;
   }
 
+  const isOnboarded = localStorage.getItem("onboarded") === "true";
+  const hasSeenWelcome = !!localStorage.getItem(WELCOME_SEEN_KEY);
+
   if (!isAuthenticated) {
-    // Auth is slow or timed out. If the user already completed onboarding
-    // in a prior session, send them to /physical — RequireAuth there will
-    // re-prompt login if the session is genuinely expired. This prevents
-    // an auth-timeout race from silently resetting a completed onboarding.
-    if (localStorage.getItem("onboarded") === "true") {
-      return <Navigate to="/physical" replace />;
-    }
+    // Auth is slow or timed out. If already onboarded, go to /physical — RequireAuth
+    // there will re-prompt login if the session is genuinely expired.
+    if (isOnboarded) return <Navigate to="/physical" replace />;
+    // First-time users see the welcome experience before onboarding.
+    if (!hasSeenWelcome) return <Navigate to="/welcome" replace />;
     return <Navigate to="/onboarding" replace />;
   }
 
+  // Authenticated — but new users who haven't seen welcome should still see it.
+  if (!isOnboarded && !hasSeenWelcome) return <Navigate to="/welcome" replace />;
   return <Navigate to="/physical" replace />;
 }
 
@@ -262,6 +268,7 @@ export default function App() {
       <React.Suspense fallback={<AppLoadingScreen />}>
       <Routes>
         <Route path="/" element={<RootEntry />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
         <Route
