@@ -83,6 +83,15 @@ import {
   type BootProfile,
 } from "@/ai/runtime/coldStartOptimizer";
 import { getDeploymentDiagnostics, isSafeModeActive, activateSafeMode, deactivateSafeMode, type DeploymentDiagnosticsReport } from "@/ai/platform/deploymentDiagnostics";
+import { getThreadingCapability, isMultiThreadEligible, type ThreadingCapability } from "@/ai/runtime/threadingCapability";
+import { getPoolMetrics, getPoolSlots, type PoolMetrics } from "@/ai/workers/threadedInferencePool";
+import { getTopologySnapshot, getQueueDepthByRole, type TopologySnapshot } from "@/ai/workers/workerTopology";
+import { getSnapshot as getNativeLifecycleSnapshot, getNativeLifecycleLog, initNativeLifecycle, type NativeLifecycleSnapshot } from "@/ai/platform/nativeLifecycle";
+import { getAllRegistryEntries, getTrustScore, verifyIntegrityChain, type SecureModelRegistryEntry } from "@/ai/storage/secureModelStore";
+import { getTelemetrySummary, getRecentTelemetry, clearTelemetry, type TelemetrySummary, type TelemetryEvent } from "@/ai/telemetry/runtimeTelemetry";
+import { getFleetDiagnosticsReport, getDeploymentCohort, type FleetDiagnosticsReport } from "@/ai/telemetry/fleetDiagnostics";
+import { getSchedulerState, getPendingJobs, getAllNativeJobs, type SchedulerState, type NativeBackgroundJob } from "@/ai/platform/nativeBackgroundExecution";
+import { getAllFeatureGates, getRolloutAssignment, checkBuildCompatibility, overrideFeatureGate, clearFeatureGateOverrides, type FeatureGateState } from "@/ai/platform/deploymentConvergence";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -2346,6 +2355,473 @@ function StressTestCard() {
   );
 }
 
+// ── Threaded Runtime Card ─────────────────────────────────────────────────────
+
+function ThreadedRuntimeCard() {
+  const [cap, setCap] = React.useState<ThreadingCapability | null>(null);
+  const [pool, setPool] = React.useState<PoolMetrics | null>(null);
+
+  React.useEffect(() => {
+    function refresh() {
+      setCap(getThreadingCapability());
+      setPool(getPoolMetrics());
+    }
+    refresh();
+    const id = setInterval(refresh, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Threaded Runtime</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {cap ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Threading mode</span>
+              <StatusBadge ok={cap.mode === "multi_thread_eligible"} label={cap.mode.replace(/_/g, " ")} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">SharedArrayBuffer</span>
+              <StatusBadge ok={cap.sharedArrayBufferAvailable} label={cap.sharedArrayBufferAvailable ? "available" : "blocked"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">crossOriginIsolated</span>
+              <StatusBadge ok={cap.crossOriginIsolated} label={String(cap.crossOriginIsolated)} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Hardware threads</span>
+              <span className="font-mono">{cap.hardwareConcurrency}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Recommended threads</span>
+              <span className="font-mono">{cap.recommendedThreadCount}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Browser compat</span>
+              <StatusBadge ok={cap.browserCompatibility === "full"} label={cap.browserCompatibility} />
+            </div>
+            {cap.degradationReason && (
+              <p className="text-[10px] text-muted-foreground/60 border-t border-border/15 pt-2">{cap.degradationReason}</p>
+            )}
+            {pool && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Inference Pool</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Slots (idle/busy/crashed)</span>
+                  <span className="font-mono">{pool.idleSlots}/{pool.busySlots}/{pool.crashedSlots}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Utilization</span>
+                  <span className="font-mono">{Math.round(pool.utilization * 100)}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Completed / Failed</span>
+                  <span className="font-mono">{pool.totalCompleted} / {pool.totalFailed}</span>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Assessing…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Worker Topology Card ──────────────────────────────────────────────────────
+
+function WorkerTopologyCard() {
+  const [snap, setSnap] = React.useState<TopologySnapshot | null>(null);
+  const [queues, setQueues] = React.useState<Record<string, number>>({});
+
+  React.useEffect(() => {
+    function refresh() {
+      setSnap(getTopologySnapshot());
+      setQueues(getQueueDepthByRole());
+    }
+    refresh();
+    const id = setInterval(refresh, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Worker Topology</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {snap ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Backpressure</span>
+              <StatusBadge ok={!snap.backpressureActive} label={snap.backpressureActive ? `active (${snap.backpressureRole})` : "none"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Avg utilization</span>
+              <span className="font-mono">{Math.round(snap.avgUtilization * 100)}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total queue depth</span>
+              <span className="font-mono">{snap.totalQueueDepth}</span>
+            </div>
+            {Object.entries(queues).map(([role, depth]) => (
+              <div key={role} className="flex items-center justify-between">
+                <span className="text-muted-foreground/70">{role}</span>
+                <span className="font-mono text-muted-foreground/70">queue={depth}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t border-border/15 pt-2">
+              <span className="text-muted-foreground">Completed / Failed</span>
+              <span className="font-mono">{snap.totalCompleted} / {snap.totalFailed}</span>
+            </div>
+            {snap.nodes.length > 0 && (
+              <div className="space-y-1 border-t border-border/15 pt-2">
+                {snap.nodes.slice(0, 6).map((n) => (
+                  <div key={n.nodeId} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground/60 truncate">{n.role}:{n.nodeId.slice(-4)}</span>
+                    <StatusBadge ok={n.status === "idle" || n.status === "busy"} label={`${n.status} ${Math.round(n.utilization * 100)}%`} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">No topology data</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Native Lifecycle Card ─────────────────────────────────────────────────────
+
+function NativeLifecycleCard() {
+  const [snap, setSnap] = React.useState<NativeLifecycleSnapshot | null>(null);
+  const [log, setLog] = React.useState<Array<{ event: string; ts: number }>>([]);
+
+  React.useEffect(() => {
+    initNativeLifecycle();
+    function refresh() {
+      setSnap(getNativeLifecycleSnapshot());
+      setLog(getNativeLifecycleLog().slice(-8).reverse());
+    }
+    refresh();
+    const id = setInterval(refresh, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Native Lifecycle</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {snap ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Platform</span>
+              <span className="font-mono">{snap.platform}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">State</span>
+              <StatusBadge ok={snap.state === "active"} label={snap.state} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Low power mode</span>
+              <StatusBadge ok={!snap.lowPowerMode} label={snap.lowPowerMode ? "on" : "off"} />
+            </div>
+            {log.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Event log</p>
+                {log.map((e, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-muted-foreground/60">{e.event}</span>
+                    <span className="font-mono text-muted-foreground/40">{new Date(e.ts).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Initializing…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Secure Storage Card ───────────────────────────────────────────────────────
+
+function SecureStorageCard() {
+  const [entries, setEntries] = React.useState<SecureModelRegistryEntry[]>([]);
+  const [verifying, setVerifying] = React.useState<string | null>(null);
+
+  React.useEffect(() => { setEntries(getAllRegistryEntries()); }, []);
+
+  async function verify(assetId: string) {
+    setVerifying(assetId);
+    try {
+      await verifyIntegrityChain(assetId);
+      setEntries(getAllRegistryEntries());
+    } finally { setVerifying(null); }
+  }
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Secure Model Store</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {entries.length === 0 ? (
+          <p className="text-muted-foreground/50">No model assets registered</p>
+        ) : (
+          entries.map((e) => (
+            <div key={e.assetId} className="border border-border/15 rounded p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-muted-foreground/80 truncate">{e.assetId.slice(0, 20)}</span>
+                <StatusBadge ok={(e.lastChainResult?.trustScore ?? 0) >= 75} label={`trust=${e.lastChainResult?.trustScore ?? "—"}`} />
+              </div>
+              {e.activation && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground/60">activation</span>
+                  <StatusBadge ok={e.activation.status === "active"} label={e.activation.status} />
+                </div>
+              )}
+              <Button variant="ghost" size="sm" className="text-[10px] h-5 px-2" disabled={verifying === e.assetId} onClick={() => void verify(e.assetId)}>
+                {verifying === e.assetId ? "Verifying…" : "Verify chain"}
+              </Button>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Runtime Telemetry Card ────────────────────────────────────────────────────
+
+function RuntimeTelemetryCard() {
+  const [summary, setSummary] = React.useState<TelemetrySummary | null>(null);
+  const [recent, setRecent] = React.useState<TelemetryEvent[]>([]);
+
+  React.useEffect(() => {
+    function refresh() {
+      setSummary(getTelemetrySummary());
+      setRecent(getRecentTelemetry(6).reverse());
+    }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">Runtime Telemetry</CardTitle>
+        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={() => { clearTelemetry(); setSummary(getTelemetrySummary()); setRecent([]); }}>
+          Clear
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {summary ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total events</span>
+              <span className="font-mono">{summary.totalEvents}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Storage</span>
+              <span className="font-mono">{Math.round(summary.storageBytes / 1024)}KB</span>
+            </div>
+            {Object.entries(summary.byType).filter(([, n]) => n > 0).map(([type, n]) => (
+              <div key={type} className="flex items-center justify-between">
+                <span className="text-muted-foreground/70">{type.replace(/_/g, " ")}</span>
+                <StatusBadge ok={type === "streaming_optimizer"} label={String(n)} />
+              </div>
+            ))}
+            {recent.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Recent</p>
+                {recent.map((e) => (
+                  <div key={e.eventId} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground/60 truncate">{e.type.replace(/_/g, " ")}</span>
+                    <span className="font-mono text-muted-foreground/40">{new Date(e.occurredAt).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Fleet Diagnostics Card ────────────────────────────────────────────────────
+
+function FleetDiagnosticsCard() {
+  const [report, setReport] = React.useState<FleetDiagnosticsReport | null>(null);
+
+  React.useEffect(() => {
+    void getFleetDiagnosticsReport().then(setReport);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Fleet Diagnostics</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {report ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Device ID</span>
+              <span className="font-mono">{report.deviceFingerprint.fingerprintId}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Capability tier</span>
+              <StatusBadge ok={report.deviceFingerprint.capabilityTier === "tier_1" || report.deviceFingerprint.capabilityTier === "tier_2"} label={report.deviceFingerprint.capabilityTier} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Cohort</span>
+              <span className="font-mono">{report.cohort.cohortId}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Health score</span>
+              <StatusBadge ok={report.currentHealthScore >= 70} label={`${report.currentHealthScore}/100`} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Hardware concurrency</span>
+              <span className="font-mono">{report.deviceFingerprint.hardwareConcurrency} cores</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Device RAM</span>
+              <span className="font-mono">{report.deviceFingerprint.deviceMemoryGb !== null ? `${report.deviceFingerprint.deviceMemoryGb}GB` : "unknown"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">SAB / COOP</span>
+              <StatusBadge ok={report.runtimeEnvironment.sabAvailable && report.runtimeEnvironment.crossOriginIsolated} label={`${report.runtimeEnvironment.sabAvailable ? "SAB" : "no-SAB"} / ${report.runtimeEnvironment.crossOriginIsolated ? "isolated" : "not-isolated"}`} />
+            </div>
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Background Execution Card ─────────────────────────────────────────────────
+
+function BackgroundExecutionCard() {
+  const [state, setState] = React.useState<SchedulerState | null>(null);
+  const [jobs, setJobs] = React.useState<NativeBackgroundJob[]>([]);
+
+  React.useEffect(() => {
+    function refresh() {
+      setState(getSchedulerState());
+      setJobs(getAllNativeJobs().slice(-5).reverse());
+    }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Background Execution</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {state ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Scheduler backend</span>
+              <StatusBadge ok={state.backend !== "none"} label={state.backend.replace(/_/g, " ")} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Pending / Deferred</span>
+              <span className="font-mono">{state.pendingJobs} / {state.deferredJobs}</span>
+            </div>
+            {jobs.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Recent jobs</p>
+                {jobs.map((j) => (
+                  <div key={j.jobId} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground/60 truncate">{j.label}</span>
+                    <StatusBadge ok={j.status === "completed"} label={j.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Deployment Convergence Card ───────────────────────────────────────────────
+
+function DeploymentConvergenceCard() {
+  const [gates, setGates] = React.useState<FeatureGateState[]>([]);
+  const rollout = getRolloutAssignment();
+  const compat = checkBuildCompatibility();
+
+  React.useEffect(() => { setGates(getAllFeatureGates()); }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">Deployment Convergence</CardTitle>
+        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={() => { clearFeatureGateOverrides(); setGates(getAllFeatureGates()); }}>
+          Reset gates
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Rollout bucket</span>
+          <span className="font-mono">{rollout.rolloutPct}/100</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Channel</span>
+          <span className="font-mono">{rollout.channel}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Build compat</span>
+          <StatusBadge ok={compat.compatible} label={compat.compatible ? "ok" : "mismatch"} />
+        </div>
+        <div className="border-t border-border/15 pt-2 space-y-1">
+          <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Feature gates</p>
+          {gates.map((g) => (
+            <div key={g.gateId} className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground/70 truncate">{g.gateId.replace(/_/g, " ")}</span>
+              <div className="flex items-center gap-1">
+                <StatusBadge ok={g.enabled} label={g.enabled ? "on" : "off"} />
+                <Button
+                  variant="ghost" size="sm"
+                  className="text-[9px] h-4 px-1.5"
+                  onClick={() => { overrideFeatureGate(g.gateId as Parameters<typeof overrideFeatureGate>[0], !g.enabled); setGates(getAllFeatureGates()); }}
+                >
+                  flip
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Worker Bridge Card ────────────────────────────────────────────────────────
 
 function WorkerBridgeCard() {
@@ -2582,6 +3058,14 @@ export function AIDevPanel() {
       <PerformanceHistoryCard />
       <FaultContainmentCard />
       <StressTestCard />
+      <ThreadedRuntimeCard />
+      <WorkerTopologyCard />
+      <NativeLifecycleCard />
+      <SecureStorageCard />
+      <RuntimeTelemetryCard />
+      <FleetDiagnosticsCard />
+      <BackgroundExecutionCard />
+      <DeploymentConvergenceCard />
       <WorkerBridgeCard />
       <StorageIntegrityCard />
       <StartupProfilerCard />
