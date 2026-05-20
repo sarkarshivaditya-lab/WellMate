@@ -101,6 +101,16 @@ import { getThroughputSummary, getRecentSamples, type ThroughputSummary } from "
 import { getHardwareCharacterization, getThermalTrendLog, type HardwareCharacterization } from "@/ai/runtime/hardwareCharacterizer";
 import { getPluginAvailability, type PluginAvailabilityMap } from "@/ai/platform/nativePluginContracts";
 import { computeRuntimePressure, getInferenceTimeline, getSustainedLoadProfile, type RuntimePressureSnapshot } from "@/ai/runtime/performanceLab";
+import { getInferenceWorkerBridgeState, initInferenceWorkerBridge, subscribeToInferenceWorkerBridge, type InferenceSlotSnapshot } from "@/ai/workers/inferenceWorkerBridge";
+import { getCoopCoepStatus, verifyCoopCoep, type CoopCoepStatus } from "@/ai/platform/coopCoepVerifier";
+import { getSabStreamStats, type SabStreamStats } from "@/ai/runtime/sabTokenStream";
+import { getThreadedBootStatus, runThreadedBoot, type ThreadedBootStatus, type ThreadedBootStageResult } from "@/ai/runtime/threadedRuntimeBoot";
+import { getNativeFilesystemReport, benchmarkFilesystem, type NativeFilesystemReport } from "@/ai/storage/nativeFilesystemAccelerator";
+import { getNativeThermalBatteryState, sampleNativeThermalBattery, type NativeThermalBatteryState } from "@/ai/platform/nativeThermalBattery";
+import { getKvCacheReport, clearKvCacheState, type KvCacheReport } from "@/ai/runtime/kvCacheGovernor";
+import { getRoutingDecision, getQuantizationProfiles, recordInferencePerformance, type RoutingDecision, type QuantizationProfile } from "@/ai/models/quantizationRouter";
+import { getAllContractSatisfaction, getNativeBackgroundContracts, type ContractSatisfactionMap } from "@/ai/platform/nativeBackgroundContracts";
+import { getRuntimeValidationReport, runValidationSuite, getDeploymentReadinessScore, type RuntimeValidationReport, type ValidationResult } from "@/ai/runtime/runtimeValidator";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -2364,6 +2374,445 @@ function StressTestCard() {
   );
 }
 
+// ── Phase 15 Cards ────────────────────────────────────────────────────────────
+
+function WorkerExecutionCard() {
+  const [state, setState] = React.useState(getInferenceWorkerBridgeState);
+  const [booting, setBooting] = React.useState(false);
+
+  React.useEffect(() => {
+    return subscribeToInferenceWorkerBridge(() => setState(getInferenceWorkerBridgeState()));
+  }, []);
+
+  const statusColor = (s: InferenceSlotSnapshot["status"]) => {
+    const map: Record<typeof s, string> = {
+      idle: "text-emerald-600", busy: "text-blue-600", spawning: "text-yellow-600",
+      crashed: "text-red-600", recovering: "text-orange-500",
+    };
+    return map[s] ?? "text-foreground";
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Worker Execution Inspector</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-3 gap-2">
+          <div><p className="text-muted-foreground">Slots</p><p className="font-mono">{state.slots.length}</p></div>
+          <div><p className="text-muted-foreground">Queue</p><p className="font-mono">{state.queueDepth}</p></div>
+          <div><p className="text-muted-foreground">Inferences</p><p className="font-mono">{state.totalInferences}</p></div>
+        </div>
+        <div className="space-y-1">
+          {state.slots.map((slot) => (
+            <div key={slot.slotId} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1">
+              <span className="font-mono text-[11px]">{slot.slotId}</span>
+              <div className="flex gap-2 items-center">
+                {slot.supportsSab && <StatusBadge ok label="SAB" />}
+                <span className={cn("font-semibold", statusColor(slot.status))}>{slot.status}</span>
+                {slot.crashCount > 0 && <span className="text-red-500 text-[10px]">×{slot.crashCount} crash</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+        {!state.initialized && (
+          <Button size="sm" variant="outline" onClick={() => { initInferenceWorkerBridge(); setState(getInferenceWorkerBridgeState()); }}>
+            Init Worker Bridge
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SabStreamingCard() {
+  const [coopCoep, setCoopCoep] = React.useState<CoopCoepStatus>(getCoopCoepStatus);
+  const [streamStats, setStreamStats] = React.useState<SabStreamStats>(getSabStreamStats);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setStreamStats(getSabStreamStats()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const gateColor = coopCoep.sabDeploymentGate === "open" ? "text-emerald-600" : "text-amber-600";
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">SAB Streaming Visualizer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Isolation</p><StatusBadge ok={coopCoep.crossOriginIsolated} label={coopCoep.isolationMode} /></div>
+          <div><p className="text-muted-foreground">SAB Gate</p><p className={cn("font-mono", gateColor)}>{coopCoep.sabDeploymentGate}</p></div>
+          <div><p className="text-muted-foreground">Active Channels</p><p className="font-mono">{streamStats.activeChannels}</p></div>
+          <div><p className="text-muted-foreground">SAB Mode</p><p className="font-mono">{streamStats.sabModeChannels}</p></div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Tokens Delivered</p><p className="font-mono">{streamStats.totalTokensDelivered}</p></div>
+          <div><p className="text-muted-foreground">Fallback Tokens</p><p className="font-mono text-amber-600">{streamStats.totalFallbackTokens}</p></div>
+        </div>
+        {streamStats.averageDrainLatencyMs !== null && (
+          <p className="text-muted-foreground">Ring drain latency: <span className="font-mono text-foreground">{streamStats.averageDrainLatencyMs.toFixed(2)}ms avg</span></p>
+        )}
+        <p className="text-[10px] text-muted-foreground/70 leading-relaxed">{coopCoep.deploymentGuidance}</p>
+        <Button size="sm" variant="outline" onClick={() => setCoopCoep(verifyCoopCoep())}>
+          Re-verify Isolation
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ThreadedExecutionMonitorCard() {
+  const [bootStatus, setBootStatus] = React.useState<ThreadedBootStatus>(getThreadedBootStatus);
+  const [booting, setBooting] = React.useState(false);
+
+  const stageBadge = (s: ThreadedBootStageResult) => {
+    const color = s.status === "complete" ? "text-emerald-600" : s.status === "failed" ? "text-red-600" : s.status === "skipped" ? "text-muted-foreground" : "text-blue-600";
+    return <span className={cn("font-mono text-[10px]", color)}>{s.status}</span>;
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Threaded Execution Monitor</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {bootStatus.blockingReason && (
+          <p className="text-amber-600 bg-amber-50 rounded px-2 py-1 text-[11px]">{bootStatus.blockingReason}</p>
+        )}
+        <div className="grid grid-cols-3 gap-2">
+          <div><p className="text-muted-foreground">Attempts</p><p className="font-mono">{bootStatus.totalAttempts}</p></div>
+          <div><p className="text-muted-foreground">Successes</p><p className="font-mono">{bootStatus.successfulBoots}</p></div>
+          <div><p className="text-muted-foreground">Avg Boot</p><p className="font-mono">{bootStatus.averageBootMs ? `${bootStatus.averageBootMs.toFixed(0)}ms` : "—"}</p></div>
+        </div>
+        {bootStatus.lastSession && (
+          <div className="space-y-1 border-t border-border/30 pt-2">
+            <p className="text-muted-foreground font-medium">Last Boot Stages</p>
+            {bootStatus.lastSession.stages.map((s) => (
+              <div key={s.stage} className="flex justify-between items-center">
+                <span className="font-mono">{s.stage}</span>
+                <div className="flex gap-2">{stageBadge(s)}{s.durationMs !== null && <span className="text-muted-foreground">{s.durationMs}ms</span>}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="outline" disabled={booting} onClick={async () => {
+          setBooting(true);
+          await runThreadedBoot();
+          setBootStatus(getThreadedBootStatus());
+          setBooting(false);
+        }}>
+          {booting ? "Booting…" : "Run Boot Sequence"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InferenceSlotTopologyCard() {
+  const [state, setState] = React.useState(getInferenceWorkerBridgeState);
+
+  React.useEffect(() => {
+    return subscribeToInferenceWorkerBridge(() => setState(getInferenceWorkerBridgeState()));
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Inference Slot Topology</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="flex gap-2 flex-wrap">
+          {state.slots.map((slot) => {
+            const busy = slot.status === "busy";
+            const crashed = slot.status === "crashed" || slot.status === "recovering";
+            return (
+              <div key={slot.slotId} className={cn(
+                "rounded-lg px-3 py-2 border text-center min-w-[80px]",
+                busy ? "border-blue-400 bg-blue-50" : crashed ? "border-red-400 bg-red-50" : "border-border bg-muted/20"
+              )}>
+                <p className="font-mono text-[10px] font-semibold">{slot.slotId}</p>
+                <p className={cn("text-[10px] font-medium mt-0.5",
+                  busy ? "text-blue-600" : crashed ? "text-red-600" : "text-emerald-600"
+                )}>{slot.status}</p>
+                <p className="text-muted-foreground text-[9px] mt-0.5">{slot.inferenceCount} inf</p>
+                {slot.supportsSab && <p className="text-[9px] text-emerald-500 mt-0.5">SAB</p>}
+              </div>
+            );
+          })}
+          {state.slots.length === 0 && <p className="text-muted-foreground">No slots initialized</p>}
+        </div>
+        <div className="border-t border-border/30 pt-2 grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Queue depth</p><p className="font-mono">{state.queueDepth}</p></div>
+          <div><p className="text-muted-foreground">Total crashes</p><p className="font-mono text-red-500">{state.totalCrashes}</p></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuantizationRoutingCard() {
+  const [decision, setDecision] = React.useState<RoutingDecision | null>(null);
+  const [profiles] = React.useState<QuantizationProfile[]>(getQuantizationProfiles);
+
+  React.useEffect(() => { setDecision(getRoutingDecision()); }, []);
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Quantization Routing Dashboard</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {decision && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Selected</p><StatusBadge ok label={decision.selected} /></div>
+              <div><p className="text-muted-foreground">Fallback</p><p className="font-mono">{decision.fallback}</p></div>
+              <div><p className="text-muted-foreground">Thermal</p><p className="font-mono">{decision.thermalState}</p></div>
+              <div><p className="text-muted-foreground">RAM (GB)</p><p className="font-mono">{decision.availableRamGb ?? "?"}</p></div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{decision.routingReason}</p>
+            <div className="space-y-1 border-t border-border/30 pt-2">
+              <p className="text-muted-foreground font-medium">Suitability Scores</p>
+              {decision.suitabilityScores.map((s) => (
+                <div key={s.profileId} className="flex justify-between items-center">
+                  <span className="font-mono">{s.profileId}</span>
+                  <div className="flex gap-2 items-center">
+                    {s.disqualifyReason ? <span className="text-red-500 text-[10px]">{s.disqualifyReason}</span> :
+                      <span className={cn("text-[10px]", s.score > 70 ? "text-emerald-600" : s.score > 40 ? "text-yellow-600" : "text-red-500")}>{s.score}/100</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <Button size="sm" variant="outline" onClick={() => setDecision(getRoutingDecision())}>
+          Refresh Routing
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function KvCacheDiagnosticsCard() {
+  const [report, setReport] = React.useState<KvCacheReport>(getKvCacheReport);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getKvCacheReport()), 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const pressureColor = report.pressureLevel === "critical" ? "text-red-600" : report.pressureLevel === "high" ? "text-orange-500" : report.pressureLevel === "moderate" ? "text-yellow-600" : "text-emerald-600";
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">KV-Cache Diagnostics</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Pressure</p><p className={cn("font-mono font-semibold", pressureColor)}>{report.pressureLevel} ({report.contextPressurePct}%)</p></div>
+          <div><p className="text-muted-foreground">Model Tier</p><p className="font-mono">{report.modelTier}</p></div>
+          <div><p className="text-muted-foreground">Tokens Used</p><p className="font-mono">{report.tokensUsed} / {report.nCtx}</p></div>
+          <div><p className="text-muted-foreground">Cache Size</p><p className="font-mono">{(report.estimatedCacheSizeBytes / (1024 * 1024)).toFixed(1)} MB</p></div>
+          <div><p className="text-muted-foreground">Recommended nCtx</p><p className="font-mono">{report.recommendedNCtx}</p></div>
+          <div><p className="text-muted-foreground">Evictions</p><p className="font-mono">{report.cacheEvictionEvents}</p></div>
+        </div>
+        <div className="flex gap-3">
+          {report.fragmentationSuspected && <StatusBadge ok={false} label="fragmented" />}
+          {report.longSession && <StatusBadge ok={false} label="long session" />}
+          {report.shrinkReason !== "none" && <StatusBadge ok={false} label={report.shrinkReason} />}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => { clearKvCacheState(); setReport(getKvCacheReport()); }}>
+          Clear Cache State
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NativeFilesystemInspectorCard() {
+  const [report, setReport] = React.useState<NativeFilesystemReport | null>(null);
+  const [benchmarking, setBenchmarking] = React.useState(false);
+
+  React.useEffect(() => {
+    getNativeFilesystemReport().then(setReport).catch(() => null);
+  }, []);
+
+  const tierColor = report?.tier === "native_capacitor" ? "text-emerald-600" : report?.tier === "opfs" ? "text-blue-600" : "text-amber-600";
+  const pressureColor = report?.storagePressure === "critical" ? "text-red-600" : report?.storagePressure === "high" ? "text-orange-500" : "text-foreground";
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Native Filesystem Inspector</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {report ? (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Tier</p><p className={cn("font-mono font-semibold", tierColor)}>{report.tier}</p></div>
+              <div><p className="text-muted-foreground">Activation</p><p className="font-mono">{report.activationState}</p></div>
+              <div><p className="text-muted-foreground">Storage Pressure</p><p className={cn("font-mono", pressureColor)}>{report.storagePressure}</p></div>
+              <div><p className="text-muted-foreground">Atomic Write</p><StatusBadge ok={report.atomicWriteSupported} label={report.atomicWriteSupported ? "yes" : "no"} /></div>
+            </div>
+            {report.availableBytes !== null && (
+              <p className="text-muted-foreground">Available: <span className="font-mono text-foreground">{(report.availableBytes / (1024 * 1024 * 1024)).toFixed(2)} GB</span></p>
+            )}
+            {report.activeModelId && <p className="text-muted-foreground">Active model: <span className="font-mono text-foreground">{report.activeModelId}</span></p>}
+            {report.benchmark && (
+              <div className="border-t border-border/30 pt-2 grid grid-cols-2 gap-2">
+                <div><p className="text-muted-foreground">Write Speed</p><p className="font-mono">{report.benchmark.writeSpeedMbps} MB/s</p></div>
+                <div><p className="text-muted-foreground">Read Speed</p><p className="font-mono">{report.benchmark.readSpeedMbps} MB/s</p></div>
+              </div>
+            )}
+          </>
+        ) : <p className="text-muted-foreground">Loading…</p>}
+        <Button size="sm" variant="outline" disabled={benchmarking} onClick={async () => {
+          setBenchmarking(true);
+          await benchmarkFilesystem();
+          const r = await getNativeFilesystemReport();
+          setReport(r);
+          setBenchmarking(false);
+        }}>
+          {benchmarking ? "Benchmarking…" : "Run FS Benchmark"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DeploymentIsolationCard() {
+  const [status, setStatus] = React.useState<CoopCoepStatus>(getCoopCoepStatus);
+  const [nativeThermal, setNativeThermal] = React.useState<NativeThermalBatteryState>(getNativeThermalBatteryState);
+  const [sampling, setSampling] = React.useState(false);
+
+  const gateOk = status.sabDeploymentGate === "open";
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Deployment Isolation Diagnostics</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Isolation Mode</p><StatusBadge ok={status.crossOriginIsolated} label={status.isolationMode} /></div>
+          <div><p className="text-muted-foreground">SAB Gate</p><StatusBadge ok={gateOk} label={status.sabDeploymentGate} /></div>
+          <div><p className="text-muted-foreground">Secure Context</p><StatusBadge ok={status.isSecureContext} label={status.isSecureContext ? "yes" : "no"} /></div>
+          <div><p className="text-muted-foreground">Local Dev</p><StatusBadge ok={!status.isLocalDev} label={status.isLocalDev ? "yes" : "no"} /></div>
+        </div>
+        <div className="border-t border-border/30 pt-2 space-y-1">
+          <p className="text-muted-foreground font-medium">Native Thermal/Battery</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div><p className="text-muted-foreground">Thermal</p><p className="font-mono">{nativeThermal.thermalState} ({nativeThermal.thermalSource})</p></div>
+            <div><p className="text-muted-foreground">Battery</p><p className="font-mono">{nativeThermal.batteryLevel}% {nativeThermal.isCharging ? "⚡" : ""}</p></div>
+          </div>
+          <p className="text-muted-foreground">Policy: <span className="font-mono text-foreground">{nativeThermal.chargingPolicy.recommended}</span> — {nativeThermal.chargingPolicy.reason}</p>
+        </div>
+        <p className="text-[10px] text-muted-foreground/70 leading-relaxed">{status.deploymentGuidance}</p>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setStatus(verifyCoopCoep())}>
+            Re-verify
+          </Button>
+          <Button size="sm" variant="outline" disabled={sampling} onClick={async () => {
+            setSampling(true);
+            setNativeThermal(await sampleNativeThermalBattery());
+            setSampling(false);
+          }}>
+            {sampling ? "Sampling…" : "Sample Thermal"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RuntimeValidationCard() {
+  const [report, setReport] = React.useState<RuntimeValidationReport | null>(getRuntimeValidationReport);
+  const [running, setRunning] = React.useState(false);
+
+  const statusColor = (s: ValidationResult["status"]) => ({
+    pass: "text-emerald-600", fail: "text-red-600", warning: "text-yellow-600", skipped: "text-muted-foreground"
+  }[s]);
+
+  const certColor = (level: string) => ({
+    production: "text-emerald-600", standard: "text-blue-600", basic: "text-yellow-600", none: "text-red-600"
+  }[level] ?? "text-foreground");
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Runtime Validation Dashboard</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {report ? (
+          <>
+            <div className="grid grid-cols-4 gap-2">
+              <div><p className="text-muted-foreground">Pass</p><p className="font-mono text-emerald-600">{report.passCount}</p></div>
+              <div><p className="text-muted-foreground">Warn</p><p className="font-mono text-yellow-600">{report.warningCount}</p></div>
+              <div><p className="text-muted-foreground">Fail</p><p className="font-mono text-red-600">{report.failCount}</p></div>
+              <div><p className="text-muted-foreground">Skip</p><p className="font-mono">{report.skippedCount}</p></div>
+            </div>
+            <p className="text-muted-foreground">Certification: <span className={cn("font-semibold", certColor(report.certificationLevel))}>{report.certificationLevel}</span></p>
+            <div className="space-y-0.5 max-h-[180px] overflow-y-auto">
+              {report.results.map((r) => (
+                <div key={r.id} className="flex justify-between items-center py-0.5">
+                  <span className="truncate max-w-[140px]">{r.name}</span>
+                  <div className="flex gap-2">
+                    <span className={cn("text-[10px] font-mono", statusColor(r.status))}>{r.status}</span>
+                    <span className="text-[10px] text-muted-foreground">{r.durationMs}ms</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : <p className="text-muted-foreground">No validation report yet</p>}
+        <Button size="sm" variant="outline" disabled={running} onClick={async () => {
+          setRunning(true);
+          const r = await runValidationSuite();
+          setReport(r);
+          setRunning(false);
+        }}>
+          {running ? "Running…" : "Run Validation Suite"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExecutionReadinessCard() {
+  const [score, setScore] = React.useState(getDeploymentReadinessScore);
+  const [contracts, setContracts] = React.useState<ContractSatisfactionMap>(getAllContractSatisfaction);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setScore(getDeploymentReadinessScore());
+      setContracts(getAllContractSatisfaction());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scoreColor = score >= 80 ? "text-emerald-600" : score >= 60 ? "text-yellow-600" : "text-red-600";
+  const scoreLabel = score >= 80 ? "Production Ready" : score >= 60 ? "Standard" : score >= 40 ? "Basic" : "Not Ready";
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Execution Readiness Scorecard</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="flex items-center gap-4">
+          <div className="text-center">
+            <p className={cn("text-4xl font-bold font-mono", scoreColor)}>{score}</p>
+            <p className="text-muted-foreground text-[10px]">/ 100</p>
+          </div>
+          <div>
+            <p className={cn("text-lg font-semibold", scoreColor)}>{scoreLabel}</p>
+            <p className="text-muted-foreground text-[11px]">Composite execution readiness</p>
+          </div>
+        </div>
+        <div className="w-full bg-muted/30 rounded-full h-2">
+          <div className={cn("h-2 rounded-full", score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-yellow-500" : "bg-red-500")}
+            style={{ width: `${score}%` }} />
+        </div>
+        <div className="border-t border-border/30 pt-2 space-y-1">
+          <p className="text-muted-foreground font-medium">Background Contract Readiness</p>
+          {Object.entries(contracts).map(([jobType, sat]) => (
+            <div key={jobType} className="flex justify-between">
+              <span className="font-mono text-[10px]">{jobType}</span>
+              <span className={sat.ok ? "text-emerald-600 text-[10px]" : "text-amber-500 text-[10px]"}>
+                {sat.ok ? "ready" : sat.reason ?? "not ready"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Wasm Runtime Card (Phase 14) ─────────────────────────────────────────────
 
 function WasmRuntimeCard() {
@@ -3491,6 +3940,16 @@ export function AIDevPanel() {
       <PerformanceHistoryCard />
       <FaultContainmentCard />
       <StressTestCard />
+      <WorkerExecutionCard />
+      <SabStreamingCard />
+      <ThreadedExecutionMonitorCard />
+      <InferenceSlotTopologyCard />
+      <QuantizationRoutingCard />
+      <KvCacheDiagnosticsCard />
+      <NativeFilesystemInspectorCard />
+      <DeploymentIsolationCard />
+      <RuntimeValidationCard />
+      <ExecutionReadinessCard />
       <WasmRuntimeCard />
       <ThreadScalerCard />
       <MemoryGovernorCard />
