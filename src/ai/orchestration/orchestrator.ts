@@ -30,9 +30,12 @@ import {
   recordInferenceFailure,
 } from "../runtime/executionRecovery";
 import { recordThermalIncident, updateDailyPerformance } from "../runtime/performanceHistory";
-import { initAppLifecycle } from "../runtime/appLifecycle";
+import { initAppLifecycle, subscribeToLifecycle } from "../runtime/appLifecycle";
 import { startSessionGuard, recordSessionInference } from "../runtime/sessionGuard";
 import { initCognitionScaler } from "../cognition/cognitionScaler";
+import { createOptimizedStream } from "../runtime/streamingOptimizer";
+import { initStartupProfile, recordStageStart, recordStageComplete } from "../runtime/coldStartOptimizer";
+import { assessAndRecover, markCleanExit } from "../runtime/lifecycleRecovery";
 
 let _initialised = false;
 let _sessionInferenceCount = 0;
@@ -81,18 +84,34 @@ export async function initOrchestrator(): Promise<void> {
 }
 
 async function _startupTasks(): Promise<void> {
-  // 0. App lifecycle tracking + cognition scaler + session guard
+  // Cold-start profiling — track each boot stage
+  initStartupProfile();
+  recordStageStart("core");
+
+  // 0. Crash/recovery assessment — must run before any other startup work
+  try { await assessAndRecover(); } catch { /* non-fatal */ }
+
+  // 0a. App lifecycle tracking + cognition scaler + session guard
   initAppLifecycle();
   initCognitionScaler();
   startSessionGuard();
 
+  // Register clean-exit marker on unload to distinguish crashes from clean shutdowns
+  subscribeToLifecycle((event) => {
+    if (event === "before_unload") markCleanExit();
+  });
+
+  recordStageComplete("core");
+
   // 1. Initialize governor (begins device capability detection in background)
+  recordStageStart("governor");
   initGovernor();
+  recordStageComplete("governor");
 
   // 1b. Cleanup any stale download markers from prior sessions
   cleanupStaleDownloadMarkers();
 
-  // 1. Recover any interrupted migration from a prior session
+  // 1c. Recover any interrupted migration from a prior session
   try {
     const { recoverInterruptedMigration } = await import("../models/migrationEngine");
     await recoverInterruptedMigration();
@@ -109,6 +128,7 @@ async function _startupTasks(): Promise<void> {
   })();
 
   // 3. Auto-activate local model if already installed
+  recordStageStart("warmup");
   try {
     const { checkLifecycleState } = await import("../models/modelLifecycle");
     const { getRecommendedManifest } = await import("../models/modelRegistry");
@@ -119,6 +139,10 @@ async function _startupTasks(): Promise<void> {
       await tryActivateLocalProvider(manifest);
     }
   } catch { /* silent — startup activation is best-effort */ }
+  recordStageComplete("warmup");
+
+  recordStageStart("ready");
+  recordStageComplete("ready");
 }
 
 async function executeInference(
@@ -152,9 +176,14 @@ async function executeInference(
     throw new Error("Inference suspended by runtime governor");
   }
 
-  // Wrap streaming with stuck-stream watchdog
+  // Streaming chain: llama → stuckGuard.wrappedOnToken → optimizer.wrappedOnToken → UI onToken
+  // stuckGuard resets its watchdog on real tokens; optimizer paces UI delivery.
+  const optimizer = createOptimizedStream({
+    onToken: governedRequest.onToken ?? (() => undefined),
+    policy,
+  });
   const stuckGuard = withStuckStreamDetection(
-    governedRequest.onToken,
+    optimizer.wrappedOnToken,
     governedRequest.controller,
   );
   const finalRequest: InferenceRequest = {
@@ -171,6 +200,7 @@ async function executeInference(
       finalRequest.controller,
     );
 
+    optimizer.flush();
     stuckGuard.cancel();
     recordInference();
     recordSessionInference();
@@ -193,6 +223,7 @@ async function executeInference(
     patchRuntimeState({ status: "ready", totalInferences: _sessionInferenceCount });
     return result;
   } catch (err) {
+    optimizer.cancel();
     stuckGuard.cancel();
     const isAbort = err instanceof Error && (
       err.message.includes("Cancelled") ||

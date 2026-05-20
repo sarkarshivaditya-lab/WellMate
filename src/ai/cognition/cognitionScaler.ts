@@ -13,6 +13,9 @@
 
 import type { RuntimeMode } from "../runtime/runtimeGovernor";
 import type { CapabilityClass } from "../platform/capabilityClassifier";
+import { getCurrentPolicy, subscribeToPolicy } from "../runtime/runtimeGovernor";
+import { getCapabilitiesSync } from "../platform/capabilityClassifier";
+import { getThermalState } from "../runtime/thermalGuard";
 
 export type CognitionQuality =
   | "minimal"
@@ -96,34 +99,19 @@ function notifyListeners(profile: CognitionProfile): void {
 export function getCognitionProfile(opts?: { batteryPct?: number | null }): CognitionProfile {
   const batteryPct = opts?.batteryPct ?? null;
 
-  // Lazy-resolved to avoid circular dep at import time
   let mode: RuntimeMode = "full";
   let capClass: CapabilityClass | undefined;
   let thermal = "nominal";
 
-  try {
-    const { getCurrentPolicy } = require("../runtime/runtimeGovernor") as typeof import("../runtime/runtimeGovernor");
-    mode = getCurrentPolicy().mode;
-  } catch { /* governor not yet initialized */ }
-
-  try {
-    const { getCapabilitiesSync } = require("../platform/capabilityClassifier") as typeof import("../platform/capabilityClassifier");
-    capClass = getCapabilitiesSync()?.capabilityClass;
-  } catch { /* classifier not yet ready */ }
-
-  try {
-    const { getThermalState } = require("../runtime/thermalGuard") as typeof import("../runtime/thermalGuard");
-    thermal = getThermalState();
-  } catch { /* */ }
+  try { mode = getCurrentPolicy().mode; } catch { /* governor not yet initialized */ }
+  try { capClass = getCapabilitiesSync()?.capabilityClass; } catch { /* classifier not yet ready */ }
+  try { thermal = getThermalState(); } catch { /* */ }
 
   const quality = deriveQuality(mode, capClass, thermal, batteryPct);
   const spec = QUALITY_SPECS[quality];
 
   let maxTokens = spec.maxTokens;
-  try {
-    const { getCurrentPolicy } = require("../runtime/runtimeGovernor") as typeof import("../runtime/runtimeGovernor");
-    maxTokens = Math.min(spec.maxTokens, getCurrentPolicy().maxGenerationTokens);
-  } catch { /* */ }
+  try { maxTokens = Math.min(spec.maxTokens, getCurrentPolicy().maxGenerationTokens); } catch { /* */ }
 
   const reason = [
     `governor=${mode}`,
@@ -141,8 +129,7 @@ let _wired = false;
 export function initCognitionScaler(): void {
   if (_wired) return;
   _wired = true;
-
-  import("../runtime/runtimeGovernor").then(({ subscribeToPolicy }) => {
+  try {
     subscribeToPolicy(() => notifyListeners(getCognitionProfile()));
-  }).catch(() => null);
+  } catch { /* governor not yet initialized */ }
 }

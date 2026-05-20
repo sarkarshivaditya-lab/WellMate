@@ -74,6 +74,15 @@ import {
   type StressScenarioResult,
   type StressProgress,
 } from "@/ai/runtime/stressSuite";
+import { getWorkerBridgeStatus, type WorkerBridgeStatus } from "@/ai/workers/workerBridge";
+import { getStorageHealthReport, type StorageHealthReport } from "@/ai/storage/storageIntegrity";
+import {
+  getStartupProfiles,
+  getAverageBootDurationMs,
+  getSlowestStage,
+  type BootProfile,
+} from "@/ai/runtime/coldStartOptimizer";
+import { getDeploymentDiagnostics, isSafeModeActive, activateSafeMode, deactivateSafeMode, type DeploymentDiagnosticsReport } from "@/ai/platform/deploymentDiagnostics";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -2337,6 +2346,223 @@ function StressTestCard() {
   );
 }
 
+// ── Worker Bridge Card ────────────────────────────────────────────────────────
+
+function WorkerBridgeCard() {
+  const [status, setStatus] = React.useState<WorkerBridgeStatus | null>(null);
+
+  React.useEffect(() => {
+    function refresh() { setStatus(getWorkerBridgeStatus()); }
+    refresh();
+    const id = setInterval(refresh, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Worker Bridge</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {status ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Mode</span>
+              <StatusBadge ok={status.mode === "worker"} label={status.mode} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Worker alive</span>
+              <StatusBadge ok={status.workerAlive} label={status.workerAlive ? "yes" : "no"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Pending tasks</span>
+              <span className="font-mono">{status.pendingTasks}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Completed / Failed</span>
+              <span className="font-mono">{status.totalCompleted} / {status.totalFailed}</span>
+            </div>
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Storage Integrity Card ─────────────────────────────────────────────────────
+
+function StorageIntegrityCard() {
+  const [report, setReport] = React.useState<StorageHealthReport | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  async function refresh() {
+    setLoading(true);
+    try { setReport(getStorageHealthReport()); } finally { setLoading(false); }
+  }
+
+  React.useEffect(() => { void refresh(); }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">Storage Integrity</CardTitle>
+        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={refresh} disabled={loading}>
+          {loading ? "…" : "Refresh"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {report ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Health score</span>
+              <StatusBadge ok={report.healthScore >= 80} label={`${report.healthScore}/100`} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total assets</span>
+              <span className="font-mono">{report.totalAssets}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Verified / Corrupt / Missing</span>
+              <span className="font-mono">{report.verified} / {report.corrupt} / {report.missing}</span>
+            </div>
+            {report.quarantined.length > 0 && (
+              <div className="border-t border-border/15 pt-2">
+                <p className="text-muted-foreground/70">Quarantined: {report.quarantined.join(", ")}</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-muted-foreground/50">Loading…</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Startup Profiler Card ─────────────────────────────────────────────────────
+
+function StartupProfilerCard() {
+  const profiles = getStartupProfiles();
+  const avgMs = getAverageBootDurationMs();
+  const slowest = getSlowestStage();
+  const last = profiles[profiles.length - 1] ?? null;
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Cold-Start Profiler</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Sessions profiled</span>
+          <span className="font-mono">{profiles.length}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Avg boot time</span>
+          <span className="font-mono">{avgMs !== null ? `${avgMs}ms` : "—"}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Slowest stage</span>
+          <span className="font-mono">{slowest ? `${slowest.stage} (${slowest.avgMs}ms)` : "—"}</span>
+        </div>
+        {last && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-muted-foreground/60 uppercase tracking-wide text-[9px]">Last session</p>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Type</span>
+              <StatusBadge ok={last.isWarmStart} label={last.isWarmStart ? "warm" : "cold"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-mono">{last.totalDurationMs !== null ? `${last.totalDurationMs}ms` : "incomplete"}</span>
+            </div>
+            {(["core", "governor", "warmup", "ready"] as const).map((stage) => {
+              const rec = last.stages[stage];
+              return rec?.durationMs != null ? (
+                <div key={stage} className="flex items-center justify-between">
+                  <span className="text-muted-foreground/60">{stage}</span>
+                  <span className="font-mono text-muted-foreground/60">{rec.durationMs}ms</span>
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Deployment Diagnostics Card ───────────────────────────────────────────────
+
+function DeploymentDiagnosticsCard() {
+  const [report, setReport] = React.useState<DeploymentDiagnosticsReport | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const safeMode = isSafeModeActive();
+
+  async function runAudit() {
+    setLoading(true);
+    try { setReport(await getDeploymentDiagnostics()); } finally { setLoading(false); }
+  }
+
+  React.useEffect(() => { void runAudit(); }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">Deployment Diagnostics</CardTitle>
+        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={runAudit} disabled={loading}>
+          {loading ? "…" : "Re-audit"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Safe mode</span>
+          <div className="flex items-center gap-2">
+            <StatusBadge ok={!safeMode} label={safeMode ? "active" : "off"} />
+            {safeMode ? (
+              <Button variant="ghost" size="sm" className="text-[10px] h-5 px-2" onClick={() => deactivateSafeMode()}>
+                Disable
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="text-[10px] h-5 px-2" onClick={() => activateSafeMode("manual")}>
+                Force
+              </Button>
+            )}
+          </div>
+        </div>
+        {report && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Critical failures</span>
+              <StatusBadge ok={report.criticalFailures === 0} label={String(report.criticalFailures)} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Build mode</span>
+              <span className="font-mono">{report.buildFingerprint.mode}</span>
+            </div>
+            {report.buildFingerprint.version && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Version</span>
+                <span className="font-mono">{report.buildFingerprint.version}</span>
+              </div>
+            )}
+            <div className="border-t border-border/15 pt-2 space-y-1">
+              {report.compatibilityChecks.map((c) => (
+                <div key={c.feature} className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground/70 truncate">{c.feature}</span>
+                  <StatusBadge ok={c.passed} label={c.passed ? "ok" : "fail"} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -2356,6 +2582,10 @@ export function AIDevPanel() {
       <PerformanceHistoryCard />
       <FaultContainmentCard />
       <StressTestCard />
+      <WorkerBridgeCard />
+      <StorageIntegrityCard />
+      <StartupProfilerCard />
+      <DeploymentDiagnosticsCard />
       <LongitudinalMemoryCard />
       <IntelligenceObservabilityCard />
       <StructuredTestsCard />
