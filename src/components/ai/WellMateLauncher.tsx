@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
 import { LAUNCH_STATE } from "@/ai/launchState";
+import { resolveAssistantReadiness } from "@/ai/assistantReadiness";
 import { getModelLoadState, subscribeToModelLoad } from "@/ai/providers/local/modelLoader";
 import { getRuntimeState, subscribeToRuntimeState } from "@/ai/runtime/runtimeState";
 import { assistantRequest } from "@/ai/assistant/unifiedAssistantOrchestrator";
@@ -209,6 +210,22 @@ function WellMateLauncher() {
     };
 
     setMessages((m) => [...m, userMessage]);
+
+    // Resolve AI capability BEFORE any requests — prevents generic catch-block
+    // errors from surfacing when the assistant simply isn't configured yet.
+    const readiness = resolveAssistantReadiness();
+    if (!readiness.canProceed) {
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: readiness.guidanceMessage ?? "WellMate AI is currently unavailable.",
+        },
+      ]);
+      return;
+    }
+
     setThinking(true);
     setClarify(null);
 
@@ -218,7 +235,7 @@ function WellMateLauncher() {
 
     try {
       // Offline-first: use local AI when the model is in memory and ready
-      if (getRuntimeState().modelLoad === "ready") {
+      if (readiness.state === "local_ready") {
         let streamed = "";
         const response = await assistantRequest(text, {
           surface: "ai_chat",
@@ -236,9 +253,16 @@ function WellMateLauncher() {
           setThinking(false);
           return;
         }
+        // Local responded but was safety-blocked or empty — do not fall through
+        // to cloud unless cloud is explicitly available.
+        if (!LAUNCH_STATE.cloudAssistantAvailable) {
+          setThinking(false);
+          return;
+        }
       }
 
-      // Cloud fallback — when local model not loaded or safety blocked
+      // Cloud fallback — only reached when readiness.state === "cloud_only",
+      // or local was safety-blocked and cloudAssistantAvailable is true.
       const res = await wellmateChat({ message: text });
 
       if (res.domain === "clarify") {
