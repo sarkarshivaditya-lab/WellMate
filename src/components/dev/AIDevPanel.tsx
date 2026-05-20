@@ -145,6 +145,15 @@ import { getSurfaceBehaviorProfile, type AssistantSurface } from "@/ai/assistant
 import { getDeliveryEngineReport, getPendingItems, refreshDeliveryQueue } from "@/ai/assistant/proactiveDeliveryEngine";
 import { runConsistencyValidation, getLastConsistencyReport, type ConsistencyValidationReport } from "@/ai/assistant/assistantConsistencyValidator";
 import { getAssistantOrchestratorReport } from "@/ai/assistant/unifiedAssistantOrchestrator";
+import { generateProductionReadinessReport, getLastProductionReport, type ProductionReadinessReport } from "@/ai/production/productionReadinessReport";
+import { getInferenceBridgeReport, runBypassAudit } from "@/ai/production/productionInferenceBridge";
+import { getEmbeddingAdapterReport, semanticCluster, getLastClusters, type SemanticCluster } from "@/ai/memory/semanticEmbeddingAdapter";
+import { runLongSessionCheck, getLastSessionStabilityReport, type SessionStabilityReport } from "@/ai/cognition/longSessionStabilityGuard";
+import { getMobileHardenerReport, initMobileHardener, type MobileHardenerReport } from "@/ai/platform/mobileExecutionHardener";
+import { getPsychologicalSafetyStatus, runFullSafetyAudit } from "@/ai/assistant/psychologicalSafetyRuntime";
+import { getAllSurfaceSignals, type SurfaceCognitionSignal } from "@/ai/assistant/uiCognitionIntegrationLayer";
+import { runOfflineDeploymentValidation, getLastDeploymentReport, type DeploymentValidationReport } from "@/ai/production/offlineDeploymentValidator";
+import { getUnifiedContextReport } from "@/ai/cognition/unifiedContextAssembler";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -5491,6 +5500,526 @@ function AssistantSurfaceSimulatorCard() {
   );
 }
 
+// ── Production Readiness Dashboard ────────────────────────────────────────────
+
+function ProductionReadinessDashboardCard() {
+  const [report, setReport] = React.useState<ProductionReadinessReport | null>(() => getLastProductionReport());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleGenerate() {
+    setRunning(true);
+    try { setReport(generateProductionReadinessReport()); } finally { setRunning(false); }
+  }
+
+  const gradeColor = !report ? "text-muted-foreground" :
+    report.deploymentGrade === "production_ready" ? "text-emerald-500" :
+    report.deploymentGrade === "staging_only" ? "text-yellow-400" : "text-red-400";
+
+  const subsystemColor = (grade: "ready" | "degraded" | "critical") =>
+    grade === "ready" ? "text-emerald-500" : grade === "degraded" ? "text-yellow-400" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Production Readiness Dashboard
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleGenerate} disabled={running}>
+            {running ? "Generating…" : "Generate report"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        {!report ? <p className="text-muted-foreground italic">No report yet</p> : (
+          <>
+            <div className="flex gap-4 items-center">
+              <div>
+                <p className="text-muted-foreground">Overall score</p>
+                <p className={cn("font-mono text-2xl font-bold", gradeColor)}>{report.overallScore}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Grade</p>
+                <p className={cn("font-semibold text-sm capitalize", gradeColor)}>{report.deploymentGrade.replace(/_/g, " ")}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-1 border-t border-border/40 pt-1">
+              {report.subsystems.map((sub) => (
+                <div key={sub.id} className="flex justify-between">
+                  <span className="text-muted-foreground capitalize">{sub.id.replace(/_/g, " ")}</span>
+                  <span className={cn("font-mono font-semibold", subsystemColor(sub.grade))}>{sub.score}</span>
+                </div>
+              ))}
+            </div>
+            {report.knownBlockers.length > 0 && (
+              <div className="bg-red-500/6 rounded p-1.5 space-y-0.5">
+                <p className="text-[10px] font-semibold text-red-400 uppercase tracking-wide">Blockers</p>
+                {report.knownBlockers.slice(0, 3).map((b, i) => <p key={i} className="text-[10px] text-red-300">{b}</p>)}
+              </div>
+            )}
+            {report.stubbedSystems.length > 0 && (
+              <div className="border-t border-border/40 pt-1">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Stubs</p>
+                {report.stubbedSystems.slice(0, 3).map((s, i) => <p key={i} className="text-[10px] text-muted-foreground/70 italic">{s}</p>)}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Unified AI Flow Inspector ──────────────────────────────────────────────────
+
+function UnifiedAIFlowInspectorCard() {
+  const [bridgeReport, setBridgeReport] = React.useState(() => getInferenceBridgeReport());
+  const [contextReport, setContextReport] = React.useState(() => getUnifiedContextReport());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setBridgeReport(getInferenceBridgeReport());
+      setContextReport(getUnifiedContextReport());
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const bypass = bridgeReport.bypassAudit;
+  const bypassColor = bypass.verdict === "clean" ? "text-emerald-500" :
+    bypass.verdict === "suspected_bypass" ? "text-red-400" : "text-muted-foreground";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Unified AI Flow Inspector</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-muted-foreground">Guarded requests</p>
+            <p className="font-mono">{bridgeReport.totalGuardedRequests}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Blocked (mobile)</p>
+            <p className="font-mono">{bridgeReport.totalBlockedByMobile}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Blocked (safety)</p>
+            <p className="font-mono">{bridgeReport.totalBlockedBySafety}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Bypass audit</p>
+            <p className={cn("font-mono font-semibold", bypassColor)}>{bypass.verdict}</p>
+          </div>
+        </div>
+        {bypass.estimatedBypasses > 0 && (
+          <div className="bg-red-500/8 rounded p-1.5">
+            <p className="text-[10px] text-red-400">~{bypass.estimatedBypasses} direct inference calls ({(bypass.bypassRatio * 100).toFixed(0)}% bypass rate)</p>
+          </div>
+        )}
+        <div className="border-t border-border/40 pt-1">
+          <p className="text-muted-foreground mb-0.5">Unified context assembler</p>
+          <div className="grid grid-cols-2 gap-1">
+            <div>
+              <p className="text-muted-foreground">Assembly count</p>
+              <p className="font-mono">{contextReport.assemblyCount}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Avg tokens</p>
+              <p className="font-mono">{contextReport.averageTokensUsed}</p>
+            </div>
+          </div>
+          {contextReport.lastContext && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Last: {contextReport.lastContext.sectionsIncluded} sections, {contextReport.lastContext.totalTokens}/{contextReport.lastContext.budgetTokens} tokens
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Semantic Memory Explorer ───────────────────────────────────────────────────
+
+function SemanticMemoryExplorerCard() {
+  const [adapterReport, setAdapterReport] = React.useState(() => getEmbeddingAdapterReport());
+  const [clusters, setClusters] = React.useState<SemanticCluster[]>(() => getLastClusters());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleCluster() {
+    setRunning(true);
+    try {
+      const { retrieveMemory } = await import("@/ai/memory/memoryHierarchy");
+      const entries = retrieveMemory({ maxTier: 4, limit: 40 });
+      if (entries.length > 0) {
+        const result = semanticCluster(entries, Math.min(5, Math.ceil(entries.length / 4)));
+        setClusters(result);
+      }
+      setAdapterReport(getEmbeddingAdapterReport());
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Semantic Memory Explorer
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleCluster} disabled={running}>
+            {running ? "Clustering…" : "Run clustering"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-3 gap-1">
+          <div>
+            <p className="text-muted-foreground">Embedding mode</p>
+            <p className="font-mono text-[11px]">{adapterReport.embeddingMode}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Cached</p>
+            <p className="font-mono">{adapterReport.cachedEmbeddings}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Clusters</p>
+            <p className="font-mono">{adapterReport.clusterCount}</p>
+          </div>
+        </div>
+        {clusters.length > 0 ? (
+          <div className="space-y-1.5 border-t border-border/40 pt-1">
+            {clusters.slice(0, 4).map((c) => (
+              <div key={c.id} className="bg-muted/30 rounded p-1.5">
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="font-semibold text-[11px]">{c.dominantTags.slice(0, 3).join(", ")}</span>
+                  <span className="text-muted-foreground text-[10px]">{c.memberIds.length} items</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-muted/50 rounded-full h-1">
+                    <div className="bg-emerald-500/60 h-1 rounded-full" style={{ width: `${c.coherenceScore * 100}%` }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{(c.coherenceScore * 100).toFixed(0)}% coherence</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground italic">No clusters yet — run clustering to explore semantic groups</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Long-Session Stability Monitor ────────────────────────────────────────────
+
+function LongSessionStabilityMonitorCard() {
+  const [report, setReport] = React.useState<SessionStabilityReport | null>(() => getLastSessionStabilityReport());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleCheck() {
+    setRunning(true);
+    try { setReport(runLongSessionCheck()); } finally { setRunning(false); }
+  }
+
+  const gradeColor = !report ? "text-muted-foreground" :
+    report.grade === "stable" ? "text-emerald-500" :
+    report.grade === "degrading" ? "text-yellow-400" : "text-red-400";
+
+  const durationMin = report ? Math.round(report.sessionDurationMs / 60000) : 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Long-Session Stability Monitor
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleCheck} disabled={running}>
+            {running ? "Checking…" : "Run check"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        {!report ? <p className="text-muted-foreground italic">No report yet</p> : (
+          <>
+            <div className="flex gap-4 items-center">
+              <div>
+                <p className="text-muted-foreground">Stability</p>
+                <p className={cn("font-mono text-lg font-bold", gradeColor)}>{report.score}/100</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Grade</p>
+                <p className={cn("font-semibold capitalize", gradeColor)}>{report.grade}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Session</p>
+                <p className="font-mono">{durationMin}m</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Inferences</p>
+                <p className="font-mono">{report.inferenceCount}</p>
+              </div>
+            </div>
+            {report.violations.length > 0 ? (
+              <div className="space-y-1 border-t border-border/40 pt-1">
+                {report.violations.map((v, i) => (
+                  <div key={i} className={cn("rounded p-1.5", v.severity === "critical" ? "bg-red-500/8" : "bg-yellow-500/8")}>
+                    <p className={cn("text-[11px] font-semibold", v.severity === "critical" ? "text-red-400" : "text-yellow-400")}>
+                      {v.checkId.replace(/_/g, " ")}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">{v.description}</p>
+                    <p className="text-[10px] text-muted-foreground/70 italic">{v.mitigation}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-emerald-500 text-[11px]">Session is stable — no drift, stale memory, or continuity issues detected.</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Mobile Runtime Hardening Panel ────────────────────────────────────────────
+
+function MobileRuntimeHardeningCard() {
+  const [report, setReport] = React.useState<MobileHardenerReport>(() => getMobileHardenerReport());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getMobileHardenerReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const pressureColor = (p: string) => p === "normal" ? "text-emerald-500" : p === "moderate" ? "text-yellow-400" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Mobile Runtime Hardening
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { initMobileHardener(); setReport(getMobileHardenerReport()); }}>
+            Init
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-muted-foreground">Platform</p>
+            <p className="font-mono text-[11px]">{report.state.platform}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Hardened</p>
+            <StatusBadge ok={report.isHardened} label={report.isHardened ? "active" : "off"} />
+          </div>
+          <div>
+            <p className="text-muted-foreground">Memory pressure</p>
+            <p className={cn("font-mono", pressureColor(report.state.memoryPressure))}>{report.state.memoryPressure}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Thermal</p>
+            <p className="font-mono">{report.state.thermalState}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Deferred inferences</p>
+            <p className="font-mono">{report.deferredInferenceCount}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Worker crashes</p>
+            <p className={cn("font-mono", report.state.workerCrashCount > 0 ? "text-red-400" : "text-muted-foreground")}>{report.state.workerCrashCount}</p>
+          </div>
+        </div>
+        {report.state.workerCrashCount > 0 && (
+          <div className="bg-red-500/6 rounded p-1.5">
+            <p className="text-[10px] text-red-400">Backoff: {report.state.backoffMs}ms. Recovery in progress.</p>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-1 text-[11px] border-t border-border/40 pt-1">
+          <div>
+            <p className="text-muted-foreground">Page hidden</p>
+            <p className="font-mono">{report.state.isPageHidden ? "yes" : "no"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Memory warnings</p>
+            <p className="font-mono">{report.memoryWarnings}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Psychological Safety Runtime ───────────────────────────────────────────────
+
+function PsychologicalSafetyRuntimeCard() {
+  const [status, setStatus] = React.useState(() => getPsychologicalSafetyStatus());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleAudit() {
+    setRunning(true);
+    try { setStatus(runFullSafetyAudit()); } finally { setRunning(false); }
+  }
+
+  const verdictColor = status.verdict === "safe" ? "text-emerald-500" :
+    status.verdict === "degraded" ? "text-yellow-400" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Psychological Safety Runtime
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleAudit} disabled={running}>
+            {running ? "Auditing…" : "Run audit"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="flex gap-4 items-center">
+          <div>
+            <p className="text-muted-foreground">Score</p>
+            <p className={cn("font-mono text-lg font-bold", verdictColor)}>{status.score}/100</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Verdict</p>
+            <p className={cn("font-semibold capitalize", verdictColor)}>{status.verdict}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          {[
+            ["Wellness safety", status.wellnessSafetyScore],
+            ["Memory safety", status.memorySafetyScore],
+            ["Consistency", status.consistencyScore],
+          ].map(([label, score]) => (
+            <div key={label as string}>
+              <p className="text-muted-foreground text-[10px]">{label as string}</p>
+              <p className={cn("font-mono font-semibold", (score as number) >= 70 ? "text-emerald-500" : (score as number) >= 45 ? "text-yellow-400" : "text-red-400")}>
+                {score as number}
+              </p>
+            </div>
+          ))}
+        </div>
+        {status.activeRisks.length > 0 && (
+          <div className="space-y-0.5 border-t border-border/40 pt-1">
+            {status.activeRisks.slice(0, 4).map((r, i) => (
+              <p key={i} className="text-[10px] text-red-300">{r}</p>
+            ))}
+          </div>
+        )}
+        {status.blockedBy && (
+          <div className="bg-red-500/8 rounded p-1.5">
+            <p className="text-[10px] font-semibold text-red-400">Blocked by: {status.blockedBy}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── UI Cognition Integration Viewer ────────────────────────────────────────────
+
+function UICognitionIntegrationViewerCard() {
+  const [signals, setSignals] = React.useState<SurfaceCognitionSignal[]>(() => getAllSurfaceSignals());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setSignals(getAllSurfaceSignals()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const strengthColor = (s: string) =>
+    s === "strong" ? "text-emerald-500" : s === "moderate" ? "text-yellow-400" : s === "weak" ? "text-orange-400" : "text-muted-foreground";
+
+  const trendIcon = (t: string) => t === "improving" ? "↑" : t === "declining" ? "↓" : t === "stable" ? "→" : "?";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">UI Cognition Integration Viewer</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1.5 text-xs">
+        {signals.map((sig) => (
+          <div key={sig.surface} className="flex items-start gap-2 border-b border-border/20 pb-1.5 last:border-0 last:pb-0">
+            <div className="w-16 shrink-0">
+              <p className="font-semibold capitalize">{sig.surface.replace("_", " ")}</p>
+              <p className={cn("text-[10px]", strengthColor(sig.signalStrength))}>{sig.signalStrength}</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className={cn("text-[11px]", sig.domainTrend === "improving" ? "text-emerald-500" : sig.domainTrend === "declining" ? "text-red-400" : "text-muted-foreground")}>
+                  {trendIcon(sig.domainTrend)}
+                </span>
+                <StatusBadge ok={sig.proactiveAvailable} label={sig.proactiveAvailable ? "proactive" : "passive"} />
+              </div>
+              {sig.primaryInsight && (
+                <p className="text-[10px] text-muted-foreground/80 leading-relaxed line-clamp-2">{sig.primaryInsight}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Deployment Validation Console ──────────────────────────────────────────────
+
+function DeploymentValidationConsoleCard() {
+  const [report, setReport] = React.useState<DeploymentValidationReport | null>(() => getLastDeploymentReport());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleValidate() {
+    setRunning(true);
+    try { setReport(runOfflineDeploymentValidation()); } finally { setRunning(false); }
+  }
+
+  const verdictColor = !report ? "text-muted-foreground" :
+    report.verdict === "ready" ? "text-emerald-500" :
+    report.verdict === "degraded" ? "text-yellow-400" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Deployment Validation Console
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleValidate} disabled={running}>
+            {running ? "Validating…" : "Run validation"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        {!report ? <p className="text-muted-foreground italic">No validation yet</p> : (
+          <>
+            <div className="flex gap-4 items-center">
+              <div>
+                <p className="text-muted-foreground">Score</p>
+                <p className={cn("font-mono text-lg font-bold", verdictColor)}>{report.score}/100</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Verdict</p>
+                <p className={cn("font-semibold capitalize", verdictColor)}>{report.verdict.replace(/_/g, " ")}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Checks</p>
+                <p className="font-mono">{report.checks.filter((c) => c.passed).length}/{report.checks.length} passed</p>
+              </div>
+            </div>
+            <div className="space-y-0.5 border-t border-border/40 pt-1">
+              {report.checks.map((c) => (
+                <div key={c.checkId} className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge ok={c.passed} label={c.passed ? "✓" : "✗"} />
+                    <span className={c.critical ? "font-medium" : "text-muted-foreground"}>{c.checkId.replace(/_/g, " ")}</span>
+                  </div>
+                  {!c.passed && <p className="text-[10px] text-red-300 text-right max-w-[55%] line-clamp-1">{c.detail}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -5581,6 +6110,14 @@ export function AIDevPanel() {
       <ProactiveDeliveryQueueCard />
       <ConsistencyValidatorCard />
       <AssistantSurfaceSimulatorCard />
+      <ProductionReadinessDashboardCard />
+      <UnifiedAIFlowInspectorCard />
+      <SemanticMemoryExplorerCard />
+      <LongSessionStabilityMonitorCard />
+      <MobileRuntimeHardeningCard />
+      <PsychologicalSafetyRuntimeCard />
+      <UICognitionIntegrationViewerCard />
+      <DeploymentValidationConsoleCard />
     </div>
   );
 }
