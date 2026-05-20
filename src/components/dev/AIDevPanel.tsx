@@ -92,6 +92,15 @@ import { getTelemetrySummary, getRecentTelemetry, clearTelemetry, type Telemetry
 import { getFleetDiagnosticsReport, getDeploymentCohort, type FleetDiagnosticsReport } from "@/ai/telemetry/fleetDiagnostics";
 import { getSchedulerState, getPendingJobs, getAllNativeJobs, type SchedulerState, type NativeBackgroundJob } from "@/ai/platform/nativeBackgroundExecution";
 import { getAllFeatureGates, getRolloutAssignment, checkBuildCompatibility, overrideFeatureGate, clearFeatureGateOverrides, type FeatureGateState } from "@/ai/platform/deploymentConvergence";
+import { getWasmRuntimeCapability, type WasmRuntimeCapabilitySummary } from "@/ai/workers/threadedWasmRuntime";
+import { getSabMemoryReport, isSabAvailable, type SabMemoryReport } from "@/ai/runtime/sabMemoryManager";
+import { computeThreadScaleDecision, getThreadScaleHistory, recordThreadEfficiency, type ThreadScaleDecision } from "@/ai/runtime/adaptiveThreadScaler";
+import { assessWebGpuCapability, getWebGpuCapabilitySync, resolveInferenceExecutionTier, type WebGpuCapabilityReport } from "@/ai/platform/webgpuCapability";
+import { getMemoryGovernorReport, getContextBudget, isFragmentationSuspected, type MemoryGovernorReport } from "@/ai/runtime/memoryGovernor";
+import { getThroughputSummary, getRecentSamples, type ThroughputSummary } from "@/ai/runtime/throughputProfiler";
+import { getHardwareCharacterization, getThermalTrendLog, type HardwareCharacterization } from "@/ai/runtime/hardwareCharacterizer";
+import { getPluginAvailability, type PluginAvailabilityMap } from "@/ai/platform/nativePluginContracts";
+import { computeRuntimePressure, getInferenceTimeline, getSustainedLoadProfile, type RuntimePressureSnapshot } from "@/ai/runtime/performanceLab";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -2355,6 +2364,430 @@ function StressTestCard() {
   );
 }
 
+// ── Wasm Runtime Card (Phase 14) ─────────────────────────────────────────────
+
+function WasmRuntimeCard() {
+  const [cap, setCap] = React.useState<WasmRuntimeCapabilitySummary | null>(null);
+  const [sab, setSab] = React.useState<SabMemoryReport | null>(null);
+  const [gpuReport, setGpuReport] = React.useState<WebGpuCapabilityReport | null>(null);
+  const [loadingGpu, setLoadingGpu] = React.useState(false);
+
+  React.useEffect(() => {
+    setCap(getWasmRuntimeCapability());
+    setSab(getSabMemoryReport());
+    const sync = getWebGpuCapabilitySync();
+    if (sync) setGpuReport(sync);
+  }, []);
+
+  async function runGpuAudit() {
+    setLoadingGpu(true);
+    try { setGpuReport(await assessWebGpuCapability(true)); } finally { setLoadingGpu(false); }
+  }
+
+  const execTier = resolveInferenceExecutionTier();
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium">WASM Runtime + GPU</CardTitle>
+        <Button variant="ghost" size="sm" className="text-[10px] h-6 px-2" onClick={runGpuAudit} disabled={loadingGpu}>
+          {loadingGpu ? "…" : "GPU Audit"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Execution tier</span>
+          <StatusBadge ok={execTier === "gpu" || execTier === "threaded_cpu"} label={execTier.replace(/_/g, " ")} />
+        </div>
+        {cap && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">WASM mode</span>
+              <StatusBadge ok={cap.activeMode === "threaded"} label={cap.activeMode.replace(/_/g, " ")} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">SAB allocatable</span>
+              <StatusBadge ok={cap.sabAllocatable} label={cap.sabAllocatable ? "yes" : "no"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Recommended threads</span>
+              <span className="font-mono">{cap.recommendedThreadCount}</span>
+            </div>
+            {cap.fallbackReason && (
+              <p className="text-[10px] text-muted-foreground/55 border-t border-border/15 pt-1">{cap.fallbackReason}</p>
+            )}
+          </>
+        )}
+        {sab && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">SAB Memory</p>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Allocations</span>
+              <span className="font-mono">{sab.totalAllocations} ({Math.round(sab.totalBytes / 1024)}KB)</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Memory pressure</span>
+              <StatusBadge ok={sab.memoryPressure === "low"} label={sab.memoryPressure} />
+            </div>
+          </div>
+        )}
+        {gpuReport && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">WebGPU</p>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Eligibility</span>
+              <StatusBadge ok={gpuReport.eligibility === "eligible"} label={gpuReport.eligibility.replace(/_/g, " ")} />
+            </div>
+            {gpuReport.adapterName && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Adapter</span>
+                <span className="font-mono truncate max-w-[140px]">{gpuReport.adapterName}</span>
+              </div>
+            )}
+            {gpuReport.eligibility === "eligible" && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">float16 / timestamp</span>
+                <span className="font-mono">{gpuReport.features.float16 ? "f16" : "no-f16"} / {gpuReport.features.timestampQuery ? "ts" : "no-ts"}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Thread Scaler Card (Phase 14) ─────────────────────────────────────────────
+
+function ThreadScalerCard() {
+  const [decision, setDecision] = React.useState<ThreadScaleDecision | null>(null);
+  const [history, setHistory] = React.useState<ReturnType<typeof getThreadScaleHistory>>([]);
+
+  React.useEffect(() => {
+    function refresh() {
+      setDecision(computeThreadScaleDecision());
+      setHistory(getThreadScaleHistory().slice(-6).reverse());
+    }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Adaptive Thread Scaler</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {decision ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Recommended threads</span>
+              <span className="font-mono">{decision.recommendedThreads} / {decision.maxPossibleThreads}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Scaling factor</span>
+              <span className="font-mono">{Math.round(decision.scalingFactor * 100)}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Primary reason</span>
+              <StatusBadge ok={decision.primaryReason === "hardware_ceiling"} label={decision.primaryReason.replace(/_/g, " ")} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Policy / Thermal</span>
+              <span className="font-mono">{decision.policyMode} / {decision.thermalState}</span>
+            </div>
+            {history.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Efficiency samples</p>
+                {history.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-muted-foreground/60">{s.threads}t / {s.thermalState}</span>
+                    <span className="font-mono">{s.tokPerSec.toFixed(1)} tok/s</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : <p className="text-muted-foreground/50">Computing…</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Memory Governor Card (Phase 14) ──────────────────────────────────────────
+
+function MemoryGovernorCard() {
+  const [report, setReport] = React.useState<MemoryGovernorReport | null>(null);
+
+  React.useEffect(() => {
+    function refresh() { setReport(getMemoryGovernorReport()); }
+    refresh();
+    const id = setInterval(refresh, 4000);
+    return () => clearInterval(id);
+  }, []);
+
+  const budget = getContextBudget();
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Memory Governor</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {report ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Memory tier</span>
+              <StatusBadge ok={report.currentTier === "unconstrained" || report.currentTier === "comfortable"} label={report.currentTier} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Device RAM</span>
+              <span className="font-mono">{report.deviceRamGb !== null ? `${report.deviceRamGb}GB` : "unknown"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Heap estimate</span>
+              <span className="font-mono">{report.estimatedHeapMb !== null ? `${Math.round(report.estimatedHeapMb)}MB` : "unavailable"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Recommended n_ctx</span>
+              <span className="font-mono">{budget.recommendedNCtx}</span>
+            </div>
+            {budget.reductionReason && (
+              <p className="text-[10px] text-muted-foreground/55">Reduced: {budget.reductionReason}</p>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Fragmentation</span>
+              <StatusBadge ok={!report.fragmentation} label={report.fragmentation ? "detected" : "clean"} />
+            </div>
+          </>
+        ) : <p className="text-muted-foreground/50">Loading…</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Throughput Profiler Card (Phase 14) ───────────────────────────────────────
+
+function ThroughputProfilerCard() {
+  const [summary, setSummary] = React.useState<ThroughputSummary | null>(null);
+
+  React.useEffect(() => {
+    function refresh() { setSummary(getThroughputSummary()); }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  const timeline = getInferenceTimeline(6);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Throughput Profiler</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {summary && summary.totalSamples > 0 ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Device class</span>
+              <StatusBadge ok={summary.deviceClass === "high_end" || summary.deviceClass === "mid_range"} label={summary.deviceClass.replace(/_/g, " ")} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Avg / Peak tok/s</span>
+              <span className="font-mono">{summary.avgTokPerSec.toFixed(1)} / {summary.peakTokPerSec.toFixed(1)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Sustained tok/s</span>
+              <span className="font-mono">{summary.sustainedTokPerSec.toFixed(1)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Degradation</span>
+              <StatusBadge ok={summary.degradationPct < 20} label={`${summary.degradationPct.toFixed(0)}%`} />
+            </div>
+            {summary.latencyPercentiles && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">P50 / P90 / P99</span>
+                <span className="font-mono">{summary.latencyPercentiles.p50Ms}ms / {summary.latencyPercentiles.p90Ms}ms / {summary.latencyPercentiles.p99Ms}ms</span>
+              </div>
+            )}
+            {timeline.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Timeline</p>
+                {timeline.map((e) => (
+                  <div key={e.sampleId} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground/60">#{e.sessionIndex} {e.thermalState}</span>
+                    <span className="font-mono">{e.tokPerSec.toFixed(1)}t/s {e.durationMs}ms</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : <p className="text-muted-foreground/50">No samples yet — run an inference first</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Hardware Characterizer Card (Phase 14) ────────────────────────────────────
+
+function HardwareCharacterizerCard() {
+  const [hw, setHw] = React.useState<HardwareCharacterization | null>(null);
+
+  React.useEffect(() => {
+    function refresh() { setHw(getHardwareCharacterization()); }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  const trendLog = getThermalTrendLog().slice(-6).reverse();
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Hardware Characterizer</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {hw ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Thermal trend</span>
+              <StatusBadge ok={hw.thermalTrend !== "heating"} label={hw.thermalTrend} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Peak thermal (session)</span>
+              <StatusBadge ok={hw.peakThermalState === "nominal" || hw.peakThermalState === "warm"} label={hw.peakThermalState} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Cooldown estimate</span>
+              <span className="font-mono">{hw.estimatedCooldownMs !== null ? `${Math.round(hw.estimatedCooldownMs / 1000)}s` : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Energy/inference</span>
+              <span className="font-mono">{hw.estimatedInferenceEnergyMah !== null ? `${hw.estimatedInferenceEnergyMah.toFixed(2)}mAh` : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Heavy session risk</span>
+              <StatusBadge ok={!hw.heavySessionRisk} label={hw.heavySessionRisk ? "yes" : "no"} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Session inferences</span>
+              <span className="font-mono">{hw.sessionInferences} ({hw.inferencesPerMin.toFixed(1)}/min)</span>
+            </div>
+            {trendLog.length > 0 && (
+              <div className="border-t border-border/15 pt-2 space-y-1">
+                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Thermal log</p>
+                {trendLog.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <StatusBadge ok={p.state === "nominal" || p.state === "warm"} label={p.state} />
+                    <span className="font-mono text-muted-foreground/50">{p.inferencesPerMin.toFixed(1)}/min</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : <p className="text-muted-foreground/50">Loading…</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Native Plugin Contracts Card (Phase 14) ───────────────────────────────────
+
+function NativePluginContractsCard() {
+  const [plugins, setPlugins] = React.useState<PluginAvailabilityMap | null>(null);
+
+  React.useEffect(() => { setPlugins(getPluginAvailability()); }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Native Plugin Contracts</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {plugins ? (
+          Object.entries(plugins).map(([name, available]) => (
+            <div key={name} className="flex items-center justify-between">
+              <span className="text-muted-foreground capitalize">{name.replace(/([A-Z])/g, ' $1').trim()}</span>
+              <StatusBadge ok={available} label={available ? "native" : "stub"} />
+            </div>
+          ))
+        ) : <p className="text-muted-foreground/50">Loading…</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Performance Lab Card (Phase 14) ──────────────────────────────────────────
+
+function PerformanceLabCard() {
+  const [pressure, setPressure] = React.useState<RuntimePressureSnapshot | null>(null);
+  const sustained = getSustainedLoadProfile();
+
+  React.useEffect(() => {
+    function refresh() { setPressure(computeRuntimePressure()); }
+    refresh();
+    const id = setInterval(refresh, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Card className="bg-card/50 border-border/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Performance Lab</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-[11px]">
+        {pressure && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Runtime pressure</span>
+              <StatusBadge ok={pressure.label === "nominal" || pressure.label === "elevated"} label={`${pressure.score}/100 ${pressure.label}`} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Thermal / Battery / Memory</span>
+              <span className="font-mono">{pressure.components.thermal} / {pressure.components.battery} / {pressure.components.memory}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Throughput / Threads</span>
+              <span className="font-mono">{pressure.components.throughput} / {pressure.components.threads}</span>
+            </div>
+            <div className="border-t border-border/15 pt-2 space-y-1">
+              <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wide">Sustained load</p>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Session duration</span>
+                <span className="font-mono">{sustained.durationMinutes}min</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Inferences run</span>
+                <span className="font-mono">{sustained.inferencesRun}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Peak thermal</span>
+                <StatusBadge ok={sustained.peakThermal === "nominal" || sustained.peakThermal === "warm"} label={sustained.peakThermal} />
+              </div>
+              {sustained.pressureProgression.length > 0 && (
+                <div className="flex items-center gap-1 pt-1 overflow-hidden">
+                  {sustained.pressureProgression.map((p, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 rounded"
+                      style={{
+                        height: `${Math.max(2, (p / 100) * 20)}px`,
+                        background: p < 25 ? "rgb(34 197 94 / 0.4)" : p < 50 ? "rgb(234 179 8 / 0.4)" : "rgb(239 68 68 / 0.4)",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Threaded Runtime Card ─────────────────────────────────────────────────────
 
 function ThreadedRuntimeCard() {
@@ -3058,6 +3491,13 @@ export function AIDevPanel() {
       <PerformanceHistoryCard />
       <FaultContainmentCard />
       <StressTestCard />
+      <WasmRuntimeCard />
+      <ThreadScalerCard />
+      <MemoryGovernorCard />
+      <ThroughputProfilerCard />
+      <HardwareCharacterizerCard />
+      <NativePluginContractsCard />
+      <PerformanceLabCard />
       <ThreadedRuntimeCard />
       <WorkerTopologyCard />
       <NativeLifecycleCard />
