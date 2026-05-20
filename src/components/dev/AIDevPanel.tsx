@@ -111,6 +111,15 @@ import { getKvCacheReport, clearKvCacheState, type KvCacheReport } from "@/ai/ru
 import { getRoutingDecision, getQuantizationProfiles, recordInferencePerformance, type RoutingDecision, type QuantizationProfile } from "@/ai/models/quantizationRouter";
 import { getAllContractSatisfaction, getNativeBackgroundContracts, type ContractSatisfactionMap } from "@/ai/platform/nativeBackgroundContracts";
 import { getRuntimeValidationReport, runValidationSuite, getDeploymentReadinessScore, type RuntimeValidationReport, type ValidationResult } from "@/ai/runtime/runtimeValidator";
+import { getCognitionEventBusStats, getRecentCognitionEvents, type CognitionEvent } from "@/ai/cognition/cognitionEventBus";
+import { getCognitiveStateReport, type CognitiveStateReport } from "@/ai/cognition/cognitiveStateEngine";
+import { getMemoryHierarchyReport, type MemoryHierarchyReport } from "@/ai/memory/memoryHierarchy";
+import { getContextBudgetReport, assembleContext, type ContextBudgetReport } from "@/ai/cognition/contextPrioritizer";
+import { getUserModelReport, type UserModelReport } from "@/ai/cognition/userModel";
+import { getReflectionReport, getActiveReflections, type ReflectionReport, type ReflectionEntry } from "@/ai/cognition/reflectionEngine";
+import { getContinuityStatus, getContinuityRecoveryLog, type ContinuityStatus } from "@/ai/cognition/continuityRecovery";
+import { getSafetyGovernorReport, runSafetyAudit, type SafetyGovernorReport } from "@/ai/cognition/memorySafetyGovernor";
+import { runCognitionValidation, getLastValidationReport, getCognitionCertification, type CognitionValidationReport } from "@/ai/cognition/cognitionValidator";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -3921,6 +3930,420 @@ function DeploymentDiagnosticsCard() {
   );
 }
 
+// ── Phase 16: Persistent Cognition Cards ─────────────────────────────────────
+
+function CognitiveStateCard() {
+  const [report, setReport] = React.useState<CognitiveStateReport>(() => getCognitiveStateReport());
+  React.useEffect(() => {
+    const id = setInterval(() => setReport(getCognitiveStateReport()), 5000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognitive State Engine</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Attention slots</p><p className="font-mono">{report.attentionSlotCount} / 5</p></div>
+          <div><p className="text-muted-foreground">Active goals</p><p className="font-mono">{report.activeGoalCount} / 3</p></div>
+          <div><p className="text-muted-foreground">Unresolved topics</p><p className="font-mono">{report.unresolvedTopicCount}</p></div>
+          <div><p className="text-muted-foreground">Momentum</p><p className="font-mono">{(report.conversationMomentum * 100).toFixed(0)}%</p></div>
+          <div><p className="text-muted-foreground">Emotion</p><p className="font-mono">{report.dominantEmotion}</p></div>
+          <div><p className="text-muted-foreground">Checkpointed</p><StatusBadge ok={report.isCheckpointed} label={report.isCheckpointed ? "yes" : "no"} /></div>
+        </div>
+        {report.attentionSlots.length > 0 && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-muted-foreground font-medium">Top attention slots</p>
+            {report.attentionSlots.slice(0, 3).map((s, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="text-foreground/70 truncate">{s.content.slice(0, 50)}</span>
+                <span className="font-mono text-muted-foreground">{(s.salience * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function WorkingMemoryTimelineCard() {
+  const [events, setEvents] = React.useState<CognitionEvent[]>(() => getRecentCognitionEvents(20));
+  const [busStats, setBusStats] = React.useState(() => getCognitionEventBusStats());
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setEvents(getRecentCognitionEvents(20));
+      setBusStats(getCognitionEventBusStats());
+    }, 3000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognition Event Timeline</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Total events</p><p className="font-mono">{busStats.totalEvents}</p></div>
+          <div><p className="text-muted-foreground">Subscribers</p><p className="font-mono">{Object.values(busStats.subscriberCount).reduce((a, b) => a + b, 0)}</p></div>
+        </div>
+        <div className="border-t border-border/15 pt-2 space-y-1 max-h-40 overflow-y-auto">
+          {events.slice().reverse().slice(0, 12).map((e, i) => (
+            <div key={i} className="flex justify-between gap-2 text-[11px]">
+              <span className="font-mono text-muted-foreground">{e.eventType}</span>
+              <span className="text-foreground/50">{new Date(e.emittedAt).toLocaleTimeString()}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemoryHierarchyCard() {
+  const [report, setReport] = React.useState<MemoryHierarchyReport>(() => getMemoryHierarchyReport());
+  React.useEffect(() => {
+    const id = setInterval(() => setReport(getMemoryHierarchyReport()), 8000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Memory Hierarchy</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-3 gap-2">
+          <div><p className="text-muted-foreground">Total items</p><p className="font-mono">{report.totalItems}</p></div>
+          <div><p className="text-muted-foreground">Evictions</p><p className="font-mono">{report.evictionsThisSession}</p></div>
+          <div><p className="text-muted-foreground">Promotions</p><p className="font-mono">{report.promotionsThisSession}</p></div>
+        </div>
+        <div className="border-t border-border/15 pt-2 space-y-1">
+          {report.tiers.map((t) => (
+            <div key={t.tier} className="flex items-center gap-2">
+              <span className="text-muted-foreground w-20">T{t.tier} {t.name}</span>
+              <div className="flex-1 h-1.5 bg-border/20 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-400/60 rounded-full" style={{ width: `${t.fillPct}%` }} />
+              </div>
+              <span className="font-mono w-12 text-right">{t.itemCount}/{t.maxItems}</span>
+            </div>
+          ))}
+        </div>
+        {report.topSalientItems.length > 0 && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-muted-foreground font-medium">Top salient items</p>
+            {report.topSalientItems.slice(0, 3).map((item, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="text-foreground/60 truncate text-[11px]">{item.content.slice(0, 55)}</span>
+                <span className="font-mono text-muted-foreground">{(item.salience * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContextBudgetCard() {
+  const [report, setReport] = React.useState<ContextBudgetReport>(() => getContextBudgetReport());
+  const [assembling, setAssembling] = React.useState(false);
+  const assemble = () => {
+    setAssembling(true);
+    assembleContext(1000);
+    setReport(getContextBudgetReport());
+    setAssembling(false);
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Context Budget</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Budget</p><p className="font-mono">{report.budgetTokens} tok</p></div>
+          <div><p className="text-muted-foreground">Utilization</p><p className="font-mono">{report.utilizationPct}%</p></div>
+          <div><p className="text-muted-foreground">Items included</p><p className="font-mono">{report.itemsIncluded}</p></div>
+          <div><p className="text-muted-foreground">Items excluded</p><p className="font-mono">{report.itemsExcluded}</p></div>
+          <div><p className="text-muted-foreground">Contradictions</p><p className="font-mono">{report.contradictionsDetected}</p></div>
+        </div>
+        {report.topItems.length > 0 && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            {report.topItems.map((item, i) => (
+              <div key={i} className="flex justify-between gap-2">
+                <span className="text-foreground/60 truncate">{item.content.slice(0, 48)}</span>
+                <span className="font-mono text-muted-foreground">{(item.score * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px] h-7" onClick={assemble} disabled={assembling}>
+          {assembling ? "Assembling…" : "Assemble Context"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function UserModelCard() {
+  const [report, setReport] = React.useState<UserModelReport>(() => getUserModelReport());
+  React.useEffect(() => {
+    const id = setInterval(() => setReport(getUserModelReport()), 10000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">User Model</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Avg confidence</p><p className="font-mono">{(report.averageConfidence * 100).toFixed(0)}%</p></div>
+          <div><p className="text-muted-foreground">High-conf dims</p><p className="font-mono">{report.highConfidenceDimensions}/{report.totalDimensions}</p></div>
+          <div><p className="text-muted-foreground">Stale dims</p><p className="font-mono">{report.staleDimensions}</p></div>
+          <div><p className="text-muted-foreground">Burnout risk</p><StatusBadge ok={report.burnoutRisk === "low"} label={report.burnoutRisk} /></div>
+          <div className="col-span-2"><p className="text-muted-foreground">Coaching style</p><p className="font-mono">{report.coachingStylePreference}</p></div>
+        </div>
+        {report.dominantMotivation && (
+          <div className="border-t border-border/15 pt-2">
+            <p className="text-muted-foreground font-medium">Coaching context</p>
+            <p className="text-foreground/70 mt-1">{report.dominantMotivation}</p>
+          </div>
+        )}
+        <div className="border-t border-border/15 pt-2 space-y-1">
+          {report.dimensions.filter((d) => d.confidence >= 0.3).slice(0, 5).map((d) => (
+            <div key={d.dimension} className="flex items-center gap-2">
+              <span className="text-muted-foreground truncate w-36">{d.dimension}</span>
+              <div className="flex-1 h-1 bg-border/20 rounded-full overflow-hidden">
+                <div className="h-full bg-violet-400/60 rounded-full" style={{ width: `${d.value * 100}%` }} />
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground">{(d.confidence * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReflectionActivityCard() {
+  const [report, setReport] = React.useState<ReflectionReport>(() => getReflectionReport());
+  const [reflections, setReflections] = React.useState<ReflectionEntry[]>(() => getActiveReflections());
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setReport(getReflectionReport());
+      setReflections(getActiveReflections());
+    }, 10000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Reflection Engine</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Total reflections</p><p className="font-mono">{report.totalReflections}</p></div>
+          <div><p className="text-muted-foreground">Active</p><p className="font-mono">{reflections.length}</p></div>
+          <div><p className="text-muted-foreground">Last run</p><p className="font-mono">{report.lastReflectionAt ? new Date(report.lastReflectionAt).toLocaleTimeString() : "never"}</p></div>
+          <div><p className="text-muted-foreground">Skipped</p><p className="font-mono">{report.skippedReason ?? "no"}</p></div>
+        </div>
+        {reflections.length > 0 && (
+          <div className="border-t border-border/15 pt-2 space-y-2">
+            {reflections.slice(0, 3).map((r, i) => (
+              <div key={i} className="space-y-0.5">
+                <p className="font-mono text-[10px] text-muted-foreground">{r.kind}</p>
+                <p className="text-foreground/70 leading-snug">{r.summary}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContinuityRecoveryCard() {
+  const [status, setStatus] = React.useState<ContinuityStatus>(() => getContinuityStatus());
+  const [log, setLog] = React.useState(() => getContinuityRecoveryLog().slice(-5).reverse());
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setStatus(getContinuityStatus());
+      setLog(getContinuityRecoveryLog().slice(-5).reverse());
+    }, 8000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Continuity Recovery</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Recovered</p><StatusBadge ok={status.isRecovered} label={status.isRecovered ? "yes" : "no"} /></div>
+          <div><p className="text-muted-foreground">Recovery count</p><p className="font-mono">{status.recoveryCount}</p></div>
+          <div><p className="text-muted-foreground">Last outcome</p><p className="font-mono">{status.lastRecoveryOutcome ?? "—"}</p></div>
+          <div><p className="text-muted-foreground">Crash marker</p><StatusBadge ok={!status.crashMarkerPresent} label={status.crashMarkerPresent ? "yes" : "no"} /></div>
+        </div>
+        {log.length > 0 && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            <p className="text-muted-foreground font-medium">Recovery log</p>
+            {log.map((r, i) => (
+              <div key={i} className="flex justify-between gap-2 text-[11px]">
+                <span className="font-mono text-muted-foreground">{r.reason} → {r.outcome}</span>
+                <span className="text-foreground/50">{r.durationMs}ms</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemorySafetyCard() {
+  const [report, setReport] = React.useState<SafetyGovernorReport>(() => getSafetyGovernorReport());
+  const [auditing, setAuditing] = React.useState(false);
+  const audit = () => {
+    setAuditing(true);
+    runSafetyAudit(true);
+    setReport(getSafetyGovernorReport());
+    setAuditing(false);
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Memory Safety Governor</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Last audit</p><StatusBadge ok={report.lastAuditPassed ?? true} label={report.lastAuditPassed === null ? "never" : report.lastAuditPassed ? "passed" : "failed"} /></div>
+          <div><p className="text-muted-foreground">Total violations</p><p className="font-mono">{report.totalViolations}</p></div>
+          <div><p className="text-muted-foreground">Remediations</p><p className="font-mono">{report.totalRemediations}</p></div>
+        </div>
+        {report.violationHistory.slice(-4).reverse().map((v, i) => (
+          <div key={i} className="text-[11px] border border-border/20 rounded p-1.5 space-y-0.5">
+            <div className="flex justify-between">
+              <span className="font-mono text-muted-foreground">{v.kind}</span>
+              <StatusBadge ok={v.severity === "low"} label={v.severity} />
+            </div>
+            <p className="text-foreground/60 leading-snug">{v.description.slice(0, 80)}</p>
+          </div>
+        ))}
+        <Button size="sm" variant="outline" className="w-full text-[11px] h-7" onClick={audit} disabled={auditing}>
+          {auditing ? "Auditing…" : "Run Safety Audit"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SalienceHeatmapCard() {
+  const [report, setReport] = React.useState<MemoryHierarchyReport>(() => getMemoryHierarchyReport());
+  const [cogReport, setCogReport] = React.useState<CognitiveStateReport>(() => getCognitiveStateReport());
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setReport(getMemoryHierarchyReport());
+      setCogReport(getCognitiveStateReport());
+    }, 6000);
+    return () => clearInterval(id);
+  }, []);
+
+  const allSlots = cogReport.attentionSlots;
+  const maxSalience = Math.max(...allSlots.map((s) => s.salience), 0.01);
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Salience Heatmap</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div>
+          <p className="text-muted-foreground font-medium mb-1">Attention slots</p>
+          {allSlots.length === 0 ? (
+            <p className="text-muted-foreground/50">No active slots</p>
+          ) : (
+            <div className="space-y-1">
+              {allSlots.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-border/15 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${(s.salience / maxSalience) * 100}%`,
+                        background: `hsl(${220 + (1 - s.salience / maxSalience) * 60}, 70%, 55%)`,
+                      }}
+                    />
+                  </div>
+                  <span className="font-mono text-[10px] w-8 text-right">{(s.salience * 100).toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="border-t border-border/15 pt-2">
+          <p className="text-muted-foreground font-medium mb-1">Memory tier fill</p>
+          <div className="space-y-1">
+            {report.tiers.map((t) => (
+              <div key={t.tier} className="flex items-center gap-2">
+                <span className="text-muted-foreground w-16 text-[10px]">T{t.tier}</span>
+                <div className="flex-1 h-1.5 bg-border/15 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${t.fillPct}%`,
+                      background: t.fillPct > 80 ? "hsl(0,70%,55%)" : "hsl(200,70%,55%)",
+                    }}
+                  />
+                </div>
+                <span className="font-mono text-[10px] w-8 text-right">{t.fillPct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CognitiveDriftCard() {
+  const [validationReport, setValidationReport] = React.useState<CognitionValidationReport | null>(() => getLastValidationReport());
+  const [cert, setCert] = React.useState(() => getCognitionCertification());
+  const [running, setRunning] = React.useState(false);
+
+  const runValidation = () => {
+    setRunning(true);
+    setTimeout(() => {
+      const r = runCognitionValidation();
+      setValidationReport(r);
+      setCert(getCognitionCertification());
+      setRunning(false);
+    }, 50);
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognition Validator</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-muted-foreground">Score</p>
+            <p className="font-mono text-lg">{validationReport?.totalScore ?? "—"}<span className="text-[10px] text-muted-foreground">/100</span></p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Certification</p>
+            <StatusBadge ok={cert === "production" || cert === "standard"} label={cert} />
+          </div>
+          {validationReport && (
+            <>
+              <div><p className="text-muted-foreground">Tests run</p><p className="font-mono">{validationReport.testResults.length}</p></div>
+              <div><p className="text-muted-foreground">Duration</p><p className="font-mono">{validationReport.durationMs}ms</p></div>
+            </>
+          )}
+        </div>
+        {validationReport && (
+          <div className="border-t border-border/15 pt-2 space-y-1">
+            {validationReport.testResults.map((t, i) => (
+              <div key={i} className="flex items-center justify-between gap-2">
+                <span className="text-foreground/60 truncate text-[11px]">{t.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[10px] text-muted-foreground">{t.score}/{t.weight}</span>
+                  <StatusBadge ok={t.passed} label={t.passed ? "ok" : "fail"} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px] h-7" onClick={runValidation} disabled={running}>
+          {running ? "Running…" : "Run Cognition Validation"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -3969,6 +4392,16 @@ export function AIDevPanel() {
       <StorageIntegrityCard />
       <StartupProfilerCard />
       <DeploymentDiagnosticsCard />
+      <CognitiveStateCard />
+      <WorkingMemoryTimelineCard />
+      <MemoryHierarchyCard />
+      <ContextBudgetCard />
+      <UserModelCard />
+      <ReflectionActivityCard />
+      <ContinuityRecoveryCard />
+      <MemorySafetyCard />
+      <SalienceHeatmapCard />
+      <CognitiveDriftCard />
       <LongitudinalMemoryCard />
       <IntelligenceObservabilityCard />
       <StructuredTestsCard />
