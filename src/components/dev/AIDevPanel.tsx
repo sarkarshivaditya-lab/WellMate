@@ -120,6 +120,31 @@ import { getReflectionReport, getActiveReflections, type ReflectionReport, type 
 import { getContinuityStatus, getContinuityRecoveryLog, type ContinuityStatus } from "@/ai/cognition/continuityRecovery";
 import { getSafetyGovernorReport, runSafetyAudit, type SafetyGovernorReport } from "@/ai/cognition/memorySafetyGovernor";
 import { runCognitionValidation, getLastValidationReport, getCognitionCertification, type CognitionValidationReport } from "@/ai/cognition/cognitionValidator";
+import { getOrchestratorReport, type OrchestratorReport } from "@/ai/cognition/cognitiveExecutionOrchestrator";
+import { getPromptSynthesisReport, type SynthesisOutput } from "@/ai/cognition/promptSynthesisEngine";
+import { getResponseAnalysisPipelineReport, type ResponseAnalysis } from "@/ai/cognition/responseAnalysisPipeline";
+import { getMemoryExtractionReport } from "@/ai/cognition/memoryExtractionEngine";
+import { getGoalThreadReport, type GoalThreadReport } from "@/ai/cognition/goalThreadTracker";
+import { getEmotionalContinuityReport, type EmotionalContinuityReport } from "@/ai/cognition/emotionalContinuityEngine";
+import { getContextInjectionReport, type ContextInjectionReport } from "@/ai/cognition/continuousContextInjector";
+import { getCognitionFeedbackLoopReport } from "@/ai/cognition/cognitionFeedbackLoop";
+import { getSemanticMemoryReport, type SemanticMemoryReport } from "@/ai/cognition/semanticMemoryEngine";
+import { runCoherenceValidation, getLastCoherenceReport, type CoherenceReport } from "@/ai/cognition/cognitiveCoherenceValidator";
+import { computeWellnessTrajectory, getWellnessTrajectory, type WellnessTrajectory } from "@/ai/wellness/wellnessTrajectoryEngine";
+import { predictDisengagement, getDisengagementPrediction, type DisengagementPrediction } from "@/ai/wellness/disengagementPredictor";
+import { detectRecoveryOpportunities, getRecoveryOpportunityReport, type RecoveryOpportunityReport } from "@/ai/wellness/recoveryOpportunityDetector";
+import { getCoachingEngineReport, calibrateCoachingStyle, resetCoachingCalibration, type CoachingEngineReport } from "@/ai/coaching/adaptiveCoachingEngine";
+import { evaluateInterventionTiming, getTimingEngineReport } from "@/ai/wellness/interventionTimingEngine";
+import { synthesizeProactiveInsights, getInsightSynthesisReport, type InsightSynthesisReport } from "@/ai/wellness/proactiveInsightSynthesizer";
+import { runWellnessSafetyAudit, getWellnessSafetyReport, type SafetyAuditReport } from "@/ai/wellness/wellnessSafetyGovernor";
+import { computeLongitudinalPatternGraph, getPatternGraphReport } from "@/ai/wellness/longitudinalPatternGraph";
+import { runProactiveCognitionLoop, getProactiveCognitionReport, type ProactiveCognitionReport } from "@/ai/cognition/proactiveCognitionLoop";
+import { runWellnessIntelligenceValidation, getLastWellnessValidationReport, type WellnessValidationReport } from "@/ai/wellness/wellnessIntelligenceValidator";
+import { getAssistantStateReport, syncAssistantState, resetAssistantState, type AssistantStateReport } from "@/ai/assistant/assistantStateModel";
+import { getSurfaceBehaviorProfile, type AssistantSurface } from "@/ai/assistant/contextualBehaviorEngine";
+import { getDeliveryEngineReport, getPendingItems, refreshDeliveryQueue } from "@/ai/assistant/proactiveDeliveryEngine";
+import { runConsistencyValidation, getLastConsistencyReport, type ConsistencyValidationReport } from "@/ai/assistant/assistantConsistencyValidator";
+import { getAssistantOrchestratorReport } from "@/ai/assistant/unifiedAssistantOrchestrator";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -4344,6 +4369,1128 @@ function CognitiveDriftCard() {
   );
 }
 
+// ── Phase 18: Proactive Wellness Intelligence ─────────────────────────────────
+
+function WellnessTrajectoryMonitorCard() {
+  const [trajectory, setTrajectory] = React.useState<WellnessTrajectory | null>(() => getWellnessTrajectory());
+  const [computing, setComputing] = React.useState(false);
+  const handleCompute = () => {
+    setComputing(true);
+    try { setTrajectory(computeWellnessTrajectory(true)); } finally { setComputing(false); }
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Wellness Trajectory Monitor</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!trajectory ? <p className="text-muted-foreground italic">No trajectory computed</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Direction</p><p className="font-mono">{trajectory.compositeDirection}</p></div>
+              <div><p className="text-muted-foreground">Momentum</p><p className="font-mono">{(trajectory.compositeMomentum * 100).toFixed(0)}%</p></div>
+              <div><p className="text-muted-foreground">Burnout progress</p><p className={cn("font-mono", trajectory.burnoutProgression > 0.6 ? "text-red-500" : "")}>{(trajectory.burnoutProgression * 100).toFixed(0)}%</p></div>
+              <div><p className="text-muted-foreground">Motivation decay</p><p className={cn("font-mono", trajectory.motivationDecay > 0.6 ? "text-amber-500" : "")}>{(trajectory.motivationDecay * 100).toFixed(0)}%</p></div>
+            </div>
+            {trajectory.negativeSignals.length > 0 && <p className="text-red-500 text-[10px]">Declining: {trajectory.negativeSignals.join(", ")}</p>}
+            {trajectory.positiveSignals.length > 0 && <p className="text-emerald-600 text-[10px]">Improving: {trajectory.positiveSignals.join(", ")}</p>}
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleCompute} disabled={computing}>
+          {computing ? "Computing…" : "Recompute trajectory"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DisengagementRiskAnalyzerCard() {
+  const [prediction, setPrediction] = React.useState<DisengagementPrediction | null>(() => getDisengagementPrediction());
+  const [computing, setComputing] = React.useState(false);
+  const handlePredict = () => {
+    setComputing(true);
+    try { setPrediction(predictDisengagement(true)); } finally { setComputing(false); }
+  };
+  const riskColor = prediction?.riskLevel === "high" ? "text-red-500" : prediction?.riskLevel === "moderate" ? "text-amber-500" : "text-emerald-600";
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Disengagement Risk Analyzer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!prediction ? <p className="text-muted-foreground italic">No prediction yet</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Risk score</p><p className={cn("font-mono font-bold", riskColor)}>{(prediction.riskScore * 100).toFixed(0)}%</p></div>
+              <div><p className="text-muted-foreground">Level</p><p className={cn("font-semibold capitalize", riskColor)}>{prediction.riskLevel}</p></div>
+              <div><p className="text-muted-foreground">Confidence</p><p className="font-mono">{(prediction.confidence * 100).toFixed(0)}%</p></div>
+              <div><p className="text-muted-foreground">Strategy</p><p className="font-mono text-[10px]">{prediction.suggestedStrategy.replace(/_/g, " ")}</p></div>
+            </div>
+            {prediction.probableCauses.length > 0 && (
+              <p className="text-muted-foreground text-[10px]">Causes: {prediction.probableCauses.join(", ")}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground italic">{prediction.strategyReason}</p>
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handlePredict} disabled={computing}>
+          {computing ? "Predicting…" : "Run disengagement prediction"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecoveryOpportunityViewerCard() {
+  const [report, setReport] = React.useState<RecoveryOpportunityReport | null>(() => getRecoveryOpportunityReport());
+  const [computing, setComputing] = React.useState(false);
+  const handleDetect = () => {
+    setComputing(true);
+    try { setReport(detectRecoveryOpportunities(true)); } finally { setComputing(false); }
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Recovery Opportunity Viewer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!report ? <p className="text-muted-foreground italic">No detection yet</p> : (
+          <>
+            <div className="flex items-center gap-4">
+              <div><p className="text-muted-foreground">Opportunities</p><p className="font-mono text-emerald-600">{report.opportunities.length}</p></div>
+              <div><p className="text-muted-foreground">Active now</p><StatusBadge ok={report.hasActiveWindow} label={report.hasActiveWindow ? "yes" : "no"} /></div>
+            </div>
+            {report.opportunities.map((o) => (
+              <div key={o.id} className="border border-border/30 rounded p-2 space-y-1">
+                <div className="flex justify-between"><span className="font-medium">{o.headline}</span><span className="text-muted-foreground">{o.window}</span></div>
+                <p className="text-[10px] text-muted-foreground">{o.suggestion.slice(0, 100)}…</p>
+                <p className="text-[10px]">Confidence: {(o.confidence * 100).toFixed(0)}%</p>
+              </div>
+            ))}
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleDetect} disabled={computing}>
+          {computing ? "Detecting…" : "Detect recovery opportunities"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AdaptiveCoachingDashboardCard() {
+  const [report, setReport] = React.useState<CoachingEngineReport>(() => getCoachingEngineReport());
+  const handleCalibrate = () => { calibrateCoachingStyle(); setReport(getCoachingEngineReport()); };
+  const handleReset = () => { resetCoachingCalibration(); setReport(getCoachingEngineReport()); };
+  const style = report.currentStyle;
+  const driftColor = report.driftRisk === "high" ? "text-red-500" : report.driftRisk === "moderate" ? "text-amber-500" : "text-emerald-600";
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Adaptive Coaching Dashboard</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!style ? <p className="text-muted-foreground italic">No calibration yet</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Tone</p><p className="font-mono">{style.tone}</p></div>
+              <div><p className="text-muted-foreground">Frame</p><p className="font-mono">{style.frame}</p></div>
+              <div><p className="text-muted-foreground">Intensity</p><p className="font-mono">{style.intensity}</p></div>
+              <div><p className="text-muted-foreground">Pressure</p><p className="font-mono">{style.pressure}</p></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-1">
+              <div><p className="text-muted-foreground">Evidence count</p><p className="font-mono">{report.evidenceCount}</p></div>
+              <div><p className="text-muted-foreground">Drift risk</p><p className={cn("font-mono capitalize", driftColor)}>{report.driftRisk}</p></div>
+              <div><p className="text-muted-foreground">Confidence</p><p className="font-mono">{(style.confidenceInCalibration * 100).toFixed(0)}%</p></div>
+            </div>
+            {report.overpersonalizationRisk && <p className="text-amber-500 text-[10px]">Over-personalization risk detected</p>}
+            <p className="text-[10px] text-muted-foreground italic">{style.calibrationReason}</p>
+          </>
+        )}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="flex-1 text-[11px]" onClick={handleCalibrate}>Recalibrate</Button>
+          <Button size="sm" variant="outline" className="flex-1 text-[11px]" onClick={handleReset}>Reset</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InterventionTimingGraphCard() {
+  const [evaluation, setEvaluation] = React.useState(() => { try { return evaluateInterventionTiming("today"); } catch { return null; } });
+  const [report] = React.useState(() => getTimingEngineReport());
+  const decisionColor = evaluation?.decision === "proceed" ? "text-emerald-600" : evaluation?.decision === "defer" ? "text-amber-500" : "text-red-500";
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Intervention Timing</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {evaluation && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Timing score</p><p className="font-mono">{(evaluation.timingScore * 100).toFixed(0)}%</p></div>
+              <div><p className="text-muted-foreground">Decision</p><p className={cn("font-semibold", decisionColor)}>{evaluation.decision}</p></div>
+              <div><p className="text-muted-foreground">Urgency</p><p className="font-mono">{evaluation.urgency}</p></div>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">{evaluation.reason}</p>
+          </>
+        )}
+        <div className="grid grid-cols-3 gap-2 border-t border-border/40 pt-1">
+          <div><p className="text-muted-foreground text-[10px]">Proceed</p><p className="font-mono">{report.proceedCount}</p></div>
+          <div><p className="text-muted-foreground text-[10px]">Deferred</p><p className="font-mono">{report.deferralCount}</p></div>
+          <div><p className="text-muted-foreground text-[10px]">Suppressed</p><p className="font-mono">{report.suppressionCount}</p></div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Avg timing score: {(report.averageTimingScore * 100).toFixed(0)}%</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProactiveInsightExplorerCard() {
+  const [report, setReport] = React.useState<InsightSynthesisReport>(() => getInsightSynthesisReport());
+  const [synthesizing, setSynthesizing] = React.useState(false);
+  const handleSynthesize = () => {
+    setSynthesizing(true);
+    try { setReport(synthesizeProactiveInsights(true)); } finally { setSynthesizing(false); }
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Proactive Insight Explorer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Fresh insights</p><p className="font-mono text-emerald-600">{report.freshInsights.length}</p></div>
+          <div><p className="text-muted-foreground">Suppressed</p><p className="font-mono">{report.suppressedCount}</p></div>
+          <div><p className="text-muted-foreground">Total generated</p><p className="font-mono">{report.totalInsightsGenerated}</p></div>
+        </div>
+        {report.freshInsights.map((ins) => (
+          <div key={ins.id} className="border border-border/30 rounded p-2 space-y-1">
+            <div className="flex justify-between"><span className={ins.isPositive ? "text-emerald-600" : "text-amber-500"}>{ins.category.replace(/_/g, " ")}</span><span className="font-mono text-muted-foreground">{(ins.confidence * 100).toFixed(0)}% conf</span></div>
+            <p className="text-[10px]">{ins.text}</p>
+          </div>
+        ))}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleSynthesize} disabled={synthesizing}>
+          {synthesizing ? "Synthesizing…" : "Synthesize insights"}
+        </Button>
+        {report.lastSynthesizedAt && <p className="text-[10px] text-muted-foreground">Last: {new Date(report.lastSynthesizedAt).toLocaleTimeString()}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function WellnessSafetyGovernorCard() {
+  const [report, setReport] = React.useState<SafetyAuditReport>(() => getWellnessSafetyReport());
+  const handleAudit = () => setReport(runWellnessSafetyAudit());
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Wellness Safety Governor</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="flex items-center gap-4">
+          <div><p className="text-muted-foreground">Overall</p><StatusBadge ok={report.overallSafe} label={report.overallSafe ? "safe" : "violations"} /></div>
+          <div><p className="text-muted-foreground">Blocks</p><p className={cn("font-mono", report.totalBlocksThisSession > 0 ? "text-red-500" : "")}>{report.totalBlocksThisSession}</p></div>
+          <div><p className="text-muted-foreground">Warnings</p><p className={cn("font-mono", report.totalWarningsThisSession > 0 ? "text-amber-500" : "")}>{report.totalWarningsThisSession}</p></div>
+        </div>
+        <div><p className="text-muted-foreground">Intervention freq/day</p><p className={cn("font-mono", report.interventionFrequency > 2 ? "text-amber-500" : "")}>{report.interventionFrequency.toFixed(1)}</p></div>
+        {report.activeViolations.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-red-500 text-[10px] uppercase tracking-wide">Active violations</p>
+            {report.activeViolations.map((v) => <p key={v} className="text-[10px] text-red-500">{v.replace(/_/g, " ")}</p>)}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleAudit}>Run safety audit</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LongitudinalPatternGraphCard() {
+  const [report, setReport] = React.useState(() => getPatternGraphReport());
+  const [computing, setComputing] = React.useState(false);
+  const handleCompute = () => {
+    setComputing(true);
+    try { computeLongitudinalPatternGraph(true); setReport(getPatternGraphReport()); } finally { setComputing(false); }
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Longitudinal Pattern Graph</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Nodes</p><p className="font-mono">{report.nodeCount}</p></div>
+          <div><p className="text-muted-foreground">Edges</p><p className="font-mono">{report.edgeCount}</p></div>
+        </div>
+        {report.dominantPattern && <p className="text-[10px] text-emerald-600 italic">{report.dominantPattern}</p>}
+        {report.topRelationships.length > 0 && (
+          <div className="space-y-1 border-t border-border/40 pt-1">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Top relationships</p>
+            {report.topRelationships.map((e, i) => (
+              <div key={i} className="flex justify-between text-[10px]">
+                <span>{e.from} → {e.to}</span>
+                <span className={cn("font-mono", e.relationship === "inverse" ? "text-amber-500" : "text-emerald-600")}>{e.relationship.replace(/_/g, " ")} {(e.strength * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleCompute} disabled={computing}>
+          {computing ? "Computing…" : "Compute pattern graph"}
+        </Button>
+        {report.lastComputedAt && <p className="text-[10px] text-muted-foreground">Last: {new Date(report.lastComputedAt).toLocaleTimeString()}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProactiveCognitionActivityCard() {
+  const [report, setReport] = React.useState<ProactiveCognitionReport>(() => getProactiveCognitionReport());
+  const [running, setRunning] = React.useState(false);
+  const handleRun = async () => {
+    setRunning(true);
+    try { await runProactiveCognitionLoop("manual", true); setReport(getProactiveCognitionReport()); } finally { setRunning(false); }
+  };
+  const last = report.lastResult;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Proactive Cognition Loop</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Total runs</p><p className="font-mono">{report.totalRuns}</p></div>
+          <div><p className="text-muted-foreground">Avg duration</p><p className="font-mono">{report.averageDurationMs}ms</p></div>
+          <div><p className="text-muted-foreground">Running now</p><StatusBadge ok={!report.isRunning} label={report.isRunning ? "running" : "idle"} /></div>
+        </div>
+        {last && (
+          <div className="space-y-1 border-t border-border/40 pt-1">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Last run ({last.triggeredBy})</p>
+            <div className="grid grid-cols-2 gap-1 text-[10px]">
+              <span>Completed</span><span className="font-mono text-right text-emerald-600">{last.stagesCompleted.length}</span>
+              <span>Failed</span><span className={cn("font-mono text-right", last.stagesFailed.length > 0 ? "text-red-500" : "")}>{last.stagesFailed.length}</span>
+              <span>Insights</span><span className="font-mono text-right">{last.freshInsightCount}</span>
+              <span>Disengagement risk</span><span className="font-mono text-right">{(last.disengagementRisk * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleRun} disabled={running || report.isRunning}>
+          {running ? "Running…" : "Run proactive cognition"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PsychologicalSafetyAuditCard() {
+  const [report, setReport] = React.useState<WellnessValidationReport | null>(() => getLastWellnessValidationReport());
+  const [running, setRunning] = React.useState(false);
+  const handleValidate = () => {
+    setRunning(true);
+    try { setReport(runWellnessIntelligenceValidation()); } finally { setRunning(false); }
+  };
+  const gradeColor = report ? { excellent: "text-emerald-600", good: "text-emerald-500", degraded: "text-amber-500", critical: "text-red-500" }[report.grade] : "";
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Psychological Safety Audit</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!report ? <p className="text-muted-foreground italic">No validation yet</p> : (
+          <>
+            <div className="flex items-center gap-4">
+              <div><p className="text-muted-foreground">Score</p><p className={cn("font-mono text-lg font-bold", gradeColor)}>{report.overallScore}/100</p></div>
+              <div><p className="text-muted-foreground">Grade</p><p className={cn("font-semibold capitalize", gradeColor)}>{report.grade}</p></div>
+            </div>
+            {report.criticalIssues.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-red-500 text-[10px] uppercase tracking-wide">Critical issues</p>
+                {report.criticalIssues.slice(0, 2).map((issue, i) => <p key={i} className="text-[10px] text-red-400">{issue}</p>)}
+              </div>
+            )}
+            <div className="space-y-1 border-t border-border/40 pt-1">
+              {report.checks.filter((c) => !c.passed).slice(0, 4).map((c) => (
+                <div key={c.checkId} className="flex justify-between">
+                  <span className="text-amber-500 text-[10px]">{c.checkId.replace(/_/g, " ")}</span>
+                  <span className="font-mono text-muted-foreground">{c.score}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleValidate} disabled={running}>
+          {running ? "Auditing…" : "Run psychological safety audit"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Phase 17: Cognitive Execution Integration ─────────────────────────────────
+
+function CognitiveExecutionPipelineCard() {
+  const [report, setReport] = React.useState<OrchestratorReport>(() => getOrchestratorReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getOrchestratorReport()), 2000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognitive Execution Pipeline</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Total executions</p><p className="font-mono">{report.totalExecutions}</p></div>
+          <div><p className="text-muted-foreground">Failed</p><p className="font-mono text-red-500">{report.failedExecutions}</p></div>
+          <div><p className="text-muted-foreground">Avg pipeline ms</p><p className="font-mono">{report.averagePipelineMs}ms</p></div>
+          <div><p className="text-muted-foreground">Executing now</p><StatusBadge ok={!report.isExecuting} label={report.isExecuting ? "running" : "idle"} /></div>
+        </div>
+        {report.lastStages.length > 0 && (
+          <div className="space-y-1 pt-1 border-t border-border/40">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Last pipeline stages</p>
+            {report.lastStages.map((s) => (
+              <div key={s.stage} className="flex justify-between items-center">
+                <span className={s.succeeded ? "text-emerald-600" : "text-red-500"}>{s.stage}</span>
+                <span className="font-mono text-muted-foreground">{s.durationMs}ms{s.detail ? ` · ${s.detail}` : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PromptSynthesisInspectorCard() {
+  const [report, setReport] = React.useState(() => getPromptSynthesisReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getPromptSynthesisReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+  const s = report.lastSynthesis;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Prompt Synthesis Inspector</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!s ? <p className="text-muted-foreground italic">No synthesis yet</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Tokens used</p><p className="font-mono">{s.tokenBudgetUsed} / {s.tokenBudgetTotal}</p></div>
+              <div><p className="text-muted-foreground">Contradictions suppressed</p><p className="font-mono">{s.contradictionsSuppressed}</p></div>
+            </div>
+            {s.continuityFrame && <p className="text-muted-foreground text-[10px] truncate">Frame: {s.continuityFrame}</p>}
+            <div className="space-y-1 border-t border-border/40 pt-1">
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Sections</p>
+              {s.sections.map((sec, i) => (
+                <div key={i} className="flex justify-between">
+                  <span className={sec.included ? "" : "text-muted-foreground line-through"}>{sec.name}</span>
+                  <span className="font-mono text-muted-foreground">{sec.tokens}t{sec.reason ? ` (${sec.reason})` : ""}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResponseAnalysisViewerCard() {
+  const [report, setReport] = React.useState(() => getResponseAnalysisPipelineReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getResponseAnalysisPipelineReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+  const a = report.lastAnalysis;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Response Analysis Viewer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!a ? <p className="text-muted-foreground italic">No analysis yet</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Emotion</p><p className="font-mono">{a.emotionalSignals.dominantEmotion}</p></div>
+              <div><p className="text-muted-foreground">Valence</p><p className={cn("font-mono", a.emotionalSignals.valence >= 0 ? "text-emerald-600" : "text-red-500")}>{a.emotionalSignals.valence.toFixed(2)}</p></div>
+              <div><p className="text-muted-foreground">Commitments</p><p className="font-mono">{a.commitments.length}</p></div>
+              <div><p className="text-muted-foreground">Coaching opps</p><p className="font-mono">{a.coachingOpportunities.length}</p></div>
+            </div>
+            {a.coachingOpportunities.length > 0 && (
+              <p className="text-[10px] text-amber-600 truncate">Opportunity: {a.coachingOpportunities[0]}</p>
+            )}
+            {a.commitments.length > 0 && (
+              <p className="text-[10px] text-emerald-600 truncate">Commitment: {a.commitments[0]}</p>
+            )}
+            <p className="text-muted-foreground text-[10px]">Analysis: {a.analysisMs}ms</p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemoryExtractionMonitorCard() {
+  const [report, setReport] = React.useState(() => getMemoryExtractionReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getMemoryExtractionReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Memory Extraction Monitor</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {report.lastExtractedAt === null ? <p className="text-muted-foreground italic">No extraction yet</p> : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Candidates</p><p className="font-mono">{report.lastCandidateCount}</p></div>
+              <div><p className="text-muted-foreground">Duplicates suppressed</p><p className="font-mono">{report.lastDuplicatesSuppressed}</p></div>
+              <div><p className="text-muted-foreground">Contradictions</p><p className="font-mono text-amber-500">{report.lastContradictionsDetected}</p></div>
+            </div>
+            <div className="space-y-1 border-t border-border/40 pt-1">
+              <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Tier distribution</p>
+              {([1, 2, 3, 4, 5] as const).map((tier) => (
+                <div key={tier} className="flex justify-between">
+                  <span>T{tier}</span>
+                  <span className="font-mono">{report.tierDistribution[tier]}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GoalThreadTrackerCard() {
+  const [report, setReport] = React.useState<GoalThreadReport>(() => getGoalThreadReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getGoalThreadReport()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Goal Thread Tracker</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Active</p><p className="font-mono text-emerald-600">{report.activeThreads}</p></div>
+          <div><p className="text-muted-foreground">Stalled</p><p className="font-mono text-amber-500">{report.stalledThreads}</p></div>
+          <div><p className="text-muted-foreground">Abandoned</p><p className="font-mono text-muted-foreground">{report.abandonedThreads}</p></div>
+          <div><p className="text-muted-foreground">Completed</p><p className="font-mono text-emerald-600">{report.completedThreads}</p></div>
+        </div>
+        {report.topThreads.length > 0 && (
+          <div className="space-y-1 border-t border-border/40 pt-1">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Top threads</p>
+            {report.topThreads.map((t, i) => (
+              <div key={i} className="space-y-0.5">
+                <div className="flex justify-between">
+                  <span className="truncate max-w-[160px]">{t.name}</span>
+                  <StatusBadge ok={t.status === "progressing" || t.status === "active"} label={t.status} />
+                </div>
+                <div className="w-full bg-border/30 rounded h-1">
+                  <div className="bg-emerald-500 h-1 rounded" style={{ width: `${Math.round(t.progress * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmotionalContinuityGraphCard() {
+  const [report, setReport] = React.useState<EmotionalContinuityReport>(() => getEmotionalContinuityReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getEmotionalContinuityReport()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+  const dims = report.profile.dimensions;
+  const dimensionEntries = Object.entries(dims) as Array<[string, { value: number; trend: string; confidence: number }]>;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Emotional Continuity</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Overall valence</p><p className={cn("font-mono", report.overallValence >= 0 ? "text-emerald-600" : "text-red-500")}>{report.overallValence.toFixed(2)}</p></div>
+          <div><p className="text-muted-foreground">Active shift</p><StatusBadge ok={!report.hasActiveShift} label={report.hasActiveShift ? "yes" : "stable"} /></div>
+        </div>
+        {report.dominantConcern && <p className="text-amber-500 text-[10px]">Dominant concern: {report.dominantConcern}</p>}
+        <div className="space-y-1 border-t border-border/40 pt-1">
+          {dimensionEntries.map(([dim, val]) => (
+            <div key={dim} className="space-y-0.5">
+              <div className="flex justify-between">
+                <span>{dim.replace(/_/g, " ")}</span>
+                <span className="font-mono text-muted-foreground">{val.value.toFixed(2)} {val.trend === "rising" ? "↑" : val.trend === "falling" ? "↓" : "→"}</span>
+              </div>
+              <div className="w-full bg-border/30 rounded h-1">
+                <div className="bg-blue-500 h-1 rounded" style={{ width: `${Math.round(val.value * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContextInjectionAnalyzerCard() {
+  const [report, setReport] = React.useState<ContextInjectionReport>(() => getContextInjectionReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getContextInjectionReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+  const inj = report.lastInjection;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Context Injection Analyzer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Avg sections</p><p className="font-mono">{report.averageSectionsIncluded}</p></div>
+          <div><p className="text-muted-foreground">Avg tokens used</p><p className="font-mono">{report.averageTokensUsed}</p></div>
+        </div>
+        {inj && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div><p className="text-muted-foreground">Last tokens</p><p className="font-mono">{inj.totalTokens} / {inj.budgetTokens}</p></div>
+              <div><p className="text-muted-foreground">Critical tokens</p><p className="font-mono">{inj.criticalTokens}</p></div>
+            </div>
+            <div className="space-y-1 border-t border-border/40 pt-1">
+              {inj.sections.map((s, i) => (
+                <div key={i} className="flex justify-between">
+                  <span className={s.isCritical ? "text-amber-500 font-medium" : ""}>{s.name}</span>
+                  <span className="font-mono text-muted-foreground">{s.tokens}t</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {report.criticalSectionNames.length > 0 && (
+          <p className="text-[10px] text-amber-500">Critical: {report.criticalSectionNames.join(", ")}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CognitionFeedbackLoopCard() {
+  const [report, setReport] = React.useState(() => getCognitionFeedbackLoopReport());
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getCognitionFeedbackLoopReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+  const last = report.lastResult;
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognition Feedback Loop</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Total loops</p><p className="font-mono">{report.totalLoops}</p></div>
+          <div><p className="text-muted-foreground">Total memories written</p><p className="font-mono">{report.totalMemoriesWritten}</p></div>
+          <div><p className="text-muted-foreground">Reflections triggered</p><p className="font-mono">{report.reflectionTriggerCount}</p></div>
+        </div>
+        {last && (
+          <div className="space-y-1 border-t border-border/40 pt-1">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Last loop</p>
+            <div className="grid grid-cols-2 gap-1">
+              <span>Memories written</span><span className="font-mono text-right">{last.memoriesWritten}</span>
+              <span>Goals updated</span><span className="font-mono text-right">{last.goalsUpdated}</span>
+              <span>Safety violations</span><span className={cn("font-mono text-right", last.safetyViolationsDetected > 0 ? "text-red-500" : "")}>{last.safetyViolationsDetected}</span>
+              <span>Duration</span><span className="font-mono text-right">{last.durationMs}ms</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SemanticMemoryExplorerCard() {
+  const [report, setReport] = React.useState<SemanticMemoryReport>(() => getSemanticMemoryReport());
+  const [computing, setComputing] = React.useState(false);
+  const handleCompute = async () => {
+    setComputing(true);
+    try {
+      const { retrieveMemory } = await import("@/ai/memory/memoryHierarchy");
+      const { computeSemanticMemoryReport } = await import("@/ai/cognition/semanticMemoryEngine");
+      const entries = retrieveMemory({ tiers: [3, 4], limit: 50 });
+      setReport(computeSemanticMemoryReport(entries));
+    } finally {
+      setComputing(false);
+    }
+  };
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Semantic Memory Explorer</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        <div className="grid grid-cols-2 gap-2">
+          <div><p className="text-muted-foreground">Relations</p><p className="font-mono">{report.totalRelations}</p></div>
+          <div><p className="text-muted-foreground">Groups</p><p className="font-mono">{report.totalGroups}</p></div>
+          <div><p className="text-muted-foreground">Avg coherence</p><p className="font-mono">{report.averageGroupCoherence.toFixed(2)}</p></div>
+          <div><p className="text-muted-foreground">Contradictions</p><p className={cn("font-mono", report.contradictionCount > 0 ? "text-amber-500" : "")}>{report.contradictionCount}</p></div>
+        </div>
+        {report.topGroups.length > 0 && (
+          <div className="space-y-1 border-t border-border/40 pt-1">
+            <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Concept groups</p>
+            {report.topGroups.map((g, i) => (
+              <div key={i} className="flex justify-between">
+                <span>{g.label}</span>
+                <span className="font-mono text-muted-foreground">{g.memberCount} items · {g.coherence.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleCompute} disabled={computing}>
+          {computing ? "Computing…" : "Compute semantic graph"}
+        </Button>
+        {report.lastComputedAt && <p className="text-[10px] text-muted-foreground">Last computed: {new Date(report.lastComputedAt).toLocaleTimeString()}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CognitiveCoherenceDashboardCard() {
+  const [report, setReport] = React.useState<CoherenceReport | null>(() => getLastCoherenceReport());
+  const [running, setRunning] = React.useState(false);
+  const handleValidate = () => {
+    setRunning(true);
+    try {
+      setReport(runCoherenceValidation());
+    } finally {
+      setRunning(false);
+    }
+  };
+  const gradeColor = report ? { excellent: "text-emerald-600", good: "text-emerald-500", degraded: "text-amber-500", critical: "text-red-500" }[report.grade] : "";
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Cognitive Coherence Dashboard</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-[12px]">
+        {!report ? <p className="text-muted-foreground italic">No validation yet</p> : (
+          <>
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-muted-foreground">Score</p>
+                <p className={cn("font-mono text-lg font-bold", gradeColor)}>{report.overallScore}/100</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Grade</p>
+                <p className={cn("font-semibold capitalize", gradeColor)}>{report.grade}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Session turns</p>
+                <p className="font-mono">{report.sessionTurns}</p>
+              </div>
+            </div>
+            <div className="space-y-1 border-t border-border/40 pt-1">
+              {report.checks.map((c) => (
+                <div key={c.checkId} className="flex justify-between items-start gap-2">
+                  <div>
+                    <StatusBadge ok={c.passed} label={c.passed ? "pass" : "fail"} />
+                    <span className="ml-2">{c.checkId.replace(/_/g, " ")}</span>
+                    {c.issue && <p className="text-[10px] text-muted-foreground mt-0.5 pl-8">{c.issue}</p>}
+                  </div>
+                  <span className="font-mono text-muted-foreground shrink-0">{c.score}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleValidate} disabled={running}>
+          {running ? "Validating…" : "Run coherence validation"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Assistant State Inspector ─────────────────────────────────────────────────
+
+function AssistantStateInspectorCard() {
+  const [report, setReport] = React.useState<AssistantStateReport>(() => getAssistantStateReport());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getAssistantStateReport()), 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const state = report.state;
+  const stalenessColor =
+    report.staleness === "fresh" ? "text-emerald-500" :
+    report.staleness === "recent" ? "text-yellow-500" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Assistant State Inspector
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { syncAssistantState(); setReport(getAssistantStateReport()); }}>
+              Sync
+            </Button>
+            <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => { resetAssistantState(); setReport(getAssistantStateReport()); }}>
+              Reset
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        <div className="flex gap-2 items-center flex-wrap">
+          <span className={cn("font-mono text-[10px]", stalenessColor)}>{report.staleness}</span>
+          <span className="text-muted-foreground">coaching: <span className="text-foreground font-mono">{state.activeCoachingFrame}</span></span>
+          <span className="text-muted-foreground">burnout sensitivity: <span className="text-foreground font-mono">{(state.burnoutSensitivity * 100).toFixed(0)}%</span></span>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {([
+            ["Dominant concern", state.dominantConcern ?? "—"],
+            ["Emotional trajectory", state.emotionalTrajectory],
+            ["Motivational state", state.motivationalState],
+            ["Engagement state", state.engagementState],
+            ["Intervention cooldown", state.interventionCooldown ? "active" : "off"],
+          ] as [string, string][]).map(([label, value]) => (
+            <div key={label}>
+              <p className="text-muted-foreground">{label}</p>
+              <p className="font-mono">{value}</p>
+            </div>
+          ))}
+        </div>
+        {state.longitudinalFocusAreas.length > 0 && (
+          <div>
+            <p className="text-muted-foreground mb-0.5">Longitudinal focus areas</p>
+            <p className="font-mono text-[11px]">{state.longitudinalFocusAreas.join(", ")}</p>
+          </div>
+        )}
+        {report.coachingHint && (
+          <div className="border-t border-border/40 pt-1">
+            <p className="text-muted-foreground">Coaching hint</p>
+            <p className="text-[11px] italic">{report.coachingHint}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Unified Behavior Pipeline ─────────────────────────────────────────────────
+
+function UnifiedBehaviorPipelineCard() {
+  const [report, setReport] = React.useState(() => getAssistantOrchestratorReport());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => setReport(getAssistantOrchestratorReport()), 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const scoreColor =
+    report.consistencyScore >= 85 ? "text-emerald-500" :
+    report.consistencyScore >= 65 ? "text-yellow-500" : "text-red-400";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Unified Behavior Pipeline</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-muted-foreground">Total requests</p>
+            <p className="font-mono">{report.totalRequests}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Blocked by safety</p>
+            <p className="font-mono">{report.blockedBySafety}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Consistency score</p>
+            <p className={cn("font-mono font-bold", scoreColor)}>{report.consistencyScore}/100</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-muted-foreground">Last surface</p>
+            <p className="font-mono">{report.lastSurface ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Status</p>
+            <StatusBadge ok={!report.isExecuting} label={report.isExecuting ? "executing" : "idle"} />
+          </div>
+        </div>
+        {report.lastRequestAt && (
+          <p className="text-muted-foreground text-[10px]">
+            Last: {new Date(report.lastRequestAt).toLocaleTimeString()}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Contextual Behavior Viewer ────────────────────────────────────────────────
+
+const SURFACES: AssistantSurface[] = ["overview", "sleep", "exercise", "nutrition", "habits", "journal", "mental", "ai_chat"];
+
+function ContextualBehaviorViewerCard() {
+  const [selectedSurface, setSelectedSurface] = React.useState<AssistantSurface>("ai_chat");
+  const profile = getSurfaceBehaviorProfile(selectedSurface);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Contextual Behavior Viewer</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="flex flex-wrap gap-1">
+          {SURFACES.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={selectedSurface === s ? "default" : "outline"}
+              className="text-[10px] h-6 px-2"
+              onClick={() => setSelectedSurface(s)}
+            >
+              {s}
+            </Button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-1 border-t border-border/40 pt-2">
+          {([
+            ["Safety level", profile.safetyLevel],
+            ["Proactive allowed", profile.proactiveAllowed ? "yes" : "no"],
+            ["Max tokens", String(profile.maxResponseTokens)],
+            ["Goal reinforcement", profile.allowGoalReinforcement ? "yes" : "no"],
+            ["Challenge framing", profile.allowChallengeFraming ? "yes" : "no"],
+            ["Tone override", profile.toneOverride ?? "none"],
+          ] as [string, string][]).map(([label, value]) => (
+            <div key={label}>
+              <p className="text-muted-foreground">{label}</p>
+              <p className="font-mono">{value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="border-t border-border/40 pt-1">
+          <p className="text-muted-foreground mb-0.5">System hint</p>
+          <p className="text-[10px] italic text-muted-foreground/80">{profile.systemHint}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Proactive Delivery Queue ──────────────────────────────────────────────────
+
+function ProactiveDeliveryQueueCard() {
+  const [report, setReport] = React.useState(() => getDeliveryEngineReport());
+  const [items, setItems] = React.useState(() => getPendingItems());
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    try {
+      refreshDeliveryQueue("overview");
+      setReport(getDeliveryEngineReport());
+      setItems(getPendingItems());
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setReport(getDeliveryEngineReport());
+      setItems(getPendingItems());
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          Proactive Delivery Queue
+          <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? "Refreshing…" : "Refresh queue"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-muted-foreground">Pending</p>
+            <p className="font-mono">{report.pendingCount}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Delivered today</p>
+            <p className="font-mono">{report.deliveredTodayCount}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Blocked</p>
+            <p className="font-mono">{report.blockedCount}</p>
+          </div>
+        </div>
+        {report.blockedReasons.length > 0 && (
+          <div className="bg-red-500/5 rounded p-1.5">
+            {report.blockedReasons.map((r, i) => (
+              <p key={i} className="text-[10px] text-red-400">{r}</p>
+            ))}
+          </div>
+        )}
+        {items.length > 0 ? (
+          <div className="space-y-2 border-t border-border/40 pt-1">
+            {items.slice(0, 3).map((item) => (
+              <div key={item.id} className="bg-muted/30 rounded p-1.5">
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="font-semibold text-[11px]">{item.title}</span>
+                  <span className="text-muted-foreground text-[10px]">{item.channel}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground line-clamp-2">{item.body}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">priority: {item.priority} · source: {item.sourceType}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground italic">Queue empty</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Consistency Validator ─────────────────────────────────────────────────────
+
+function ConsistencyValidatorCard() {
+  const [report, setReport] = React.useState<ConsistencyValidationReport | null>(() => getLastConsistencyReport());
+  const [running, setRunning] = React.useState(false);
+
+  async function handleValidate() {
+    setRunning(true);
+    try {
+      const r = runConsistencyValidation();
+      setReport(r);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const gradeColor =
+    !report ? "text-muted-foreground" :
+    report.grade === "excellent" ? "text-emerald-500" :
+    report.grade === "good" ? "text-yellow-400" :
+    report.grade === "degraded" ? "text-orange-400" : "text-red-500";
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Consistency Validator</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        {!report ? (
+          <p className="text-muted-foreground italic">No report yet</p>
+        ) : (
+          <>
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-muted-foreground">Score</p>
+                <p className={cn("font-mono text-lg font-bold", gradeColor)}>{report.score}/100</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Grade</p>
+                <p className={cn("font-semibold capitalize", gradeColor)}>{report.grade}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Violations</p>
+                <p className="font-mono">{report.violations.length}</p>
+              </div>
+            </div>
+            {report.violations.length > 0 && (
+              <div className="space-y-1 border-t border-border/40 pt-1">
+                {report.violations.map((v, i) => (
+                  <div key={i} className={cn("rounded p-1.5", v.severity === "critical" ? "bg-red-500/8" : "bg-yellow-500/8")}>
+                    <div className="flex justify-between items-center mb-0.5">
+                      <span className={cn("font-semibold text-[11px]", v.severity === "critical" ? "text-red-400" : "text-yellow-400")}>
+                        {v.type.replace(/_/g, " ")}
+                      </span>
+                      <StatusBadge ok={v.severity === "info"} label={v.severity} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">{v.description}</p>
+                    <p className="text-[10px] text-muted-foreground/70 italic mt-0.5">{v.recommendation}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleValidate} disabled={running}>
+          {running ? "Validating…" : "Run consistency validation"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Assistant Surface Simulator ────────────────────────────────────────────────
+
+function AssistantSurfaceSimulatorCard() {
+  const [selectedSurface, setSelectedSurface] = React.useState<AssistantSurface>("ai_chat");
+  const [prompt, setPrompt] = React.useState("How am I doing overall?");
+  const [result, setResult] = React.useState<string | null>(null);
+  const [running, setRunning] = React.useState(false);
+  const [stateSnap, setStateSnap] = React.useState(() => getAssistantStateReport());
+
+  React.useEffect(() => {
+    syncAssistantState();
+    setStateSnap(getAssistantStateReport());
+  }, [selectedSurface]);
+
+  async function handleSimulate() {
+    setRunning(true);
+    setResult(null);
+    try {
+      const { assistantRequest } = await import("@/ai/assistant/unifiedAssistantOrchestrator");
+      let accumulated = "";
+      const response = await assistantRequest(prompt, {
+        surface: selectedSurface,
+        maxTokens: 120,
+        onToken: (t) => { accumulated += t; setResult(accumulated); },
+      });
+      setResult(
+        response.safetyVerdict === "blocked"
+          ? "[Blocked by safety governor]"
+          : accumulated || `[${response.tokensGenerated} tokens, no streaming]`,
+      );
+    } catch (e) {
+      setResult(`Error: ${String(e)}`);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">Assistant Surface Simulator</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        <div className="flex flex-wrap gap-1">
+          {SURFACES.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={selectedSurface === s ? "default" : "outline"}
+              className="text-[10px] h-6 px-2"
+              onClick={() => setSelectedSurface(s)}
+            >
+              {s}
+            </Button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-1 text-[11px]">
+          <div>
+            <p className="text-muted-foreground">Frame</p>
+            <p className="font-mono">{stateSnap.state.activeCoachingFrame}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Burnout sensitivity</p>
+            <p className="font-mono">{(stateSnap.state.burnoutSensitivity * 100).toFixed(0)}%</p>
+          </div>
+        </div>
+        <div className="border-t border-border/40 pt-1">
+          <p className="text-muted-foreground mb-0.5">Prompt</p>
+          <textarea
+            className="w-full bg-muted/30 rounded p-1.5 font-mono text-[11px] resize-none"
+            rows={2}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
+        {result && (
+          <div className="bg-muted/20 rounded p-1.5 text-[11px] whitespace-pre-wrap font-mono">
+            {result}
+          </div>
+        )}
+        <Button size="sm" variant="outline" className="w-full text-[11px]" onClick={handleSimulate} disabled={running || !prompt.trim()}>
+          {running ? "Simulating…" : `Run on ${selectedSurface}`}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -4408,6 +5555,32 @@ export function AIDevPanel() {
       <InferenceTestCard />
       <RetrievalTestCard />
       <SessionMemoryCard />
+      <CognitiveExecutionPipelineCard />
+      <PromptSynthesisInspectorCard />
+      <ResponseAnalysisViewerCard />
+      <MemoryExtractionMonitorCard />
+      <GoalThreadTrackerCard />
+      <EmotionalContinuityGraphCard />
+      <ContextInjectionAnalyzerCard />
+      <CognitionFeedbackLoopCard />
+      <SemanticMemoryExplorerCard />
+      <CognitiveCoherenceDashboardCard />
+      <WellnessTrajectoryMonitorCard />
+      <DisengagementRiskAnalyzerCard />
+      <RecoveryOpportunityViewerCard />
+      <AdaptiveCoachingDashboardCard />
+      <InterventionTimingGraphCard />
+      <ProactiveInsightExplorerCard />
+      <WellnessSafetyGovernorCard />
+      <LongitudinalPatternGraphCard />
+      <ProactiveCognitionActivityCard />
+      <PsychologicalSafetyAuditCard />
+      <AssistantStateInspectorCard />
+      <UnifiedBehaviorPipelineCard />
+      <ContextualBehaviorViewerCard />
+      <ProactiveDeliveryQueueCard />
+      <ConsistencyValidatorCard />
+      <AssistantSurfaceSimulatorCard />
     </div>
   );
 }
