@@ -46,6 +46,7 @@ export type SessionStabilityReport = {
 const _sessionStartAt = Date.now();
 let _lastFrames: string[] = [];          // coaching frame history (last 10 inferences)
 let _emotionalUpdateCount = 0;           // how many emotional signals this session
+let _overfittingActive = false;          // true when update rate exceeds safe threshold
 let _lastEmotionalUpdateAt = 0;
 let _lastReport: SessionStabilityReport | null = null;
 
@@ -120,6 +121,7 @@ function checkEmotionalOverfitting(): StabilityViolation | null {
   const updatesPerHour = _emotionalUpdateCount / Math.max(0.1, sessionHours);
 
   if (updatesPerHour > 20 && avgEvidenceCount > 30) {
+    _overfittingActive = true;
     return {
       checkId: "emotional_overfitting",
       severity: "warning",
@@ -128,6 +130,7 @@ function checkEmotionalOverfitting(): StabilityViolation | null {
     };
   }
 
+  _overfittingActive = false;
   return null;
 }
 
@@ -189,6 +192,26 @@ function checkContinuityBreak(): StabilityViolation | null {
   return null;
 }
 
+function checkLongTermCoachingConsistency(): StabilityViolation | null {
+  if (_lastFrames.length < 15) return null;
+
+  const earlyFrames = new Set(_lastFrames.slice(0, 5));
+  const recentFrames = new Set(_lastFrames.slice(-5));
+  const overlap = [...earlyFrames].filter((f) => recentFrames.has(f)).length;
+  const consistencyRatio = overlap / Math.max(earlyFrames.size, 1);
+
+  if (consistencyRatio === 0 && earlyFrames.size >= 2 && recentFrames.size >= 2) {
+    return {
+      checkId: "coaching_frame_drift",
+      severity: "critical",
+      description: `No shared coaching frames between session start (${[...earlyFrames].join(", ")}) and now (${[...recentFrames].join(", ")}). Session context may have fundamentally shifted.`,
+      mitigation: "Consider calling continuityRecovery.rebuildCognitionState() to re-anchor from current state.",
+    };
+  }
+
+  return null;
+}
+
 // ── Main entry ─────────────────────────────────────────────────────────────────
 
 export function runLongSessionCheck(): SessionStabilityReport {
@@ -197,6 +220,7 @@ export function runLongSessionCheck(): SessionStabilityReport {
 
   const checks = [
     checkCoachingFrameDrift(),
+    checkLongTermCoachingConsistency(),
     checkStaleDominance(),
     checkEmotionalOverfitting(),
     checkContextEntropy(),
@@ -231,4 +255,8 @@ export function getLastSessionStabilityReport(): SessionStabilityReport | null {
 
 export function getSessionDurationMs(): number {
   return Date.now() - _sessionStartAt;
+}
+
+export function isEmotionalOverfittingActive(): boolean {
+  return _overfittingActive;
 }

@@ -55,20 +55,33 @@ export type SafetyAuditReport = {
 
 const STORAGE_KEY = "ai_wellness_safety_governor_v1";
 
+const MIN_INTERVENTION_COOLDOWN_MS = 90 * 60 * 1000;  // 90 minutes between any two deliveries
+const DAILY_INTERVENTION_CAP = 2;                       // max per calendar day (previously 3)
+const ESCALATION_BURNOUT_DELTA = 0.15;                  // block if burnout rose by this much after last delivery
+const DEPENDENCY_WINDOW_DAYS = 7;
+const DEPENDENCY_THRESHOLD_DAYS = 5;                    // 5+ days with delivery in 7 days = dependency risk
+const RECOVERY_MODE_BURNOUT_THRESHOLD = 0.60;           // recovery mode above this burnout level
+
 type SafetyState = {
   interventionTimestamps: number[];   // last 7 days
   blockCount: number;
   warnCount: number;
   lastAuditAt: number | null;
+  lastInterventionAt: number | null;           // for minimum cooldown
+  burnoutAtLastIntervention: number | null;    // for escalation guard
 };
 
 function loadState(): SafetyState {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") ?? {
       interventionTimestamps: [], blockCount: 0, warnCount: 0, lastAuditAt: null,
+      lastInterventionAt: null, burnoutAtLastIntervention: null,
     };
   } catch {
-    return { interventionTimestamps: [], blockCount: 0, warnCount: 0, lastAuditAt: null };
+    return {
+      interventionTimestamps: [], blockCount: 0, warnCount: 0, lastAuditAt: null,
+      lastInterventionAt: null, burnoutAtLastIntervention: null,
+    };
   }
 }
 
@@ -140,16 +153,83 @@ function checkBurnoutEscalation(emotional: ReturnType<typeof getEmotionalProfile
   return null;
 }
 
-function checkExcessiveIntervention(state: SafetyState): SafetyVerdict | null {
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  const todayCount = state.interventionTimestamps.filter((t) => t > oneDayAgo).length;
-  if (todayCount >= 3) {
+function checkMinimumCooldown(state: SafetyState): SafetyVerdict | null {
+  if (!state.lastInterventionAt) return null;
+  const elapsed = Date.now() - state.lastInterventionAt;
+  if (elapsed < MIN_INTERVENTION_COOLDOWN_MS) {
+    const remainingMin = Math.ceil((MIN_INTERVENTION_COOLDOWN_MS - elapsed) / 60000);
     return {
       allowed: false,
       verdict: "block",
       violationType: "excessive_intervention",
-      reason: `${todayCount} interventions already delivered today`,
-      suggestedAdjustment: "Defer until tomorrow",
+      reason: `90-minute delivery cooldown active — ${remainingMin}m remaining`,
+      suggestedAdjustment: "Wait for cooldown before next proactive delivery",
+    };
+  }
+  return null;
+}
+
+function checkExcessiveIntervention(state: SafetyState): SafetyVerdict | null {
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const todayCount = state.interventionTimestamps.filter((t) => t > dayStart.getTime()).length;
+  if (todayCount >= DAILY_INTERVENTION_CAP) {
+    return {
+      allowed: false,
+      verdict: "block",
+      violationType: "excessive_intervention",
+      reason: `Daily delivery cap reached (${todayCount}/${DAILY_INTERVENTION_CAP})`,
+      suggestedAdjustment: "Defer all proactive content until tomorrow",
+    };
+  }
+  return null;
+}
+
+function checkEmotionalEscalation(
+  emotional: ReturnType<typeof getEmotionalProfile>,
+  state: SafetyState,
+): SafetyVerdict | null {
+  if (state.burnoutAtLastIntervention === null) return null;
+  const currentBurnout = emotional.dimensions.burnout.value;
+  if (currentBurnout > state.burnoutAtLastIntervention + ESCALATION_BURNOUT_DELTA) {
+    return {
+      allowed: false,
+      verdict: "block",
+      violationType: "burnout_escalation",
+      reason: "Burnout increased since last intervention — proactive delivery may be counterproductive",
+      suggestedAdjustment: "Suppress all proactive content until burnout stabilizes below last-delivery level",
+    };
+  }
+  return null;
+}
+
+function checkDependencyRisk(state: SafetyState): SafetyVerdict | null {
+  const windowStart = Date.now() - DEPENDENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const recentTimestamps = state.interventionTimestamps.filter((t) => t > windowStart);
+  const uniqueDays = new Set(recentTimestamps.map((t) => new Date(t).toDateString())).size;
+  if (uniqueDays >= DEPENDENCY_THRESHOLD_DAYS) {
+    return {
+      allowed: true,
+      verdict: "warn",
+      violationType: "emotional_dependency",
+      reason: `AI delivered interventions on ${uniqueDays}/${DEPENDENCY_WINDOW_DAYS} days — watch for dependency patterns`,
+      suggestedAdjustment: "Consider spacing deliveries more; avoid AI becoming primary emotional support",
+    };
+  }
+  return null;
+}
+
+function checkRecoveryModeEnforcement(
+  emotional: ReturnType<typeof getEmotionalProfile>,
+  context: { isGoalPressure?: boolean },
+): SafetyVerdict | null {
+  const burnout = emotional.dimensions.burnout.value;
+  if (burnout > RECOVERY_MODE_BURNOUT_THRESHOLD && context.isGoalPressure) {
+    return {
+      allowed: false,
+      verdict: "block",
+      violationType: "burnout_escalation",
+      reason: "Recovery mode active — goal or performance pressure is blocked above burnout threshold",
+      suggestedAdjustment: "Use acknowledgment or rest-first framing only",
     };
   }
   return null;
@@ -174,19 +254,22 @@ export function checkInterventionSafety(context: {
   textContent?: string;
   isAccountabilityFrame?: boolean;
   isGoalPressure?: boolean;
+  contentType?: string;   // caller-supplied label ("insight", "post_checkin", "conversational")
+  urgency?: string;       // caller-supplied urgency hint
 }): SafetyVerdict {
   const emotional = getEmotionalProfile();
   const ctx = buildRecommendationContext(null);
   const state = loadState();
 
-  // Run all checks
-  const burnoutVerdict = checkBurnoutEscalation(emotional);
-  if (burnoutVerdict?.verdict === "block") {
+  // 1. Minimum cooldown between deliveries
+  const cooldownVerdict = checkMinimumCooldown(state);
+  if (cooldownVerdict?.verdict === "block") {
     state.blockCount++;
     saveState(state);
-    return burnoutVerdict;
+    return cooldownVerdict;
   }
 
+  // 2. Daily cap
   const excessVerdict = checkExcessiveIntervention(state);
   if (excessVerdict?.verdict === "block") {
     state.blockCount++;
@@ -194,9 +277,33 @@ export function checkInterventionSafety(context: {
     return excessVerdict;
   }
 
+  // 3. Burnout escalation (hardest block)
+  const burnoutVerdict = checkBurnoutEscalation(emotional);
+  if (burnoutVerdict?.verdict === "block") {
+    state.blockCount++;
+    saveState(state);
+    return burnoutVerdict;
+  }
+
+  // 4. Escalation guard — did burnout worsen after last intervention?
+  const escalationVerdict = checkEmotionalEscalation(emotional, state);
+  if (escalationVerdict?.verdict === "block") {
+    state.blockCount++;
+    saveState(state);
+    return escalationVerdict;
+  }
+
+  // 5. Recovery mode enforcement — block goal pressure when in burnout zone
+  const recoveryVerdict = checkRecoveryModeEnforcement(emotional, context);
+  if (recoveryVerdict?.verdict === "block") {
+    state.blockCount++;
+    saveState(state);
+    return recoveryVerdict;
+  }
+
   const toxicVerdict = checkToxicProductivity(ctx);
 
-  // Text content scan
+  // 6. Text content scan
   if (context.textContent) {
     const textViolation = scanTextForViolations(context.textContent);
     if (textViolation) {
@@ -206,7 +313,7 @@ export function checkInterventionSafety(context: {
     }
   }
 
-  // Accountability frame check when burnout is elevated
+  // 7. Accountability frame with elevated burnout
   if (context.isAccountabilityFrame && emotional.dimensions.burnout.value > 0.5) {
     state.warnCount++;
     saveState(state);
@@ -219,6 +326,10 @@ export function checkInterventionSafety(context: {
     };
   }
 
+  // 8. Dependency risk warning (non-blocking)
+  const dependencyVerdict = checkDependencyRisk(state);
+  if (dependencyVerdict) { state.warnCount++; saveState(state); return dependencyVerdict; }
+
   if (burnoutVerdict) { state.warnCount++; saveState(state); return burnoutVerdict; }
   if (toxicVerdict) { state.warnCount++; saveState(state); return toxicVerdict; }
 
@@ -226,9 +337,51 @@ export function checkInterventionSafety(context: {
 }
 
 export function recordInterventionDelivered(): void {
+  const emotional = getEmotionalProfile();
   const state = loadState();
-  state.interventionTimestamps.push(Date.now());
+  const now = Date.now();
+  state.interventionTimestamps.push(now);
+  state.lastInterventionAt = now;
+  state.burnoutAtLastIntervention = emotional.dimensions.burnout.value;
   saveState(state);
+}
+
+export function getInterventionCalibrationStatus(): {
+  cooldownActiveMs: number;
+  deliveriesToday: number;
+  deliveriesThisWeek: number;
+  uniqueDaysThisWeek: number;
+  dependencyRisk: boolean;
+  recoveryModeActive: boolean;
+  escalationGuardActive: boolean;
+} {
+  const emotional = getEmotionalProfile();
+  const state = loadState();
+  const now = Date.now();
+
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const weekStart = now - DEPENDENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+  const deliveriesToday = state.interventionTimestamps.filter((t) => t > dayStart.getTime()).length;
+  const weekTimestamps = state.interventionTimestamps.filter((t) => t > weekStart);
+  const uniqueDaysThisWeek = new Set(weekTimestamps.map((t) => new Date(t).toDateString())).size;
+  const cooldownActiveMs = state.lastInterventionAt
+    ? Math.max(0, MIN_INTERVENTION_COOLDOWN_MS - (now - state.lastInterventionAt))
+    : 0;
+
+  const currentBurnout = emotional.dimensions.burnout.value;
+  const escalationGuardActive = state.burnoutAtLastIntervention !== null &&
+    currentBurnout > state.burnoutAtLastIntervention + ESCALATION_BURNOUT_DELTA;
+
+  return {
+    cooldownActiveMs,
+    deliveriesToday,
+    deliveriesThisWeek: weekTimestamps.length,
+    uniqueDaysThisWeek,
+    dependencyRisk: uniqueDaysThisWeek >= DEPENDENCY_THRESHOLD_DAYS,
+    recoveryModeActive: currentBurnout > RECOVERY_MODE_BURNOUT_THRESHOLD,
+    escalationGuardActive,
+  };
 }
 
 export function runWellnessSafetyAudit(): SafetyAuditReport {
@@ -239,8 +392,8 @@ export function runWellnessSafetyAudit(): SafetyAuditReport {
   const violations: SafetyViolationType[] = [];
   if (emotional.dimensions.burnout.value > 0.7) violations.push("burnout_escalation");
   if (ctx.energyState === "low") violations.push("toxic_productivity");
-  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  if (state.interventionTimestamps.filter((t) => t > oneDayAgo).length >= 3) {
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  if (state.interventionTimestamps.filter((t) => t > dayStart.getTime()).length >= DAILY_INTERVENTION_CAP) {
     violations.push("excessive_intervention");
   }
 

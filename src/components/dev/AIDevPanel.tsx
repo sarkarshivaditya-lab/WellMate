@@ -154,6 +154,17 @@ import { getPsychologicalSafetyStatus, runFullSafetyAudit } from "@/ai/assistant
 import { getAllSurfaceSignals, type SurfaceCognitionSignal } from "@/ai/assistant/uiCognitionIntegrationLayer";
 import { runOfflineDeploymentValidation, getLastDeploymentReport, type DeploymentValidationReport } from "@/ai/production/offlineDeploymentValidator";
 import { getUnifiedContextReport } from "@/ai/cognition/unifiedContextAssembler";
+import {
+  validateEmbeddingCapabilities,
+  runEmbeddingDiagnostics,
+  getEmbeddingMetrics,
+  type EmbeddingDiagnosticResult,
+  type EmbeddingCapabilityReport,
+} from "@/ai/embeddings/embeddingPipeline";
+import { getInterventionCalibrationStatus } from "@/ai/wellness/wellnessSafetyGovernor";
+import { isEmotionalOverfittingActive } from "@/ai/cognition/longSessionStabilityGuard";
+import { conceptualRecall } from "@/ai/memory/semanticEmbeddingAdapter";
+import { retrieveMemory } from "@/ai/memory/memoryHierarchy";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -6020,6 +6031,246 @@ function DeploymentValidationConsoleCard() {
   );
 }
 
+// ── ONNX Validation Panel ─────────────────────────────────────────────────────
+
+function OnnxValidationPanel() {
+  const [caps, setCaps] = React.useState<EmbeddingCapabilityReport | null>(null);
+  const [diag, setDiag] = React.useState<EmbeddingDiagnosticResult | null>(null);
+  const [running, setRunning] = React.useState(false);
+  const metrics = getEmbeddingMetrics();
+
+  React.useEffect(() => {
+    setCaps(validateEmbeddingCapabilities());
+  }, []);
+
+  async function runDiag() {
+    setRunning(true);
+    try {
+      const result = await runEmbeddingDiagnostics();
+      setDiag(result);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">ONNX Embedding Validation</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        {caps && (
+          <div className="space-y-1">
+            <p className="font-semibold text-muted-foreground uppercase tracking-wider">Capabilities</p>
+            <p>WASM: <span className={caps.wasmSupported ? "text-green-500" : "text-red-500"}>{caps.wasmSupported ? "supported" : "unsupported"}</span></p>
+            <p>OPFS: <span className={caps.opfsAvailable ? "text-green-500" : "text-yellow-500"}>{caps.opfsAvailable ? "available" : "unavailable"}</span></p>
+            <p>Cross-origin isolated: {caps.crossOriginIsolated ? "yes" : "no"}</p>
+            <p>Safari: {caps.safariDetected ? "yes" : "no"} · RAM: {caps.estimatedRamMb > 0 ? `${caps.estimatedRamMb}MB` : "unknown"}</p>
+            {caps.warnings.map((w, i) => (
+              <p key={i} className="text-yellow-500">⚠ {w}</p>
+            ))}
+          </div>
+        )}
+        <div className="space-y-1">
+          <p className="font-semibold text-muted-foreground uppercase tracking-wider">Metrics</p>
+          <p>Embeddings generated: {metrics.embeddingCount}</p>
+          <p>Avg latency: {metrics.embeddingCount > 0 ? `${Math.round(metrics.totalLatencyMs / metrics.embeddingCount)}ms` : "—"}</p>
+          <p>Last latency: {metrics.lastLatencyMs > 0 ? `${metrics.lastLatencyMs}ms` : "—"}</p>
+          <p>Load failures: {metrics.loadFailures}</p>
+          {metrics.lastError && <p className="text-red-500">Last error: {metrics.lastError}</p>}
+        </div>
+        {diag && (
+          <div className="space-y-1">
+            <p className="font-semibold text-muted-foreground uppercase tracking-wider">Diagnostic Result</p>
+            <p>Passed: <span className={diag.passed ? "text-green-500" : "text-red-500"}>{diag.passed ? "yes" : "no"}</span></p>
+            <p>Load time: {diag.loadTimeMs !== null ? `${diag.loadTimeMs}ms` : "—"}</p>
+            <p>Embed latency: {diag.embedLatencyMs !== null ? `${diag.embedLatencyMs}ms` : "—"}</p>
+            <p>Vector dims: {diag.vectorDimensions}</p>
+            <p>Paraphrase recall: <span className={diag.paraphraseRecallOk ? "text-green-500" : "text-red-500"}>{diag.paraphraseRecallOk ? "ok" : "failed"}</span></p>
+            {diag.errors.map((e, i) => <p key={i} className="text-red-500">{e}</p>)}
+          </div>
+        )}
+        <Button size="sm" onClick={runDiag} disabled={running}>
+          {running ? "Running…" : "Run Diagnostics"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Surface Migration Auditor ─────────────────────────────────────────────────
+
+function SurfaceMigrationAuditorCard() {
+  const surfaces = [
+    { name: "DailyReflectionCard", route: "reflectionEngine → assistantRequest", status: "unified" },
+    { name: "JournalReflectionCard", route: "reflectionEngine → assistantRequest", status: "unified" },
+    { name: "WellMateLauncher", route: "local: assistantRequest / cloud: wellmateChat fallback", status: "hybrid" },
+    { name: "AiMentalCoach", route: "Convex aiMentalCoach action (cloud-only)", status: "cloud" },
+    { name: "useInference hook", route: "assistantRequest (unified)", status: "unified" },
+    { name: "useStreamingInference hook", route: "assistantRequest (unified)", status: "unified" },
+    { name: "AIDevPanel tests", route: "submitInference (dev-only, intentional bypass)", status: "devonly" },
+    { name: "benchmarkEngine", route: "submitInference (perf testing, dev-only)", status: "devonly" },
+    { name: "stressSuite", route: "submitInference (stress testing, dev-only)", status: "devonly" },
+  ] as const;
+
+  const statusColor = {
+    unified: "text-green-500",
+    hybrid: "text-blue-400",
+    cloud: "text-yellow-500",
+    devonly: "text-muted-foreground",
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Surface Migration Audit</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-xs">
+        {surfaces.map((s) => (
+          <div key={s.name} className="space-y-0.5">
+            <p className={`font-medium ${statusColor[s.status]}`}>{s.name} [{s.status}]</p>
+            <p className="text-muted-foreground pl-2">{s.route}</p>
+          </div>
+        ))}
+        <p className="text-muted-foreground pt-1">
+          AiMentalCoach remains cloud-only (Convex). Remaining submitInference calls are intentional dev tooling.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Psychological Calibration Inspector ────────────────────────────────────────
+
+function PsychologicalCalibrationInspectorCard() {
+  const [status, setStatus] = React.useState(() => getInterventionCalibrationStatus());
+
+  React.useEffect(() => {
+    const t = setInterval(() => setStatus(getInterventionCalibrationStatus()), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  const overfitting = isEmotionalOverfittingActive();
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Psychological Calibration</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        <div className="space-y-1">
+          <p className="font-semibold text-muted-foreground uppercase tracking-wider">Cooldowns</p>
+          <p>Active cooldown: {status.cooldownActiveMs > 0 ? `${Math.ceil(status.cooldownActiveMs / 60000)}m remaining` : <span className="text-green-500">clear</span>}</p>
+          <p>Today&apos;s deliveries: {status.deliveriesToday}/2</p>
+        </div>
+        <div className="space-y-1">
+          <p className="font-semibold text-muted-foreground uppercase tracking-wider">Weekly Pattern</p>
+          <p>Deliveries this week: {status.deliveriesThisWeek}</p>
+          <p>Days with delivery: {status.uniqueDaysThisWeek}/7</p>
+        </div>
+        <div className="space-y-1">
+          <p className="font-semibold text-muted-foreground uppercase tracking-wider">Safety Guards</p>
+          <p>Dependency risk: <span className={status.dependencyRisk ? "text-yellow-500" : "text-green-500"}>{status.dependencyRisk ? "active" : "none"}</span></p>
+          <p>Recovery mode: <span className={status.recoveryModeActive ? "text-yellow-500" : "text-green-500"}>{status.recoveryModeActive ? "active — blocking goal pressure" : "off"}</span></p>
+          <p>Escalation guard: <span className={status.escalationGuardActive ? "text-red-500" : "text-green-500"}>{status.escalationGuardActive ? "active — burnout increased after last delivery" : "clear"}</span></p>
+          <p>Emotional overfitting: <span className={overfitting ? "text-yellow-500" : "text-green-500"}>{overfitting ? "active" : "none"}</span></p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Dependency Risk Monitor ────────────────────────────────────────────────────
+
+function DependencyRiskMonitorCard() {
+  const safetyReport = getWellnessSafetyReport();
+  const calibration = getInterventionCalibrationStatus();
+  const overfitting = isEmotionalOverfittingActive();
+
+  const riskLevel = (() => {
+    if (calibration.escalationGuardActive) return "high";
+    if (calibration.dependencyRisk || overfitting) return "medium";
+    if (calibration.recoveryModeActive) return "elevated";
+    return "low";
+  })();
+
+  const riskColor = {
+    high: "text-red-500",
+    medium: "text-yellow-500",
+    elevated: "text-orange-400",
+    low: "text-green-500",
+  }[riskLevel];
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Dependency Risk Monitor</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        <p>Overall risk: <span className={riskColor + " font-semibold"}>{riskLevel.toUpperCase()}</span></p>
+        <div className="space-y-1">
+          <p className="font-semibold text-muted-foreground uppercase tracking-wider">Signals</p>
+          <p>Intervention frequency (7d): {safetyReport.interventionFrequency.toFixed(1)}/day</p>
+          <p>Session blocks: {safetyReport.totalBlocksThisSession}</p>
+          <p>Session warnings: {safetyReport.totalWarningsThisSession}</p>
+          <p>Deliveries on unique days: {calibration.uniqueDaysThisWeek}/7</p>
+        </div>
+        {safetyReport.activeViolations.length > 0 && (
+          <div className="space-y-1">
+            <p className="font-semibold text-muted-foreground uppercase tracking-wider">Active Violations</p>
+            {safetyReport.activeViolations.map((v) => (
+              <p key={v} className="text-yellow-500">{v}</p>
+            ))}
+          </div>
+        )}
+        <p className="text-muted-foreground">
+          Healthy range: &lt;0.5/day, &lt;3 unique days/week. Escalation guard blocks delivery
+          when burnout increases after prior intervention.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Semantic Recall Tester ─────────────────────────────────────────────────────
+
+function SemanticRecallTesterCard() {
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<Array<{ content: string; score: number; tier: number }>>([]);
+  const [ran, setRan] = React.useState(false);
+
+  function runRecall() {
+    if (!query.trim()) return;
+    const entries = retrieveMemory({ limit: 100 });
+    const recalls = conceptualRecall(query.trim(), entries, 5);
+    setResults(recalls.map((r) => ({
+      content: r.entry.content,
+      score: r.relevanceScore,
+      tier: r.entry.tier,
+    })));
+    setRan(true);
+  }
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Semantic Recall Tester</CardTitle></CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        <div className="flex gap-2">
+          <input
+            className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs"
+            placeholder="Enter a query to test recall…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runRecall()}
+          />
+          <Button size="sm" onClick={runRecall}>Recall</Button>
+        </div>
+        {ran && results.length === 0 && (
+          <p className="text-muted-foreground">No memory entries found. Add some wellness data first.</p>
+        )}
+        {results.map((r, i) => (
+          <div key={i} className="space-y-0.5 border-b border-border/40 pb-2">
+            <p className="text-muted-foreground">T{r.tier} · score {r.score.toFixed(3)}</p>
+            <p className="line-clamp-2">{r.content}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AIDevPanel() {
@@ -6118,6 +6369,11 @@ export function AIDevPanel() {
       <PsychologicalSafetyRuntimeCard />
       <UICognitionIntegrationViewerCard />
       <DeploymentValidationConsoleCard />
+      <OnnxValidationPanel />
+      <SurfaceMigrationAuditorCard />
+      <PsychologicalCalibrationInspectorCard />
+      <DependencyRiskMonitorCard />
+      <SemanticRecallTesterCard />
     </div>
   );
 }

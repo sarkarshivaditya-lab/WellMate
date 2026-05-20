@@ -240,10 +240,10 @@ export function generateProductionReadinessReport(): ProductionReadinessReport {
   const deploymentRisks = subsystems.flatMap((s) => s.risks);
 
   const stubbedSystems: string[] = [
-    "generateDailyReflection — still uses reflectionEngine directly (Phase 20: should route through assistantRequest)",
-    "generateJournalReflection — same as above",
-    "Embedding model — using pseudo-TF-IDF embeddings (semanticEmbeddingAdapter), not real neural vectors",
-    "quantizationRouter — model not loaded unless manually activated in AIDevPanel",
+    "AiMentalCoach — still routes through Convex cloud action (aiMentalCoach), not local AI stack",
+    "Embedding model — ONNX all-MiniLM-L6-v2 requires network for first load; auto-falls back to TF-IDF offline",
+    "autoModelLifecycle — loadFromBlobUrl activation not yet called automatically; model must complete download first",
+    "quantizationRouter — model not loaded unless download completes and autoModelLifecycle activates it",
   ];
 
   const remainingProductionBlockers: string[] = [

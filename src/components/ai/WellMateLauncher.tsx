@@ -5,6 +5,8 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
+import { getModelLoadState } from "@/ai/providers/local/modelLoader";
+import { assistantRequest } from "@/ai/assistant/unifiedAssistantOrchestrator";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
 import { getCachedRecommendations } from "@/recommendations/recommendationEngine";
@@ -189,6 +191,28 @@ function WellMateLauncher() {
     }
 
     try {
+      // Offline-first: use local AI when the model is loaded
+      if (getModelLoadState().phase === "ready") {
+        let streamed = "";
+        const response = await assistantRequest(text, {
+          surface: "ai_chat",
+          maxTokens: 256,
+          temperature: 0.7,
+          skipProactiveInjection: false,
+          onToken: (token) => { streamed += token; },
+        });
+        const responseText = streamed || response.responseText;
+        if (response.safetyVerdict !== "blocked" && responseText.trim()) {
+          setMessages((m) => [
+            ...m,
+            { id: crypto.randomUUID(), role: "assistant", text: responseText.trim() },
+          ]);
+          setThinking(false);
+          return;
+        }
+      }
+
+      // Cloud fallback — when local model not loaded or safety blocked
       const res = await wellmateChat({ message: text });
 
       if (res.domain === "clarify") {

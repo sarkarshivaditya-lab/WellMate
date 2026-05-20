@@ -1,6 +1,6 @@
 import React from "react";
 import type { InferenceResult, InferenceStatus } from "../runtime/types";
-import { submitInference } from "../orchestration/orchestrator";
+import { assistantRequest } from "../assistant/unifiedAssistantOrchestrator";
 
 export function useInference() {
   const [status, setStatus] = React.useState<InferenceStatus>({ phase: "idle" });
@@ -13,7 +13,6 @@ export function useInference() {
       maxTokens?: number;
       temperature?: number;
     }): Promise<InferenceResult | null> => {
-      // Cancel any in-flight request before starting a new one
       controllerRef.current?.abort();
 
       const controller = new AbortController();
@@ -25,15 +24,24 @@ export function useInference() {
       try {
         setStatus({ phase: "running", requestId });
 
-        const result = await submitInference({
-          id: requestId,
-          prompt: opts.prompt,
-          systemContext: opts.systemContext,
+        const response = await assistantRequest(opts.prompt, {
+          surface: "ai_chat",
+          systemContextAddition: opts.systemContext,
           maxTokens: opts.maxTokens ?? 512,
           temperature: opts.temperature ?? 0.7,
-          priority: "normal",
-          controller,
+          signal: controller.signal,
+          skipProactiveInjection: true,
         });
+
+        const result: InferenceResult = {
+          requestId: response.requestId,
+          text: response.responseText,
+          tokensGenerated: response.tokensGenerated,
+          durationMs: response.durationMs,
+          provider: "local",
+          modelId: "local",
+          cached: false,
+        };
 
         setStatus({ phase: "complete", result });
         return result;

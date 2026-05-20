@@ -1,6 +1,6 @@
 import React from "react";
 import type { InferenceResult, InferenceStatus } from "../runtime/types";
-import { submitInference } from "../orchestration/orchestrator";
+import { assistantRequest } from "../assistant/unifiedAssistantOrchestrator";
 
 export type StreamingInferenceState = {
   status: InferenceStatus;
@@ -39,18 +39,27 @@ export function useStreamingInference(): StreamingInferenceState {
       try {
         setStatus({ phase: "running", requestId });
 
-        const result = await submitInference({
-          id: requestId,
-          prompt: opts.prompt,
-          systemContext: opts.systemContext,
+        const response = await assistantRequest(opts.prompt, {
+          surface: "ai_chat",
+          systemContextAddition: opts.systemContext,
           maxTokens: opts.maxTokens ?? 256,
           temperature: opts.temperature ?? 0.7,
-          priority: "normal",
-          controller,
+          signal: controller.signal,
+          skipProactiveInjection: true,
           onToken: (token) => {
             setStreamedText((prev) => prev + token);
           },
         });
+
+        const result: InferenceResult = {
+          requestId: response.requestId,
+          text: response.responseText,
+          tokensGenerated: response.tokensGenerated,
+          durationMs: response.durationMs,
+          provider: "local",
+          modelId: "local",
+          cached: false,
+        };
 
         setStatus({ phase: "complete", result });
         return result;
