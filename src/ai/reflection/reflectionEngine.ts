@@ -21,7 +21,7 @@ import {
 import type { ReflectionType } from "./reflectionStore";
 import { retrievalBridge } from "../retrieval/retrievalBridge";
 import { serializeSummaryForPrompt } from "../memory/longitudinalSummary";
-import { submitInference } from "../orchestration/orchestrator";
+import { assistantRequest } from "../assistant/unifiedAssistantOrchestrator";
 
 export type ReflectionResult = {
   text: string;
@@ -39,22 +39,23 @@ async function runInference(opts: {
   prompt: string;
   maxTokens: number;
   temperature: number;
+  surface: "overview" | "journal";
   onToken?: (token: string) => void;
 }): Promise<string> {
-  const controller = new AbortController();
-
-  const result = await submitInference({
-    id: crypto.randomUUID(),
-    prompt: opts.prompt,
-    systemContext: WELLMATE_IDENTITY_PROMPT,
+  let accumulated = "";
+  const response = await assistantRequest(opts.prompt, {
+    surface: opts.surface,
     maxTokens: opts.maxTokens,
     temperature: opts.temperature,
-    priority: "low",
-    controller,
-    onToken: opts.onToken,
+    systemContextAddition: WELLMATE_IDENTITY_PROMPT,
+    skipProactiveInjection: true,
+    onToken: (token) => {
+      accumulated += token;
+      opts.onToken?.(token);
+    },
   });
-
-  return result.text.trim();
+  if (response.safetyVerdict === "blocked") return "";
+  return (accumulated || response.responseText).trim();
 }
 
 export async function generateDailyReflection(
@@ -103,6 +104,7 @@ export async function generateDailyReflection(
       prompt,
       maxTokens: 128,
       temperature: 0.65,
+      surface: "overview",
       onToken: opts?.onToken,
     });
 
@@ -161,6 +163,7 @@ export async function generateJournalReflection(
       prompt,
       maxTokens: 96,
       temperature: 0.6,
+      surface: "journal",
       onToken: opts?.onToken,
     });
 

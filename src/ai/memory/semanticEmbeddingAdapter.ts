@@ -1,22 +1,26 @@
 // Semantic Embedding Adapter — embedding-ready semantic memory architecture.
 //
-// Fully offline-first. No external APIs, no neural inference.
-// Uses normalized TF-IDF token-frequency vectors as pseudo-embeddings.
-// These provide approximate semantic similarity suitable for clustering and recall
-// without requiring a loaded embedding model.
+// Fully offline-first. No external APIs, no neural inference required.
 //
-// When a real embedding model is available (future), replace computeEmbedding()
-// with a real ONNX/WASM embedding model call — all downstream code stays the same.
+// Two modes, selected at runtime:
+//   "neural" — uses the real ONNX all-MiniLM-L6-v2 pipeline (384-dim float32)
+//              when isEmbeddingReady() returns true. Enables paraphrase-level recall.
+//   "pseudo_tfidf" — normalized TF-IDF token-frequency vectors as a deterministic
+//              fallback when the ONNX model is not loaded.
+//
+// All downstream code (clustering, recall, dedup) works in both modes.
 //
 // Capabilities:
-//   computeEmbedding        — pseudo-embedding vector for a text string
+//   computeEmbedding        — embedding vector for a text string (sync TF-IDF or async ONNX)
+//   conceptualRecallAsync   — async recall using real ONNX embeddings when available
 //   semanticCluster         — k-means-lite clustering of memory entries
-//   conceptualRecall        — top-k most related memories for a query
+//   conceptualRecall        — top-k most related memories for a query (sync fallback)
 //   groupContradictions     — cluster conflicting memories
 //   semanticDeduplicate     — remove near-duplicates above threshold
 
 import type { MemoryEntry } from "./memoryHierarchy";
 import { computeSemanticSimilarity, detectContradictions, groupByConceptualSimilarity } from "@/ai/cognition/semanticMemoryEngine";
+import { embedText, isEmbeddingReady } from "@/ai/embeddings/embeddingPipeline";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -239,13 +243,51 @@ export function semanticDeduplicate(entries: MemoryEntry[], threshold = 0.85): M
   return kept;
 }
 
+// ── Neural recall (real ONNX embeddings) ──────────────────────────────────────
+
+function cosineFloat32(a: Float32Array, b: Float32Array): number {
+  let dot = 0;
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++) dot += a[i] * b[i];
+  return Math.max(0, Math.min(1, dot));  // already L2-normalized → dot = cosine
+}
+
+// Async recall using real 384-dim ONNX embeddings when the pipeline is loaded.
+// Falls back to synchronous TF-IDF recall when not ready.
+export async function conceptualRecallAsync(
+  query: string,
+  entries: MemoryEntry[],
+  topK = 5,
+): Promise<RecallResult[]> {
+  if (!isEmbeddingReady()) {
+    return conceptualRecall(query, entries, topK);
+  }
+
+  const start = Date.now();
+
+  const queryVec = await embedText(query);
+  const results: RecallResult[] = await Promise.all(
+    entries.map(async (entry) => {
+      const entryVec = await embedText(entry.content);
+      const relevanceScore = cosineFloat32(queryVec, entryVec);
+      const queryTokens = new Set(tokenize(query));
+      const matched = tokenize(entry.content).filter((t) => queryTokens.has(t)).slice(0, 5);
+      return { entry, relevanceScore, matchedTokens: matched };
+    }),
+  );
+
+  results.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  _lastRecallMs = Date.now() - start;
+  return results.slice(0, topK);
+}
+
 export function getEmbeddingAdapterReport(): EmbeddingAdapterReport {
   return {
     cachedEmbeddings: _embeddingCache.size,
     clusterCount: _lastClusters.length,
     lastClusterAt: _lastClusterAt,
     recallLatencyMs: _lastRecallMs,
-    embeddingMode: "pseudo_tfidf",
+    embeddingMode: isEmbeddingReady() ? "neural" : "pseudo_tfidf",
   };
 }
 

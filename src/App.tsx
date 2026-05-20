@@ -45,6 +45,12 @@ import {
   initAIRuntime,
   disposeAIRuntime,
 } from "./ai/runtime/aiRuntime";
+import { initAssistantBehaviorRuntime } from "./ai/assistant/assistantBehaviorRuntime";
+import { bindProactiveCognitionToLifecycle, unbindProactiveCognition } from "./ai/cognition/proactiveCognitionLoop";
+import { initMobileHardener } from "./ai/platform/mobileExecutionHardener";
+import { initSelfHealingRuntime, disposeSelfHealingRuntime } from "./ai/runtime/selfHealingRuntime";
+import { initAutoModelLifecycle } from "./ai/production/autoModelLifecycle";
+import { scheduleConsolidation } from "./ai/memory/memoryConsolidationScheduler";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
@@ -188,13 +194,24 @@ function useAppStartup() {
 
     // Initialize AI runtime — post-hydration, non-blocking, failure-tolerant.
     // Uses Promise.resolve() scheduling so it never runs before the first paint.
-    void Promise.resolve().then(() => initAIRuntime());
+    void Promise.resolve().then(async () => {
+      await initAIRuntime();
+      // Phase 20: unified AI convergence — all inits are idempotent
+      initMobileHardener();
+      initAssistantBehaviorRuntime();
+      bindProactiveCognitionToLifecycle();
+      initSelfHealingRuntime();
+      initAutoModelLifecycle();
+      scheduleConsolidation();
+    });
 
     return () => {
       disposeLifecycle();
       disposeAnalytics();
       disposeNotifications();
       void disposeAIRuntime();
+      unbindProactiveCognition();
+      disposeSelfHealingRuntime();
     };
   }, []);
 }
