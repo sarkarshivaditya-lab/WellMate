@@ -16,6 +16,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import type { AiMentalResponse } from "@/services/aiMentalTypes";
+import { EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { haptics } from "@/motion";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { LAUNCH_STATE } from "@/ai/launchState";
@@ -234,21 +235,16 @@ export function CoachTabContent() {
 
             <div className="rounded-xl border border-border/40 bg-background/60 p-3 space-y-2">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Crisis support
+                {EMERGENCY_COPY.title}
               </p>
+              <p className="text-[12px] text-muted-foreground">{EMERGENCY_COPY.body}</p>
               <div className="space-y-1.5 text-[13px]">
-                <div>
-                  <span className="font-semibold">100</span>
-                  {" "}— Suicide &amp; Crisis Lifeline (call or text)
-                </div>
-                <div>
-                  <span className="font-semibold">102</span>
-                  {" "}— Emergency services
-                </div>
-                <div>
-                  <span className="font-semibold">100/112</span>
-                  {" "}— Crisis Text Line (text HOME)
-                </div>
+                {EMERGENCY_COPY.resources.map((r) => (
+                  <div key={r.label}>
+                    <span className="font-semibold">{r.label}</span>
+                    {" "}— {r.description}
+                  </div>
+                ))}
               </div>
             </div>
 

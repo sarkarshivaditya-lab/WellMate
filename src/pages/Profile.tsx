@@ -16,7 +16,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { getAllLocalExercises } from "@/data/local/exercises";
 import { getPendingMeals } from "@/data/local/mealsStore";
 import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
-import { DISCLAIMER_SECTIONS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
+import { PolicyContent } from "@/components/PolicyContent";
 import NotificationSettings from "@/components/NotificationSettings";
 import { DataOwnershipCard } from "@/components/profile/DataOwnershipCard";
 import { HealthProfileSection } from "@/components/profile/HealthProfileSection";
@@ -245,8 +245,7 @@ export default function Profile() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            WellMate is a wellness companion, not a medical device. AI content is for
-            general informational purposes only and is not medical advice.
+            Non-clinical, educational, and advisory platform. Please read the full Terms of Service and Privacy Policy.
           </p>
           <Button
             variant="outline"
@@ -254,49 +253,23 @@ export default function Profile() {
             className="w-full"
             onClick={() => setSafetySheetOpen(true)}
           >
-            Read health disclaimer
+            Read Terms &amp; Privacy Policy
           </Button>
         </CardContent>
       </Card>
 
-      {/* Health & Safety bottom sheet */}
+      {/* Terms & Privacy bottom sheet */}
       <Sheet open={safetySheetOpen} onOpenChange={setSafetySheetOpen}>
         <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col rounded-t-2xl">
           <SheetHeader className="flex-shrink-0 pb-2">
-            <SheetTitle>Health &amp; Safety</SheetTitle>
+            <SheetTitle>Terms &amp; Privacy Policy</SheetTitle>
             <SheetDescription>
-              Please read before making any health decisions.
+              Terms of Service and Privacy Policy for Dr Anuradha Palta's consultancy.
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto py-4 space-y-5">
-            {/* Emergency resources — always at the top */}
-            <div className="rounded-xl border border-amber-200/50 bg-amber-50/60 p-4 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                {EMERGENCY_COPY.title}
-              </p>
-              <p className="text-[12px] text-amber-800/80">{EMERGENCY_COPY.body}</p>
-              <div className="space-y-1.5 mt-2">
-                {EMERGENCY_COPY.resources.map((r) => (
-                  <div key={r.label} className="text-[13px]">
-                    <span className="font-semibold">{r.label}</span>
-                    {" "}— {r.description}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Full disclaimer sections */}
-            {DISCLAIMER_SECTIONS.map((section, i) => (
-              <div key={i} className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {section.title}
-                </p>
-                <p className="text-[13px] leading-relaxed text-foreground/80">
-                  {section.body}
-                </p>
-              </div>
-            ))}
+          <div className="flex-1 min-h-0 overflow-y-auto py-4 overscroll-y-contain">
+            <PolicyContent />
           </div>
         </SheetContent>
       </Sheet>

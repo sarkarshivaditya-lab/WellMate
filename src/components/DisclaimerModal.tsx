@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { setDisclaimerAcked } from "@/data/disclaimerStore";
-import { FIRST_LAUNCH_POINTS, DISCLAIMER_SECTIONS } from "@/content/disclaimerCopy";
+import { PolicyContent } from "@/components/PolicyContent";
 
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
@@ -12,7 +11,6 @@ interface DisclaimerModalProps {
 }
 
 export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
-  const [expanded, setExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,54 +63,13 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
             </p>
           </div>
           <p className="text-[13px] text-amber-800/80 leading-snug">
-            WellMate is a personal wellness companion. Please read the following before using the app.
+            Please read the Terms of Service and Privacy Policy before using the app.
           </p>
         </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
-          <div className="space-y-2.5">
-            {FIRST_LAUNCH_POINTS.map((point, i) => (
-              <div key={i} className="flex items-start gap-2.5 text-[13px]">
-                <span className="mt-0.5 flex-shrink-0 text-amber-600 font-bold">•</span>
-                <span className="leading-snug text-foreground/85">{point}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Expandable full disclaimer */}
-          <div className="rounded-xl border border-border/50 overflow-hidden mt-1">
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className={cn(
-                "w-full flex items-center justify-between px-4 py-3 text-[12px] font-medium",
-                "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                "transition-premium",
-              )}
-            >
-              <span>Read full disclaimer</span>
-              {expanded ? (
-                <ChevronUp className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronDown className="h-3.5 w-3.5" />
-              )}
-            </button>
-            {expanded && (
-              <div className="px-4 pb-4 space-y-3 border-t border-border/40">
-                {DISCLAIMER_SECTIONS.map((section, i) => (
-                  <div key={i} className="pt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                      {section.title}
-                    </p>
-                    <p className="text-[12px] leading-relaxed text-foreground/75">
-                      {section.body}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* Scrollable policy body */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 overscroll-y-contain">
+          <PolicyContent />
         </div>
 
         {/* Footer */}
