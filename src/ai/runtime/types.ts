@@ -15,6 +15,8 @@ export type ModelLoadStatus =
   | "loading"
   | "ready"
   | "failed"
+  | "failed_oom"      // WASM heap allocation failed — device is out of memory
+  | "failed_degraded" // max retry attempts exhausted — no further attempts this session
   | "unloading";
 
 export type ThermalState = "nominal" | "warm" | "hot" | "critical" | "emergency";

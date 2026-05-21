@@ -3,7 +3,9 @@
 //
 // Architecture:
 //   - Single WASM binary — maximum compatibility (iOS WKWebView, Android WebView)
-//   - Model loaded from a blob URL — the caller creates and revokes it.
+//   - Model loaded from a Blob — bypasses wllama's internal download/cache layer.
+//     (loadModelFromUrl with a blob URL triggers wllama's cache manager, which
+//      re-downloads and re-stores 2.4GB, doubling I/O and causing multi-minute hangs.)
 //   - Streaming via onData callback + AbortSignal for clean cancellation.
 //   - Conservative mobile settings: n_ctx=2048, n_batch=16, n_threads=1
 //
@@ -21,12 +23,28 @@ import { recordInferenceComplete } from "../../../runtime/performanceMonitor";
 // Vite resolves this ?url import to a public asset URL at build time
 import wasmUrl from "@wllama/wllama/esm/wasm/wllama.wasm?url";
 
-// Generation timeout — protects against infinite WASM hangs
+// Generation timeout — protects against infinite WASM hangs during inference
 const GENERATION_TIMEOUT_MS = 120_000; // 2 minutes
 
-export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
-  const { Wllama } = await import("@wllama/wllama");
+// Heartbeat interval for model loading — logs progress so Android logs show activity
+const HEARTBEAT_INTERVAL_MS = 5_000;
 
+function aiLog(phase: string, t0: number, extra?: string): void {
+  const elapsed = Date.now() - t0;
+  const msg = `[AI WASM +${elapsed}ms] ${phase}${extra ? ` | ${extra}` : ""}`;
+  console.log(msg);
+}
+
+export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
+  const t0 = Date.now();
+  aiLog("createWasmBridge begin", t0);
+
+  const { Wllama } = await import("@wllama/wllama");
+  aiLog("wllama module imported", t0);
+
+  // AssetsPathConfig: `default` is required (base for unresolved assets).
+  // `single-thread/wllama.wasm` overrides the WASM path with our Vite-resolved URL.
+  // Worker code is inlined in the wllama bundle — no external worker JS file needed.
   const wllama = new Wllama(
     {
       default: "",
@@ -36,23 +54,51 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
       suppressNativeLog: !import.meta.env.DEV,
     },
   );
+  aiLog("Wllama instance created", t0, `wasmUrl=${wasmUrl.substring(0, 60)}`);
 
   let _modelLoaded = false;
 
   return {
-    async loadFromBlobUrl(
+    async loadModel(
       manifest: ModelManifest,
-      blobUrl: string,
+      blob: Blob,
     ): Promise<void> {
-      await wllama.loadModelFromUrl(blobUrl, {
-        // 2K context: halves KV cache vs 4096 — critical for mobile RAM budget.
-        // A 2K context still fits the full wellness prompt + user question + response.
-        n_ctx: Math.min(manifest.contextLength, 2048),
-        n_batch: 16,       // small batches — lower peak RAM, more stable on weak devices
-        n_threads: 1,      // single-thread for maximum cross-device compatibility
-        cache_type_k: "q4_0", // quantized KV cache — significant RAM reduction
-      });
-      _modelLoaded = true;
+      const lt0 = Date.now();
+      const log = (phase: string, extra?: string) => aiLog(phase, lt0, extra);
+
+      log("loadModel begin", `blobSize=${blob.size} sizeExpected=${manifest.sizeBytes}`);
+
+      // Heartbeat: Android logcat must show activity every few seconds so the OS
+      // doesn't consider the WebView frozen. Cleared after load completes/fails.
+      const heartbeat = setInterval(() => {
+        log("heartbeat — wllama.loadModel still in progress", `elapsed=${Date.now() - lt0}ms`);
+      }, HEARTBEAT_INTERVAL_MS);
+
+      try {
+        log("wllama.loadModel call start");
+
+        // Pass Blob directly to wllama — no URL fetch, no internal cache write.
+        // This avoids the caching layer that would re-download 2.4GB to wllama's
+        // own OPFS directory before loading (which caused multi-minute hangs).
+        await wllama.loadModel([blob], {
+          // 2K context: halves KV cache vs 4096 — critical for mobile RAM budget.
+          // A 2K context still fits the full wellness prompt + user question + response.
+          n_ctx: Math.min(manifest.contextLength, 2048),
+          n_batch: 16,       // small batches — lower peak RAM, more stable on weak devices
+          n_threads: 1,      // single-thread for maximum cross-device compatibility
+          cache_type_k: "q4_0", // quantized KV cache — significant RAM reduction
+        });
+
+        log("wllama.loadModel complete");
+        _modelLoaded = true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        log("wllama.loadModel FAILED", msg);
+        throw err;
+      } finally {
+        clearInterval(heartbeat);
+        log("loadModel finally block");
+      }
     },
 
     async generate(request: InferenceRequest): Promise<InferenceResult> {

@@ -10,6 +10,7 @@ import { LAUNCH_STATE } from "@/ai/launchState";
 import { resolveAssistantReadiness } from "@/ai/assistantReadiness";
 import { getModelLoadState, subscribeToModelLoad } from "@/ai/providers/local/modelLoader";
 import { getRuntimeState, subscribeToRuntimeState } from "@/ai/runtime/runtimeState";
+import { getPersistedInstallState } from "@/ai/models/modelLifecycle";
 import { assistantRequest } from "@/ai/assistant/unifiedAssistantOrchestrator";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
@@ -64,27 +65,32 @@ function WellMateLauncher() {
   const [starterPrompts, setStarterPrompts] = React.useState<FollowUpPrompt[]>([]);
   const hasSentMessage = React.useRef(false);
 
-  type ModelStatus = "ready" | "downloading" | "activating" | "unavailable";
-  const [modelStatus, setModelStatus] = React.useState<ModelStatus>(() => {
+  type ModelStatus = "ready" | "downloading" | "activating" | "failed" | "unavailable";
+
+  function deriveModelStatus(): ModelStatus {
     const rt = getRuntimeState();
     const dl = getModelLoadState();
     if (rt.modelLoad === "ready") return "ready";
     if (rt.modelLoad === "loading") return "activating";
+    // Terminal failure states must resolve to "failed" — never "activating".
+    // These are set when autoModelLifecycle enters degraded state or OOM is detected.
+    if (
+      rt.modelLoad === "failed_oom" ||
+      rt.modelLoad === "failed_degraded" ||
+      rt.modelLoad === "failed"
+    ) return "failed";
     if (dl.phase === "downloading" || dl.phase === "verifying") return "downloading";
+    // Model stored on device but WASM not yet loaded — still activating.
+    // Only show this when there is no terminal failure (checked above).
+    if (getPersistedInstallState() === "installed") return "activating";
     return "unavailable";
-  });
+  }
+
+  const [modelStatus, setModelStatus] = React.useState<ModelStatus>(deriveModelStatus);
 
   React.useEffect(() => {
-    function update() {
-      const rt = getRuntimeState();
-      const dl = getModelLoadState();
-      if (rt.modelLoad === "ready") setModelStatus("ready");
-      else if (rt.modelLoad === "loading") setModelStatus("activating");
-      else if (dl.phase === "downloading" || dl.phase === "verifying") setModelStatus("downloading");
-      else setModelStatus("unavailable");
-    }
-    const unsubRt = subscribeToRuntimeState(update);
-    const unsubLoad = subscribeToModelLoad(update);
+    const unsubRt = subscribeToRuntimeState(() => setModelStatus(deriveModelStatus()));
+    const unsubLoad = subscribeToModelLoad(() => setModelStatus(deriveModelStatus()));
     return () => { unsubRt(); unsubLoad(); };
   }, []);
 
@@ -400,9 +406,18 @@ function WellMateLauncher() {
 
           {/* Model status notice */}
           {modelStatus !== "ready" && (
-            <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/30 border-b border-border/30 leading-snug">
-              {modelStatus === "downloading" && "Downloading offline AI model…"}
-              {modelStatus === "activating" && "Loading offline AI into memory…"}
+            <div className="px-4 py-2 text-[11px] bg-muted/30 border-b border-border/30 leading-snug">
+              {modelStatus === "downloading" && (
+                <span className="text-muted-foreground">Downloading offline AI…</span>
+              )}
+              {modelStatus === "activating" && (
+                <span className="text-muted-foreground">Loading offline AI into memory…</span>
+              )}
+              {modelStatus === "failed" && (
+                <span className="text-destructive/70">
+                  {getRuntimeState().lastError ?? "Offline AI could not load. Restart the app to retry."}
+                </span>
+              )}
               {modelStatus === "unavailable" && (
                 <span className="text-primary/80">
                   Download Offline AI from the Overview page for offline use.

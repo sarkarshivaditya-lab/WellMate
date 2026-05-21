@@ -2,19 +2,39 @@
 // Falls back gracefully when the bridge or model is unavailable.
 //
 // Memory safety:
-//   - Blob URL is created immediately before load and revoked after wllama
-//     has opened its internal copy — avoids holding 2× model size in RAM.
-//   - 90-second load timeout prevents hanging on slow/incompatible devices.
+//   - Model is loaded from a Blob reference (OPFS File or IDB Blob).
+//   - No intermediate blob URL — avoids holding 2× model size in RAM.
+//   - Per-device load timeout prevents hanging on slow/incompatible devices.
+//
+// Logging: every async phase emits [AI INIT +Xms] to console. On Android,
+// these are visible in adb logcat and show exactly which phase stalls.
 
 import type { AIProvider } from "../types";
 import type { InferenceRequest, InferenceResult, ProviderType } from "../../runtime/types";
 import type { ModelManifest } from "./modelMetadata";
 import { createLlamaBridge, type LlamaBridgeHandle } from "./llamaBridge";
-import { isModelStored, getModelBlobUrl, validateModelIntegrity, deleteModel } from "./modelStorage";
+import { isModelStored, validateModelIntegrity, deleteModel, getModelFile } from "./modelStorage";
 import { patchRuntimeState } from "../../runtime/runtimeState";
 import { recordModelLoadDuration } from "../../runtime/performanceMonitor";
 
-const LOAD_TIMEOUT_MS = 90_000; // 90 seconds — generous for low-end devices
+// Device-tier-aware load timeout.
+// Loading a 2.4GB GGUF model on Android WebView via WASM takes 30–120s depending
+// on device tier. These values are intentionally generous so the runtime can
+// complete on mid-range hardware. OOM / worker-killed failures surface as
+// exceptions from wllama (not as timeouts) on modern Chromium WebViews.
+function getLoadTimeoutMs(): number {
+  const ram = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+  // Note: Android deviceMemory is often capped at 4 even on 8GB devices.
+  if (ram >= 8) return 90_000;   // flagship — 90s
+  if (ram >= 6) return 120_000;  // high-end — 2min
+  if (ram >= 4) return 150_000;  // mid-range — 2.5min
+  return 180_000;                // low-end — 3min (likely OOM before this fires)
+}
+
+function initLog(phase: string, t0: number, extra?: string): void {
+  const elapsed = Date.now() - t0;
+  console.log(`[AI INIT +${elapsed}ms] ${phase}${extra ? ` | ${extra}` : ""}`);
+}
 
 export class LocalProvider implements AIProvider {
   readonly type: ProviderType = "local";
@@ -30,9 +50,17 @@ export class LocalProvider implements AIProvider {
   }
 
   async initialize(): Promise<void> {
+    const t0 = Date.now();
+    const log = (phase: string, extra?: string) => initLog(phase, t0, extra);
+
+    log("begin", `modelId=${this.manifest.id}`);
     patchRuntimeState({ status: "initializing", modelLoad: "loading" });
 
+    // ── Phase 1: confirm model is stored ─────────────────────────────────────
+    log("checking storage");
     const stored = await isModelStored(this.manifest.id);
+    log("storage check done", `stored=${stored}`);
+
     if (!stored) {
       patchRuntimeState({
         status: "error",
@@ -42,7 +70,11 @@ export class LocalProvider implements AIProvider {
       throw new Error(`Model "${this.modelId}" not in storage`);
     }
 
+    // ── Phase 2: create WASM bridge ───────────────────────────────────────────
+    log("creating bridge");
     const bridge = await createLlamaBridge();
+    log("bridge created", `bridge=${bridge ? "ok" : "null"}`);
+
     if (!bridge) {
       patchRuntimeState({
         status: "error",
@@ -52,8 +84,11 @@ export class LocalProvider implements AIProvider {
       throw new Error("llama.cpp bridge unavailable");
     }
 
-    // Validate GGUF magic bytes before handing to WASM — avoids cryptic crashes
+    // ── Phase 3: GGUF integrity check ─────────────────────────────────────────
+    log("validating integrity");
     const integrity = await validateModelIntegrity(this.manifest.id);
+    log("integrity done", `valid=${integrity.valid} reason=${integrity.reason ?? "none"}`);
+
     if (!integrity.valid) {
       // Auto-delete the corrupted file so UI shows "idle" not "stored"
       await deleteModel(this.manifest.id).catch(() => null);
@@ -62,9 +97,16 @@ export class LocalProvider implements AIProvider {
       throw new Error(msg);
     }
 
-    // Create blob URL from storage (OPFS = memory-efficient, IDB = loads into RAM)
-    const blobUrl = await getModelBlobUrl(this.manifest.id);
-    if (!blobUrl) {
+    // ── Phase 4: obtain Blob reference ────────────────────────────────────────
+    // getModelFile returns an OPFS File handle (lazy — not yet in RAM) or an
+    // IDB-assembled Blob. Either way, wllama.loadModel([blob]) reads from it
+    // directly without creating an intermediate blob URL or triggering the
+    // wllama cache manager (which would re-store 2.4GB to its own OPFS directory).
+    log("getting model file");
+    const modelBlob = await getModelFile(this.manifest.id);
+    log("model file ready", `blobSize=${modelBlob?.size ?? "null"}`);
+
+    if (!modelBlob) {
       patchRuntimeState({
         status: "error",
         modelLoad: "failed",
@@ -73,35 +115,45 @@ export class LocalProvider implements AIProvider {
       throw new Error("Model data unreadable — delete and re-download");
     }
 
+    // ── Phase 5: load model into WASM runtime ─────────────────────────────────
+    const timeoutMs = getLoadTimeoutMs();
+    log("starting model load", `timeoutMs=${timeoutMs}`);
+
     const loadStart = Date.now();
 
     const loadTimeout = new Promise<never>((_, reject) =>
       setTimeout(
-        () => reject(new Error("Model load timeout (90s) — device may be low on memory")),
-        LOAD_TIMEOUT_MS,
+        () => reject(new Error(`Model load timed out after ${timeoutMs / 1000}s — device may be low on memory or WASM is unavailable`)),
+        timeoutMs,
       ),
     );
 
     try {
       await Promise.race([
-        bridge.loadFromBlobUrl(this.manifest, blobUrl),
+        bridge.loadModel(this.manifest, modelBlob),
         loadTimeout,
       ]);
+      log("model load complete", `durationMs=${Date.now() - loadStart}`);
     } catch (err) {
-      // Classify low-memory errors vs other failures for better UX messages
       const msg = err instanceof Error ? err.message : String(err);
+      log("model load FAILED", msg);
+
       const isOOM = /out of memory|allocation failed|oom|enomem/i.test(msg);
-      const isTimeout = /timeout/i.test(msg);
+      const isTimeout = /timed out/i.test(msg);
       const friendlyMsg = isOOM
-        ? "Not enough RAM to load model — close other apps and try again"
+        ? "Not enough memory to load offline AI — close other apps and restart"
         : isTimeout
-          ? "Model load timed out — device may be overloaded. Try again when cooler."
-          : `Model load failed: ${msg}`;
-      patchRuntimeState({ status: "error", modelLoad: "failed", lastError: friendlyMsg });
+          ? `Offline AI took too long to load (${timeoutMs / 1000}s). Try restarting the app.`
+          : `Offline AI failed to load: ${msg}`;
+
+      // Use failed_oom for memory failures so the degraded path can detect them
+      // and avoid pointless retries that will also OOM.
+      patchRuntimeState({
+        status: "error",
+        modelLoad: isOOM ? "failed_oom" : "failed",
+        lastError: friendlyMsg,
+      });
       throw new Error(friendlyMsg);
-    } finally {
-      // Always revoke — wllama has its own internal copy after loadModelFromUrl
-      URL.revokeObjectURL(blobUrl);
     }
 
     const loadDurationMs = Date.now() - loadStart;
@@ -110,6 +162,7 @@ export class LocalProvider implements AIProvider {
     this.bridge = bridge;
     this._ready = true;
 
+    log("provider ready", `totalMs=${Date.now() - t0}`);
     patchRuntimeState({
       status: "ready",
       provider: "local",

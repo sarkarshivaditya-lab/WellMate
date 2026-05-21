@@ -20,7 +20,7 @@ import {
   resetThermal,
   getInferenceRate,
 } from "../runtime/thermalGuard";
-import { patchRuntimeState } from "../runtime/runtimeState";
+import { patchRuntimeState, getRuntimeState } from "../runtime/runtimeState";
 import { getCurrentPolicy, applyGovernorPolicy, initGovernor } from "../runtime/runtimeGovernor";
 import { recordInferenceProfile } from "../runtime/performanceProfiler";
 import {
@@ -84,59 +84,62 @@ export async function initOrchestrator(): Promise<void> {
 }
 
 async function _startupTasks(): Promise<void> {
-  // Cold-start profiling — track each boot stage
   initStartupProfile();
   recordStageStart("core");
 
-  // 0. Crash/recovery assessment — must run before any other startup work
-  try { await assessAndRecover(); } catch { /* non-fatal */ }
+  // Crash recovery + migration recovery are independent — run in parallel
+  await Promise.all([
+    assessAndRecover().catch(() => null),
+    import("../models/migrationEngine")
+      .then(({ recoverInterruptedMigration }) => recoverInterruptedMigration())
+      .catch(() => null),
+  ]);
 
-  // 0a. App lifecycle tracking + cognition scaler + session guard
   initAppLifecycle();
   initCognitionScaler();
   startSessionGuard();
 
-  // Register clean-exit marker on unload to distinguish crashes from clean shutdowns
   subscribeToLifecycle((event) => {
     if (event === "before_unload") markCleanExit();
   });
 
   recordStageComplete("core");
 
-  // 1. Initialize governor (begins device capability detection in background)
   recordStageStart("governor");
   initGovernor();
   recordStageComplete("governor");
 
-  // 1b. Cleanup any stale download markers from prior sessions
   cleanupStaleDownloadMarkers();
 
-  // 1c. Recover any interrupted migration from a prior session
-  try {
-    const { recoverInterruptedMigration } = await import("../models/migrationEngine");
-    await recoverInterruptedMigration();
-  } catch { /* non-fatal */ }
-
-  // 2. Fetch remote manifest and hydrate registry (background, non-blocking)
+  // Remote manifest fetch — background, non-blocking
   void (async () => {
     try {
       const { fetchManifest } = await import("../models/remoteManifest");
       const { hydrateFromRemote } = await import("../models/modelRegistry");
       const result = await fetchManifest();
       if (result.models.length) hydrateFromRemote(result.models);
-    } catch { /* non-fatal — static fallback remains active */ }
+    } catch { /* non-fatal */ }
   })();
 
-  // 3. Auto-activate local model if already installed
+  // Auto-activate local model if already installed.
+  // Fast-path: when the install marker is present, skip checkLifecycleState()
+  // entirely. That function runs validateModelIntegrity + evaluateModelUpdate
+  // (300-1000ms of storage/battery I/O). LocalProvider.initialize() catches
+  // corruption independently, so the integrity check is not needed here.
   recordStageStart("warmup");
   try {
-    const { checkLifecycleState } = await import("../models/modelLifecycle");
+    const { getPersistedInstallState, checkLifecycleState } = await import("../models/modelLifecycle");
     const { getRecommendedManifest } = await import("../models/modelRegistry");
 
-    const state = await checkLifecycleState();
-    if (state === "installed") {
+    if (getPersistedInstallState() === "installed") {
       const manifest = getRecommendedManifest();
       await tryActivateLocalProvider(manifest);
+    } else {
+      const state = await checkLifecycleState();
+      if (state === "installed") {
+        const manifest = getRecommendedManifest();
+        await tryActivateLocalProvider(manifest);
+      }
     }
   } catch { /* silent — startup activation is best-effort */ }
   recordStageComplete("warmup");
@@ -238,30 +241,54 @@ async function executeInference(
   }
 }
 
+// Mutex — prevents concurrent activations (e.g. _startupTasks + lifecycle subscription
+// both seeing "installed" simultaneously and each creating a LocalProvider).
+let _activationInFlight: Promise<boolean> | null = null;
+
 // Attempt to activate the local model provider at runtime.
 // Falls back silently to stub if llama.cpp bridge is unavailable.
+// Concurrent callers share the same in-flight promise (safe to call from multiple sites).
 export async function tryActivateLocalProvider(
   manifest: ModelManifest,
 ): Promise<boolean> {
   const existing = getProvider("local");
   if (existing?.isReady()) return true;
 
-  const { LocalProvider } = await import("../providers/local/LocalProvider");
-  const local = new LocalProvider(manifest);
+  if (_activationInFlight) return _activationInFlight;
 
-  try {
-    await local.initialize();
-    registerProvider(local);
-    setActiveProvider("local");
-    return true;
-  } catch {
-    patchRuntimeState({
-      status: "ready",
-      provider: "stub",
-      lastError: "Local model unavailable — inference via stub",
-    });
-    return false;
-  }
+  _activationInFlight = (async () => {
+    const { LocalProvider } = await import("../providers/local/LocalProvider");
+    const local = new LocalProvider(manifest);
+
+    try {
+      await local.initialize();
+      registerProvider(local);
+      setActiveProvider("local");
+      return true;
+    } catch {
+      // LocalProvider.initialize() patches its own failure state before throwing.
+      // Preserve failed_oom — it needs a different recovery path (no retries).
+      // For all other failures, surface "failed" (not "not_loaded"):
+      //   - "not_loaded" + installed=true causes WellMateLauncher to show "activating"
+      //     indefinitely, because deriveModelStatus() returns "activating" whenever the
+      //     model is installed but not yet in memory — hiding the real failure.
+      //   - "failed" correctly surfaces the error so the user sees what went wrong.
+      //   - autoModelLifecycle still retries (it only skips failed_oom / failed_degraded).
+      const { modelLoad, lastError } = getRuntimeState();
+      const isOom = modelLoad === "failed_oom";
+      patchRuntimeState({
+        status: "ready",
+        provider: "stub",
+        modelLoad: isOom ? "failed_oom" : "failed",
+        lastError: isOom ? lastError : (lastError ?? "Offline AI could not load — restart the app to try again"),
+      });
+      return false;
+    }
+  })().finally(() => {
+    _activationInFlight = null;
+  });
+
+  return _activationInFlight;
 }
 
 export function submitInference(

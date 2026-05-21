@@ -26,6 +26,9 @@ import {
   subscribeToModelLoad,
   getModelLoadState,
   deleteStoredModel,
+  pauseActiveDownload,
+  cancelActiveDownload,
+  isActivelyDownloading,
 } from "@/ai/providers/local/modelLoader";
 import { checkStorageAvailability } from "@/ai/providers/local/modelStorage";
 import { checkDownloadEligibility } from "@/ai/downloads/downloadManager";
@@ -66,12 +69,16 @@ export function ModelDownloadCard() {
   const [updateTarget, setUpdateTarget] = React.useState<ModelManifest | null>(null);
   const [wifiConfirmPending, setWifiConfirmPending] = React.useState(false);
   const [migrationStage, setMigrationStage] = React.useState<string | null>(null);
-  const abortRef = React.useRef<AbortController | null>(null);
-  // Tracks whether a user-controlled download is active. Guards the
-  // subscribeToModelLoad callback from calling handleAutoActivate prematurely.
+
+  // Guards the subscribeToModelLoad "not_loaded" handler from calling
+  // handleAutoActivate while a download is still owned by this instance.
+  // The "aborted" state is handled via the subscription callback regardless
+  // of whether isDownloadingRef is set (covers remount scenarios too).
   const isDownloadingRef = React.useRef(false);
-  // "pause" preserves partial data; "cancel" deletes it and resets to idle.
-  const cancelIntentRef = React.useRef<"pause" | "cancel" | null>(null);
+
+  // Separate controller for migration — migration is caller-owned by design.
+  const migrationAbortRef = React.useRef<AbortController | null>(null);
+
   const runtime = useAIRuntime();
 
   // ── Lifecycle subscription ────────────────────────────────────────────────
@@ -176,7 +183,9 @@ export function ModelDownloadCard() {
       setPhase("install_idle");
     }
 
-    // Sync with any in-progress download
+    // Sync with any in-progress download. Note: isDownloadingRef is NOT set here
+    // because for the remount-during-download scenario we rely on the "aborted" and
+    // "not_loaded" subscription handlers (which fire regardless of the ref value).
     const currentLoad = getModelLoadState();
     if (currentLoad.phase === "downloading") {
       const s = currentLoad as Extract<ModelLoadState, { phase: "downloading" }>;
@@ -196,16 +205,47 @@ export function ModelDownloadCard() {
         const s = state as Extract<ModelLoadState, { phase: "downloading" }>;
         setPhase("downloading");
         setProgressPct(s.totalBytes > 0 ? Math.round((s.progressBytes / s.totalBytes) * 100) : 0);
+
       } else if (state.phase === "verifying") {
         setProgressPct(99);
+
+      } else if (state.phase === "aborted") {
+        // Handles pause/cancel from both same-mount and remount-during-download.
+        // The module-level controller emits this, so it reaches whatever component
+        // instance is currently mounted — no dependency on isDownloadingRef.
+        isDownloadingRef.current = false;
+
+        if (state.intent === "cancel") {
+          void deleteStoredModel(manifest)
+            .catch(() => null)
+            .then(() => {
+              setPhase("install_idle");
+              setProgressPct(0);
+              setResumeBytes(0);
+            });
+        } else {
+          // pause — partial data saved; show accurate resume progress
+          setResumeBytes(state.savedBytes);
+          setProgressPct(
+            manifest.sizeBytes > 0
+              ? Math.round((state.savedBytes / manifest.sizeBytes) * 100)
+              : 0,
+          );
+          setPhase(state.savedBytes > 0 ? "install_resumable" : "install_idle");
+        }
+
       } else if (state.phase === "not_loaded") {
-        // Don't auto-activate while a user-controlled download is running —
-        // the startDownload .then() handler owns activation in that case.
+        // Guard prevents double auto-activate when the same component instance
+        // has a pending .then() handler that will call handleAutoActivate.
+        // In the remount case isDownloadingRef is false, so the guard passes
+        // and the subscription handles activation correctly.
         if (!isDownloadingRef.current) {
           void handleAutoActivate(manifest);
         }
+
       } else if (state.phase === "failed") {
         const s = state as Extract<ModelLoadState, { phase: "failed" }>;
+        isDownloadingRef.current = false;
         setErrorReason(s.reason);
         setPhase("error");
       }
@@ -215,14 +255,24 @@ export function ModelDownloadCard() {
   // ── Auto-activate after download ─────────────────────────────────────────
   async function handleAutoActivate(target: ModelManifest) {
     setPhase("activating");
+
+    // Attempt WASM activation — a failure does NOT mean the file wasn't stored.
+    // tryActivateLocalProvider is documented to catch and return false, not throw.
     try {
-      const ok = await tryActivateLocalProvider(target);
-      if (ok) {
-        const state = await checkLifecycleState();
-        setLifecycleState(state);
-      } else {
-        setPhase("install_idle");
-      }
+      await tryActivateLocalProvider(target);
+    } catch {
+      // Unexpected throw — fall through to lifecycle re-check below.
+    }
+
+    // Always re-check lifecycle state: the model may be stored even if WASM
+    // couldn't load it this session (OOM, bridge unavailable, slow device).
+    // This is the authoritative gate — it reads storage, not runtime memory.
+    try {
+      const state = await checkLifecycleState();
+      setLifecycleState(state);
+      // When state === "installed": lifecycleState causes the card to return null.
+      // Only fall back to install_idle if storage confirms no model is present.
+      if (state !== "installed") setPhase("install_idle");
     } catch {
       setPhase("install_idle");
     }
@@ -233,7 +283,6 @@ export function ModelDownloadCard() {
     const eligibility = await checkDownloadEligibility(targetManifest.sizeBytes);
 
     if (!eligibility.eligible) {
-      // Battery too low — show error
       setErrorReason("Battery is too low to start a large download. Connect a charger and try again.");
       setPhase("error");
       return;
@@ -253,44 +302,22 @@ export function ModelDownloadCard() {
     setPhase("downloading");
     setProgressPct(0);
     setErrorReason(null);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
     isDownloadingRef.current = true;
 
-    downloadAndStoreModel(targetManifest, controller.signal)
-      .then(async () => {
+    // No signal argument — modelLoader creates and owns the AbortController.
+    // pauseActiveDownload() / cancelActiveDownload() abort it from any call site.
+    downloadAndStoreModel(targetManifest)
+      .then(() => {
+        // "aborted" path: downloadAndStoreModel emits { phase:"aborted" } and returns
+        // normally. The subscription callback already handled the UI transition.
+        // Only call auto-activate when the download genuinely completed.
         isDownloadingRef.current = false;
-        abortRef.current = null;
-        const intent = cancelIntentRef.current;
-        cancelIntentRef.current = null;
-
-        if (controller.signal.aborted) {
-          if (intent === "cancel") {
-            // Full cancel — delete partial data and return to idle state
-            await deleteStoredModel(targetManifest).catch(() => null);
-            setPhase("install_idle");
-            setProgressPct(0);
-            setResumeBytes(0);
-          } else {
-            // Pause — chunks saved in storage; compute current resume offset
-            const saved = await getPartialDownloadBytes(targetManifest).catch(() => 0);
-            const savedPct = targetManifest.sizeBytes > 0
-              ? Math.round((saved / targetManifest.sizeBytes) * 100)
-              : 0;
-            setResumeBytes(saved);
-            setProgressPct(savedPct);
-            setPhase(saved > 0 ? "install_resumable" : "install_idle");
-          }
-        } else {
-          // Download completed and verified — activate the model
+        if (getModelLoadState().phase !== "aborted") {
           void handleAutoActivate(targetManifest);
         }
       })
       .catch((err) => {
         isDownloadingRef.current = false;
-        abortRef.current = null;
-        cancelIntentRef.current = null;
         setErrorReason(err instanceof Error ? err.message : "Download failed");
         setPhase("error");
       });
@@ -302,7 +329,7 @@ export function ModelDownloadCard() {
     setErrorReason(null);
 
     const controller = new AbortController();
-    abortRef.current = controller;
+    migrationAbortRef.current = controller;
     isDownloadingRef.current = true;
 
     try {
@@ -316,28 +343,28 @@ export function ModelDownloadCard() {
       }
     } finally {
       isDownloadingRef.current = false;
-      abortRef.current = null;
+      migrationAbortRef.current = null;
     }
   }
 
+  // ── Download pause / cancel ───────────────────────────────────────────────
+  // These call the module-level functions — always wired, even after remount.
+
   function handlePause() {
-    cancelIntentRef.current = "pause";
-    abortRef.current?.abort();
+    pauseActiveDownload();
   }
 
   function handleCancelDownload() {
-    cancelIntentRef.current = "cancel";
-    abortRef.current?.abort();
+    cancelActiveDownload();
   }
 
-  async function handleDelete() {
-    await deleteStoredModel(manifest);
-    setPhase("install_idle");
-    setProgressPct(0);
-    setResumeBytes(0);
-    const state = await checkLifecycleState();
-    setLifecycleState(state);
+  // ── Migration cancel ──────────────────────────────────────────────────────
+
+  function handleCancelMigration() {
+    migrationAbortRef.current?.abort();
   }
+
+  // ── Other handlers ────────────────────────────────────────────────────────
 
   async function handleRepairCorrupted() {
     await deleteCorruptedModel();
@@ -391,11 +418,14 @@ export function ModelDownloadCard() {
     );
   }
 
-  // ── Downloading ───────────────────────────────────────────────────────────
+  // ── Downloading / Migrating ───────────────────────────────────────────────
   if (phase === "downloading" || phase === "migrating") {
     const label = phase === "migrating"
       ? migrationLabel(migrationStage)
       : "Enabling offline support";
+
+    // Pause is only meaningful for the resumable download flow, not migration.
+    const showPause = phase === "downloading" && isActivelyDownloading();
 
     return (
       <Card className="border-border/20">
@@ -406,37 +436,26 @@ export function ModelDownloadCard() {
               <span className="text-[11.5px] text-muted-foreground/40 tabular-nums">
                 {progressPct}%
               </span>
-              {phase === "downloading" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handlePause}
-                    aria-label="Pause download"
-                    title="Pause"
-                    className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
-                  >
-                    <Pause className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelDownload}
-                    aria-label="Cancel download"
-                    title="Cancel"
-                    className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </>
-              ) : (
+              {showPause && (
                 <button
                   type="button"
-                  onClick={() => { abortRef.current?.abort(); }}
-                  aria-label="Cancel migration"
-                  className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
+                  onClick={handlePause}
+                  aria-label="Pause download"
+                  title="Pause"
+                  className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors active:scale-90"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <Pause className="h-3.5 w-3.5" />
                 </button>
               )}
+              <button
+                type="button"
+                onClick={phase === "downloading" ? handleCancelDownload : handleCancelMigration}
+                aria-label={phase === "downloading" ? "Cancel download" : "Cancel migration"}
+                title="Cancel"
+                className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors active:scale-90"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
           <div className="h-0.5 w-full bg-border/15 rounded-full overflow-hidden">

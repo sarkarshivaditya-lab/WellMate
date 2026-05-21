@@ -43,6 +43,7 @@ export type ModelLoadState =
   | { phase: "verifying" }
   | { phase: "loading"; progressPct: number }
   | { phase: "ready"; loadedAt: number }
+  | { phase: "aborted"; intent: "pause" | "cancel"; savedBytes: number }
   | { phase: "failed"; reason: string };
 
 // Static fallback manifest — used when remote manifest is unavailable.

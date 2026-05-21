@@ -291,6 +291,31 @@ export async function getModelBlobUrl(modelId: string): Promise<string | null> {
   }
 }
 
+// Returns the model file as a Blob for direct WASM loading (no blob URL needed).
+// OPFS path: returns a lazy File handle — data is read on demand, not into RAM now.
+// IDB path: assembles all chunks into a single Blob — unavoidable RAM load.
+export async function getModelFile(modelId: string): Promise<Blob | null> {
+  if (await isOPFSAvailable()) {
+    try {
+      const dir = await opfsDir();
+      const fh = await dir.getFileHandle(`${modelId}.gguf`);
+      return await fh.getFile(); // File extends Blob; lazy OPFS read — not in RAM yet
+    } catch {
+      return null;
+    }
+  }
+
+  // IDB path — all chunks must be assembled into RAM
+  try {
+    const meta = await readIdbMeta(modelId);
+    if (!meta?.complete) return null;
+    const chunks = await readAllIdbChunks(modelId, meta.chunkCount);
+    return new Blob(chunks as Uint8Array<ArrayBuffer>[], { type: "application/octet-stream" });
+  } catch {
+    return null;
+  }
+}
+
 // GGUF magic bytes: ASCII "GGUF" = 0x47 0x47 0x55 0x46
 const GGUF_MAGIC = [0x47, 0x47, 0x55, 0x46];
 

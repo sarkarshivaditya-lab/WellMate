@@ -36,8 +36,40 @@ type LifecycleListener = (state: InstallState) => void;
 const _listeners = new Set<LifecycleListener>();
 let _currentState: InstallState = "checking";
 
+// ── Persistent install marker ─────────────────────────────────────────────────
+// Survives app restarts so the card and assistant readiness can avoid waiting
+// for async OPFS/IDB checks during the first seconds of startup.
+// Set when lifecycle confirms installed; cleared when model is deleted/corrupted.
+
+const INSTALL_MARKER_KEY = "wellmate_offline_ai_v1";
+
+function writeInstallMarker(installed: boolean): void {
+  try {
+    if (installed) {
+      localStorage.setItem(INSTALL_MARKER_KEY, "1");
+    } else {
+      localStorage.removeItem(INSTALL_MARKER_KEY);
+    }
+  } catch { /* quota or private mode — non-fatal */ }
+}
+
+/** Returns "installed" if localStorage confirms a model was previously committed. */
+export function getPersistedInstallState(): "installed" | "unknown" {
+  try {
+    return localStorage.getItem(INSTALL_MARKER_KEY) === "1" ? "installed" : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 function emit(state: InstallState): void {
   _currentState = state;
+  // Keep the persistent marker in sync so startup is accurate without OPFS reads.
+  if (state === "installed") {
+    writeInstallMarker(true);
+  } else if (state === "install_available" || state === "none" || state === "corrupted") {
+    writeInstallMarker(false);
+  }
   _listeners.forEach((fn) => {
     try { fn(state); } catch { /* never crash */ }
   });
@@ -68,7 +100,6 @@ const DECISION_MAP: Record<UpdateDecision, InstallState> = {
 
 // Primary state check — run on card mount and after any install/delete/upgrade.
 export async function checkLifecycleState(): Promise<InstallState> {
-  // Fast path: check if recommended model is installed and healthy
   let recommended: ModelManifest;
   try {
     recommended = getRecommendedManifest();
@@ -77,16 +108,29 @@ export async function checkLifecycleState(): Promise<InstallState> {
     return "none";
   }
 
+  // Fast-path: when the install marker is present, skip validateModelIntegrity()
+  // and evaluateModelUpdate() — both are expensive (300-1000ms combined).
+  // LocalProvider.initialize() detects corruption independently.
+  // Update checks run separately outside the activation hot path.
+  if (getPersistedInstallState() === "installed") {
+    const stored = await isModelStored(recommended).catch(() => false);
+    if (stored) {
+      emit("installed");
+      return "installed";
+    }
+    // Marker is stale — clear it and fall through to full evaluation
+    writeInstallMarker(false);
+  }
+
   const stored = await isModelStored(recommended).catch(() => false);
 
   if (stored) {
-    // Verify integrity before declaring installed
+    // Full evaluation path: only reached when the install marker was absent/stale.
     const integrity = await validateModelIntegrity(recommended.id).catch(() => ({ valid: false }));
     if (!integrity.valid) {
       emit("corrupted");
       return "corrupted";
     }
-    // Healthy — still check if an upgrade is available
     const evaluation = await evaluateModelUpdate();
     const state = DECISION_MAP[evaluation.decision] ?? "installed";
     emit(state);

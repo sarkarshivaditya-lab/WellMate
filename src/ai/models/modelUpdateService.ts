@@ -70,9 +70,19 @@ export async function evaluateModelUpdate(): Promise<UpdateEvaluation> {
   });
 
   if (!candidates.length) {
+    // An installed model already passed the user through setup — don't revoke
+    // access based on a conservative device-tier check. Keep using what's there.
+    if (installedManifest) {
+      return {
+        decision: "no_update",
+        installedManifest,
+        targetManifest: null,
+        reason: "Model is installed and running.",
+      };
+    }
     return {
       decision: "incompatible",
-      installedManifest,
+      installedManifest: null,
       targetManifest: null,
       reason: "No compatible model for this device.",
     };
