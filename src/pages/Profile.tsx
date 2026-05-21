@@ -20,6 +20,7 @@ import { PolicyContent } from "@/components/PolicyContent";
 import NotificationSettings from "@/components/NotificationSettings";
 import { DataOwnershipCard } from "@/components/profile/DataOwnershipCard";
 import { HealthProfileSection } from "@/components/profile/HealthProfileSection";
+import { AiPrivacyCard } from "@/components/profile/AiPrivacyCard";
 
 /**
  * Profile / Settings
@@ -205,6 +206,11 @@ export default function Profile() {
       <DataOwnershipCard />
 
       {/* =========================
+          AI & PRIVACY
+         ========================= */}
+      <AiPrivacyCard />
+
+      {/* =========================
           NOTIFICATIONS
          ========================= */}
       <NotificationSettings />
@@ -260,16 +266,20 @@ export default function Profile() {
 
       {/* Terms & Privacy bottom sheet */}
       <Sheet open={safetySheetOpen} onOpenChange={setSafetySheetOpen}>
-        <SheetContent side="bottom" className="max-h-[85dvh] flex flex-col rounded-t-2xl">
-          <SheetHeader className="flex-shrink-0 pb-2">
+        <SheetContent side="bottom" className="max-h-[88dvh] flex flex-col rounded-t-2xl">
+          <SheetHeader className="flex-shrink-0 pb-3">
             <SheetTitle>Terms &amp; Privacy Policy</SheetTitle>
             <SheetDescription>
-              Terms of Service and Privacy Policy for Dr Anuradha Palta's consultancy.
+              For Dr Anuradha Palta's consultancy.
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto py-4 overscroll-y-contain">
-            <PolicyContent />
+          <div className="relative flex-1 min-h-0">
+            <div className="h-full overflow-y-auto py-4 overscroll-y-contain">
+              <PolicyContent />
+              <div className="h-4" />
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
           </div>
         </SheetContent>
       </Sheet>

@@ -46,34 +46,53 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/55 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="disclaimer-title"
     >
-      <div className="w-full max-w-md max-h-[90dvh] flex flex-col rounded-2xl bg-card border border-amber-200/60 shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4 bg-amber-50/80 border-b border-amber-200/50 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 border border-amber-200/60 flex-shrink-0">
-              <ShieldAlert className="h-4 w-4 text-amber-700" />
+      <div className="w-full max-w-md max-h-[92dvh] flex flex-col rounded-2xl bg-card border border-border/50 shadow-2xl overflow-hidden">
+
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div className="flex-shrink-0 px-6 pt-7 pb-6 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100/90 border border-amber-200/70 shadow-sm">
+              <ShieldAlert className="h-5 w-5 text-amber-700" />
             </div>
-            <p id="disclaimer-title" className="text-sm font-semibold text-amber-900">
-              Before you begin
-            </p>
           </div>
-          <p className="text-[13px] text-amber-800/80 leading-snug">
-            Please read the Terms of Service and Privacy Policy before using the app.
+          <p
+            id="disclaimer-title"
+            className="text-[15px] font-semibold text-foreground/90 leading-snug"
+          >
+            Before you begin
+          </p>
+          <p className="mt-2 text-[12.5px] leading-snug text-muted-foreground">
+            Please read our Terms of Service and Privacy Policy.
           </p>
         </div>
 
-        {/* Scrollable policy body */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 overscroll-y-contain">
-          <PolicyContent />
+        {/* ── Divider ────────────────────────────────────────── */}
+        <div className="flex-shrink-0 h-px bg-border/30" />
+
+        {/* ── Scrollable body ────────────────────────────────── */}
+        <div className="relative flex-1 min-h-0">
+          <div className="h-full overflow-y-auto px-5 py-5 overscroll-y-contain">
+            <PolicyContent />
+            {/* Bottom spacer so last card clears the footer fade */}
+            <div className="h-4" />
+          </div>
+          {/* Fade indicating scrollable content below */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-card to-transparent" />
         </div>
 
-        {/* Footer */}
-        <div className="px-5 pb-5 pt-3 flex-shrink-0 border-t border-border/30">
+        {/* ── Footer ─────────────────────────────────────────── */}
+        <div
+          className="flex-shrink-0 px-5 pt-4 border-t border-border/25"
+          style={{
+            paddingBottom:
+              "max(1.25rem, calc(1.25rem + env(safe-area-inset-bottom, 0px)))",
+          }}
+        >
           <Button className="w-full" onClick={handleAck}>
             I understand — continue to WellMate
           </Button>
