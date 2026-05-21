@@ -42,13 +42,15 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
   const { Wllama } = await import("@wllama/wllama");
   aiLog("wllama module imported", t0);
 
-  // AssetsPathConfig: `default` is required (base for unresolved assets).
-  // `single-thread/wllama.wasm` overrides the WASM path with our Vite-resolved URL.
-  // Worker code is inlined in the wllama bundle — no external worker JS file needed.
+  // AssetsPathConfig: `default` must be a non-empty truthy string — wllama v3
+  // checks `!pathConfig["default"]` (truthiness, not existence) and uses it as
+  // the WASM URL directly via absoluteUrl(). The Vite ?url import resolves to
+  // an absolute asset path at build time, satisfying both requirements.
+  // "single-thread/wllama.wasm" is not used by the v3.1.1 loadModel runtime;
+  // only `default` is read when building the internal mPathConfig.
   const wllama = new Wllama(
     {
-      default: "",
-      "single-thread/wllama.wasm": wasmUrl,
+      default: wasmUrl,
     },
     {
       suppressNativeLog: !import.meta.env.DEV,
