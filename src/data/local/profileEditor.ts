@@ -1,7 +1,5 @@
-import {
-  readOnboardingPayload,
-  OnboardingPayload,
-} from "./onboardingPayload";
+import { readOnboardingPayload } from "./onboardingPayload";
+import type { OnboardingPayload } from "./onboardingPayload";
 
 const STORAGE_KEY = "onboarding_profile";
 const PROFILE_UPDATED_EVENT = "wellmate:profile-updated";

@@ -17,9 +17,11 @@
 //
 // No direct inference bypasses. No surface should call executeWithCognition directly.
 
-import { executeWithCognition, CognitiveInferenceResult } from "@/ai/cognition/cognitiveExecutionOrchestrator";
+import { executeWithCognition } from "@/ai/cognition/cognitiveExecutionOrchestrator";
+import type { CognitiveInferenceResult } from "@/ai/cognition/cognitiveExecutionOrchestrator";
 import { syncAssistantState, getAssistantState, setEngagementState } from "./assistantStateModel";
-import { getSurfaceBehaviorProfile, getSurfaceSystemPromptAddition, AssistantSurface } from "./contextualBehaviorEngine";
+import { getSurfaceBehaviorProfile, getSurfaceSystemPromptAddition } from "./contextualBehaviorEngine";
+import type { AssistantSurface } from "./contextualBehaviorEngine";
 import { getCoachingStyleAsPromptHint } from "@/ai/coaching/adaptiveCoachingEngine";
 import { getWellnessTrajectory } from "@/ai/wellness/wellnessTrajectoryEngine";
 import { detectRecoveryOpportunities } from "@/ai/wellness/recoveryOpportunityDetector";

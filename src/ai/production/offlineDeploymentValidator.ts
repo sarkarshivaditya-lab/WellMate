@@ -99,7 +99,7 @@ function checkMemoryHierarchy(): DeploymentCheck {
 function checkCognitionState(): DeploymentCheck {
   try {
     const report = getCognitiveStateReport();
-    return { checkId: "cognition_state", passed: true, critical: true, detail: `${report.activeGoals} goals, emotional state: ${report.emotionalState}` };
+    return { checkId: "cognition_state", passed: true, critical: true, detail: `${report.activeGoals} goals, emotional state: ${report.dominantEmotion}` };
   } catch {
     return { checkId: "cognition_state", passed: false, critical: true, detail: "Cognitive state engine not responsive" };
   }

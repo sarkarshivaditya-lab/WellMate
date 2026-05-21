@@ -101,8 +101,9 @@ function bindWebEvents(): void {
 
   // Poll for low-power mode via Battery API (best-effort)
   if ("getBattery" in navigator) {
-    (navigator as Navigator & { getBattery(): Promise<{ charging: boolean; level: number; addEventListener(e: string, fn: () => void): void }> })
-      .getBattery().then((battery) => {
+    // Battery Status API is deprecated but available on Chromium — use any cast for compat
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (navigator as any).getBattery().then((battery: { charging: boolean; level: number; addEventListener(e: string, fn: () => void): void }) => {
         const check = () => {
           const lpm = !battery.charging && battery.level <= 0.2;
           if (lpm !== _lowPowerMode) applyEvent(lpm ? "low_power_mode_on" : "low_power_mode_off");

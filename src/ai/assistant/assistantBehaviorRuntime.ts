@@ -18,7 +18,7 @@ import { runConsistencyValidation } from "./assistantConsistencyValidator";
 import { runLongSessionCheck, recordCoachingFrame } from "@/ai/cognition/longSessionStabilityGuard";
 import { emitCognitionEvent } from "@/ai/cognition/cognitionEventBus";
 import { getAssistantState } from "./assistantStateModel";
-import { AssistantSurface } from "./contextualBehaviorEngine";
+import type { AssistantSurface } from "./contextualBehaviorEngine";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

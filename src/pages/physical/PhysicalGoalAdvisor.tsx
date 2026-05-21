@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,8 +12,16 @@ export default function PhysicalGoalAdvisor() {
   const meals = useQuery(api.meals.getRecentMeals, { days: 7 });
   const profile = useLocalProfile();
 
-  // 1️⃣ Still loading meal history from Convex
-  if (meals === undefined) {
+  // On Android, Convex queries may hang if the backend is unreachable.
+  // After 4 seconds, treat an unresolved query as empty so the card renders.
+  const [queryResolved, setQueryResolved] = React.useState(false);
+  React.useEffect(() => {
+    if (meals !== undefined) { setQueryResolved(true); return; }
+    const t = setTimeout(() => setQueryResolved(true), 4000);
+    return () => clearTimeout(t);
+  }, [meals]);
+
+  if (!queryResolved) {
     return (
       <Card>
         <CardHeader>
@@ -27,9 +36,10 @@ export default function PhysicalGoalAdvisor() {
     );
   }
 
-  if (meals === null) return null;
+  // Treat null (no backend access) or undefined (timed out) as empty meal history
+  const safeMeals = meals ?? [];
 
-  // 2️⃣ No goal set in local profile
+  // No goal set in local profile
   const goal = profile?.goal;
   if (!goal) {
     return (
@@ -42,7 +52,7 @@ export default function PhysicalGoalAdvisor() {
   }
 
   const dayMap = new Map<string, number>();
-  meals.forEach((m) => {
+  safeMeals.forEach((m) => {
     dayMap.set(m.dateIso, (dayMap.get(m.dateIso) || 0) + m.totalCalories);
   });
 

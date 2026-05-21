@@ -21,7 +21,8 @@ import { getWellnessTrajectory } from "@/ai/wellness/wellnessTrajectoryEngine";
 import { getEmotionalContinuityReport } from "@/ai/cognition/emotionalContinuityEngine";
 import { getActiveGoalThreads } from "@/ai/cognition/goalThreadTracker";
 import { getAssistantState } from "./assistantStateModel";
-import { isSurfaceProactiveAllowed, AssistantSurface } from "./contextualBehaviorEngine";
+import { isSurfaceProactiveAllowed } from "./contextualBehaviorEngine";
+import type { AssistantSurface } from "./contextualBehaviorEngine";
 import { getPsychologicalSafetyScore } from "./psychologicalSafetyRuntime";
 import { getRecoveryOpportunityReport } from "@/ai/wellness/recoveryOpportunityDetector";
 import { getDisengagementPrediction } from "@/ai/wellness/disengagementPredictor";
@@ -34,7 +35,7 @@ export type SurfaceCognitionSignal = {
   surface: AssistantSurface;
   primaryInsight: string | null;          // 1 sentence, or null
   signalStrength: CognitionSignalStrength;
-  domainTrend: "improving" | "stable" | "declining" | "unknown";
+  domainTrend: "improving" | "stable" | "declining" | "volatile" | "unknown";
   proactiveAvailable: boolean;
   safetyScore: number;                    // 0-100
   actionableHint: string | null;          // optional coaching micro-hint
@@ -75,7 +76,7 @@ function sleepSignal(): SurfaceCognitionSignal {
   const trajectory = getWellnessTrajectory();
   const recovery = getRecoveryOpportunityReport();
   const sleepDomain = trajectory?.domains.find((d) => d.domain === "sleep");
-  const hasRecovery = recovery.opportunities.some((o) => o.category === "sleep_improvement");
+  const hasRecovery = recovery?.opportunities.some((o) => o.category === "sleep_improvement") ?? false;
 
   const primaryInsight = sleepDomain
     ? `Sleep is ${sleepDomain.direction} over the past ${sleepDomain.trend4wk.length} weeks.`
@@ -109,7 +110,7 @@ function exerciseSignal(): SurfaceCognitionSignal {
     domainTrend: (activityDomain?.direction as SurfaceCognitionSignal["domainTrend"]) ?? "unknown",
     proactiveAvailable: isSurfaceProactiveAllowed("exercise"),
     safetyScore: getPsychologicalSafetyScore(),
-    actionableHint: recovery.opportunities.some((o) => o.category === "physical_recovery")
+    actionableHint: recovery?.opportunities.some((o) => o.category === "physical_recovery")
       ? "Your body may be ready for gentle activity."
       : null,
     freshAt: Date.now(),
@@ -138,7 +139,7 @@ function habitsSignal(): SurfaceCognitionSignal {
   const trajectory = getWellnessTrajectory();
   const habitDomain = trajectory?.domains.find((d) => d.domain === "habits");
   const recovery = getRecoveryOpportunityReport();
-  const hasRestart = recovery.opportunities.some((o) => o.category === "habit_restart");
+  const hasRestart = recovery?.opportunities.some((o) => o.category === "habit_restart") ?? false;
 
   return {
     surface: "habits",

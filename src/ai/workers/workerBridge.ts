@@ -26,7 +26,7 @@ type PendingTask = {
   timeoutHandle: ReturnType<typeof setTimeout>;
 };
 
-type WorkerBridgeStatus = {
+export type WorkerBridgeStatus = {
   mode: "worker" | "inline";
   pendingTasks: number;
   totalCompleted: number;

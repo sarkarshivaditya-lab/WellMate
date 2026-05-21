@@ -77,7 +77,7 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
         max_tokens: maxTokens,
         temperature: Math.min(request.temperature, 0.9), // clamp: prevent incoherent outputs
         top_p: 0.9,          // nucleus sampling — natural, non-repetitive text
-        repeat_penalty: 1.1, // discourage looping phrases common in small models
+        penalty_repeat: 1.1, // discourage looping phrases common in small models
         stop: ["<|end|>", "<|endoftext|>", "<|im_end|>", "<|user|>"],
         stream: true,
         onData: (chunk) => {

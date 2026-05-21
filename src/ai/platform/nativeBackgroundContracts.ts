@@ -100,7 +100,7 @@ const MODEL_INTEGRITY_CONTRACT: BackgroundExecutionContract = {
     const report = getStorageHealthReport();
     if (signal.aborted) return { status: "cancelled", checkpoint: null };
 
-    return { status: "complete", summary: `integrity score: ${report.integrityScore}/100, quarantined: ${report.quarantinedCount}` };
+    return { status: "complete", summary: `integrity score: ${report.healthScore}/100, quarantined: ${report.quarantined.length}` };
   },
 };
 
@@ -141,7 +141,7 @@ const STORAGE_MAINTENANCE_CONTRACT: BackgroundExecutionContract = {
   async execute(_payload, signal): Promise<BackgroundExecutionResult> {
     if (signal.aborted) return { status: "cancelled", checkpoint: null };
     const report = getStorageHealthReport();
-    return { status: "complete", summary: `storage health ${report.integrityScore}/100 — maintenance complete` };
+    return { status: "complete", summary: `storage health ${report.healthScore}/100 — maintenance complete` };
   },
 };
 

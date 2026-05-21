@@ -149,7 +149,7 @@ export function getRecommendedContextWindow(): number {
 export function shouldEvictCache(): boolean {
   const pressurePct = _nCtx > 0 ? (_tokensUsed / _nCtx) * 100 : 0;
   const budget = getContextBudget();
-  return pressurePct > 90 || budget.currentTier === "critical";
+  return pressurePct > 90 || budget.tier === "critical";
 }
 
 // ── Report ────────────────────────────────────────────────────────────────────

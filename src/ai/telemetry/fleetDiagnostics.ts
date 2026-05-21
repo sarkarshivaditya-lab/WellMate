@@ -78,7 +78,7 @@ function deriveCapabilityTier(
   cap: RuntimeCapabilities | null,
   threading: ThreadingCapability,
 ): CapabilityTier {
-  const memGb = cap?.estimatedRamGb ?? 0;
+  const memGb = cap?.estimatedRamGB ?? 0;
   const multiThread = threading.mode === "multi_thread_eligible";
 
   if (memGb >= 8 && multiThread) return "tier_1";
@@ -123,7 +123,7 @@ export function getDeviceFingerprint(): DeviceFingerprint {
     platform: nav?.platform ?? "unknown",
     userAgent: (nav?.userAgent ?? "unknown").slice(0, 200),
     hardwareConcurrency: nav?.hardwareConcurrency ?? 0,
-    deviceMemoryGb: cap?.estimatedRamGb ?? null,
+    deviceMemoryGb: cap?.estimatedRamGB ?? null,
     screenWidth: scr?.width ?? 0,
     screenHeight: scr?.height ?? 0,
     pixelRatio: typeof devicePixelRatio !== "undefined" ? devicePixelRatio : 1,

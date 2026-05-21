@@ -18,8 +18,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { useEditableProfile } from "@/hooks/useEditableProfile";
-import { OnboardingPayload } from "@/data/local/onboardingPayload";
-import { HealthExtras } from "@/data/local/healthExtras";
+import type { OnboardingPayload } from "@/data/local/onboardingPayload";
+import type { HealthExtras } from "@/data/local/healthExtras";
 
 // ── Utilities (unchanged) ──────────────────────────────────────────────────────
 

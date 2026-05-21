@@ -14,8 +14,11 @@
 // The orchestrator records a pipeline trace per execution — visible in AIDevPanel.
 
 import { buildContextInjection } from "./continuousContextInjector";
+import type { ContextInjection } from "./continuousContextInjector";
 import { synthesizePrompt } from "./promptSynthesisEngine";
+import type { SynthesisOutput } from "./promptSynthesisEngine";
 import { analyzeResponse } from "./responseAnalysisPipeline";
+import type { ResponseAnalysis } from "./responseAnalysisPipeline";
 import { extractMemoryCandidates } from "./memoryExtractionEngine";
 import { runCognitionFeedbackLoop } from "./cognitionFeedbackLoop";
 import {
@@ -124,7 +127,7 @@ export async function executeWithCognition(
   try {
     // ── Stage 1: Context assembly ──────────────────────────────────────────────
     const ctxStart = Date.now();
-    let injection = { sections: [], totalTokens: 0, budgetTokens: 800, criticalTokens: 0, assembledAt: Date.now() };
+    let injection: ContextInjection = { sections: [], totalTokens: 0, budgetTokens: 800, criticalTokens: 0, assembledAt: Date.now() };
     let contextTokensUsed = 0;
     try {
       injection = buildContextInjection(800);
@@ -136,7 +139,7 @@ export async function executeWithCognition(
 
     // ── Stage 2: Prompt synthesis ──────────────────────────────────────────────
     const synthStart = Date.now();
-    let synthesized = { prompt: req.userMessage, systemPrompt: req.systemContext ?? "", tokenBudgetUsed: 0, sections: [], continuityFrame: null, contradictionsSuppressed: 0 };
+    let synthesized: SynthesisOutput = { prompt: req.userMessage, systemPrompt: req.systemContext ?? "", tokenBudgetUsed: 0, tokenBudgetTotal: 1200, sections: [], continuityFrame: null, contradictionsSuppressed: 0, synthesizedAt: Date.now() };
     try {
       synthesized = synthesizePrompt({
         userMessage: req.userMessage,
@@ -193,7 +196,7 @@ export async function executeWithCognition(
 
     // ── Stage 4: Response analysis ─────────────────────────────────────────────
     const analysisStart = Date.now();
-    let analysis = { requestId, emotionalSignals: { valence: 0, arousal: 0.3, dominantEmotion: "calm" }, unresolvedGoals: [], commitments: [], contradictions: [], memoryWorthyFacts: [], coachingOpportunities: [], motivationalShifts: [], analysisMs: 0 };
+    let analysis: ResponseAnalysis = { requestId, emotionalSignals: { valence: 0, arousal: 0.3, dominantEmotion: "calm" }, unresolvedGoals: [], commitments: [], contradictions: [], memoryWorthyFacts: [], coachingOpportunities: [], motivationalShifts: [], analysisMs: 0 };
     try {
       analysis = analyzeResponse({ requestId, userMessage: req.userMessage, responseText, tokensGenerated });
       stages.push({ stage: "response_analysis", durationMs: Date.now() - analysisStart, succeeded: true });

@@ -107,7 +107,7 @@ export async function getBatteryScheduleState(opts?: { refresh?: boolean }): Pro
     const { getDeviceProfile } = await import("../platform/deviceProfile");
     const profile = await getDeviceProfile();
     batteryPct = profile.batteryPct;
-    charging = profile.batteryCharging;
+    charging = profile.batteryCharging ?? false;
   } catch { /* non-fatal */ }
 
   const state = buildState(batteryPct, charging);

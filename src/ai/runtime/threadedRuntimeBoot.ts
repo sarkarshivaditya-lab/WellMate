@@ -142,7 +142,7 @@ export async function runThreadedBoot(opts: {
   _totalAttempts++;
 
   const decision = computeThreadScaleDecision();
-  const threadCount = opts.threadCount ?? decision.targetThreads;
+  const threadCount = opts.threadCount ?? decision.recommendedThreads;
   const negotiation = negotiateThreadAllocation(threadCount);
 
   const session: ThreadedBootSession = {
@@ -241,7 +241,7 @@ export function getThreadedBootStatus(): ThreadedBootStatus {
   let blockingReason: string | null = null;
   if (!isSabAvailable()) blockingReason = "SharedArrayBuffer unavailable";
   else if (!(self.crossOriginIsolated ?? false)) blockingReason = "COOP/COEP headers not active";
-  else if (computeThreadScaleDecision().targetThreads === 0) blockingReason = "thread count = 0 (thermal/policy)";
+  else if (computeThreadScaleDecision().recommendedThreads === 0) blockingReason = "thread count = 0 (thermal/policy)";
 
   return {
     lastSession: history[history.length - 1] ?? null,

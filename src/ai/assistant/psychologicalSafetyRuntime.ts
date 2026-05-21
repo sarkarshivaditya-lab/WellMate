@@ -60,8 +60,8 @@ function wellnessSafetyScore(): number {
 function memorySafetyScore(): number {
   const report = getSafetyGovernorReport();
   if (!report) return 80;  // no report yet = assume safe
-  const violations = report.violations?.length ?? 0;
-  const critical = report.violations?.filter((v: { severity: string }) => v.severity === "critical").length ?? 0;
+  const violations = report.violationHistory?.length ?? 0;
+  const critical = report.violationHistory?.filter((v: { severity: string }) => v.severity === "critical").length ?? 0;
   if (critical > 0) return 10;
   if (violations > 2) return 40;
   if (violations > 0) return 65;
@@ -111,15 +111,15 @@ export function getPsychologicalSafetyStatus(): PsychologicalSafetyStatus {
   const consReport = getLastConsistencyReport();
 
   for (const v of wellnessReport.activeViolations) activeRisks.push(`wellness:${v}`);
-  for (const v of (memReport?.violations ?? [])) {
-    activeRisks.push(`memory:${(v as { type: string }).type}`);
+  for (const v of (memReport?.violationHistory ?? [])) {
+    activeRisks.push(`memory:${v.kind}`);
   }
   for (const v of (consReport?.criticalViolations ?? [])) {
     activeRisks.push(`behavior:${v.type}`);
   }
 
   if (!wellnessReport.overallSafe) blockedBy = "wellness_safety_governor";
-  else if ((memReport?.violations ?? []).some((v: { severity: string }) => v.severity === "critical")) blockedBy = "memory_safety_governor";
+  else if ((memReport?.violationHistory ?? []).some((v: { severity: string }) => v.severity === "critical")) blockedBy = "memory_safety_governor";
   else if ((consReport?.criticalViolations ?? []).length > 0 && composite < 40) blockedBy = "consistency_validator";
 
   const verdict: SafetyVerdict =

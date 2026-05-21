@@ -43,13 +43,13 @@ export async function indexWellnessProfile(): Promise<void> {
     });
   }
 
-  if (profile.goal) {
-    const goalText = { lose: "lose weight", maintain: "maintain weight", gain: "gain weight" }[profile.goal] ?? profile.goal;
+  if (profile.weightGoal) {
+    const goalText = { lose: "lose weight", maintain: "maintain weight", gain: "gain weight" }[profile.weightGoal] ?? profile.weightGoal;
     texts.push({
       id: "profile_goal",
       scope: "wellness_logs",
       text: `User wellness goal: ${goalText}.`,
-      metadata: { goal: profile.goal },
+      metadata: { goal: profile.weightGoal },
     });
   }
 

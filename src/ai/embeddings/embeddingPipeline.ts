@@ -48,7 +48,7 @@ async function ensurePipeline(): Promise<Pipeline> {
   _loading = true;
   emitState({ status: "loading" });
 
-  _loadPromise = (async () => {
+  const prom: Promise<Pipeline> = (async () => {
     const { pipeline, env } = await import("@xenova/transformers");
 
     // Use quantized ONNX model for lower memory footprint on mobile
@@ -63,10 +63,12 @@ async function ensurePipeline(): Promise<Pipeline> {
     _pipe = pipe;
     _loading = false;
     emitState({ status: "ready", modelId: "Xenova/all-MiniLM-L6-v2" });
-    return pipe;
+    return pipe as unknown as Pipeline;
   })();
 
-  _loadPromise.catch((err: unknown) => {
+  _loadPromise = prom;
+
+  prom.catch((err: unknown) => {
     _loading = false;
     _pipe = null;
     emitState({
@@ -75,7 +77,7 @@ async function ensurePipeline(): Promise<Pipeline> {
     });
   });
 
-  return _loadPromise;
+  return prom;
 }
 
 // ── Metrics ────────────────────────────────────────────────────────────────────

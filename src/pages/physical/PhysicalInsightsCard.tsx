@@ -1,5 +1,6 @@
 // src/pages/physical/PhysicalInsightsCard.tsx
 
+import React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
@@ -58,13 +59,24 @@ export default function PhysicalInsightsCard() {
 
   const exercises7: DatedEntry[] = [];
 
-  // Block only on data queries — profile is local/immediate
-  if (
-    mealsToday === undefined ||
-    exercisesToday === undefined ||
-    sleep7 === undefined ||
-    meals7 === undefined
-  ) {
+  // On Android, Convex queries may never resolve if the backend is unreachable.
+  // After 4 seconds, treat any still-pending query as empty so the card renders.
+  const [queryResolved, setQueryResolved] = React.useState(false);
+  React.useEffect(() => {
+    if (
+      mealsToday !== undefined &&
+      meals7 !== undefined &&
+      exercisesToday !== undefined &&
+      sleep7 !== undefined
+    ) {
+      setQueryResolved(true);
+      return;
+    }
+    const t = setTimeout(() => setQueryResolved(true), 4000);
+    return () => clearTimeout(t);
+  }, [mealsToday, meals7, exercisesToday, sleep7]);
+
+  if (!queryResolved) {
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -79,14 +91,12 @@ export default function PhysicalInsightsCard() {
     );
   }
 
-  if (
-    mealsToday === null ||
-    exercisesToday === null ||
-    sleep7 === null ||
-    meals7 === null
-  ) {
-    return null;
-  }
+  // Treat null (no backend access) or undefined (timed out) as empty — card
+  // renders with available local-first data and graceful empty insights.
+  const safeMealsToday = mealsToday ?? [];
+  const safeMeals7 = meals7 ?? [];
+  const safeExercisesToday = exercisesToday ?? [];
+  const safeSleep7 = sleep7 ?? [];
 
   const userForScoring = profile
     ? {
@@ -103,12 +113,12 @@ export default function PhysicalInsightsCard() {
 
   const confidence = calculateConfidenceScore({
     user: userForScoring,
-    mealsLast7: meals7,
+    mealsLast7: safeMeals7,
     exercisesLast7: exercises7,
-    sleepLast7: sleep7,
-    mealsToday,
-    exercisesToday,
-    sleepToday: sleep7.filter((s) =>
+    sleepLast7: safeSleep7,
+    mealsToday: safeMealsToday,
+    exercisesToday: safeExercisesToday,
+    sleepToday: safeSleep7.filter((s) =>
       s.startIso?.startsWith(today),
     ),
   });
@@ -116,9 +126,9 @@ export default function PhysicalInsightsCard() {
   const decayedConfidence = applyConfidenceDecay({
     confidenceScore: confidence.confidenceScore,
     daysSinceLastLog: Math.min(
-      mealsToday.length === 0 ? 7 : 0,
-      exercisesToday.length === 0 ? 7 : 0,
-      sleep7.length === 0 ? 7 : 0,
+      safeMealsToday.length === 0 ? 7 : 0,
+      safeExercisesToday.length === 0 ? 7 : 0,
+      safeSleep7.length === 0 ? 7 : 0,
     ),
   });
 
@@ -134,9 +144,9 @@ export default function PhysicalInsightsCard() {
   const rankedInsights = rankPhysicalInsights({
     insights: physicalInsights,
     confidenceScore: confidence.confidenceScore,
-    hasMeals: mealsToday.length > 0,
-    hasExercise: exercisesToday.length > 0,
-    hasSleep: sleep7.length > 0,
+    hasMeals: safeMealsToday.length > 0,
+    hasExercise: safeExercisesToday.length > 0,
+    hasSleep: safeSleep7.length > 0,
     hasProfile: Boolean(
       profile?.heightCm && profile?.weightKg && profile?.activityLevel && profile?.goal,
     ),
@@ -162,6 +172,21 @@ export default function PhysicalInsightsCard() {
   );
 
   /* ---------- RENDER ---------- */
+
+  if (finalInsights.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Health Insights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Start logging meals, exercise, and sleep to unlock personalised health insights.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

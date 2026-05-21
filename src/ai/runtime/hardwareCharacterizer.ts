@@ -10,7 +10,8 @@
 //   - thermalRecoveryRateMs: how long does the device take to cool down?
 //   - heavySessionRisk: is this session at risk of thermal throttling?
 
-import { getThermalState, getInferenceRate, type ThermalState } from "./thermalGuard";
+import { getThermalState, getInferenceRate } from "./thermalGuard";
+import type { ThermalState } from "./types";
 
 const THERMAL_LOG_KEY = "ai_thermal_trend_v1";
 const BATTERY_LOG_KEY = "ai_battery_drain_v1";

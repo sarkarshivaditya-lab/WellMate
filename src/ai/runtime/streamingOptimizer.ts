@@ -11,7 +11,7 @@
 //   llama → stuckGuard.wrappedOnToken → optimizer.wrappedOnToken → UI onToken
 // stuckGuard resets its watchdog on every real token; optimizer paces UI delivery.
 
-import type { GovernorPolicy } from "./runtimeGovernor";
+import type { RuntimePolicy } from "./runtimeGovernor";
 import { getThermalState } from "./thermalGuard";
 
 export type OptimizedStreamHandle = {
@@ -30,7 +30,7 @@ export type StreamStats = {
 
 type OptimizerOptions = {
   onToken: (token: string) => void;
-  policy: GovernorPolicy;
+  policy: RuntimePolicy;
   thermal?: string;
 };
 

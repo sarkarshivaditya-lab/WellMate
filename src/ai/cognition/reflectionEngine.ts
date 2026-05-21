@@ -191,8 +191,8 @@ function detectEngagementShift(): ReflectionEntry | null {
   if (traces.length < 5) return null;
 
   const qualityScores = traces.map((t) => (t.responseQuality === "high" ? 1 : t.responseQuality === "medium" ? 0.5 : 0));
-  const recentAvg = qualityScores.slice(-3).reduce((s, v) => s + v, 0) / 3;
-  const olderAvg = qualityScores.slice(0, 3).reduce((s, v) => s + v, 0) / 3;
+  const recentAvg = qualityScores.slice(-3).reduce((s: number, v) => s + v, 0) / 3;
+  const olderAvg = qualityScores.slice(0, 3).reduce((s: number, v) => s + v, 0) / 3;
   const delta = recentAvg - olderAvg;
 
   if (Math.abs(delta) < 0.2) return null;

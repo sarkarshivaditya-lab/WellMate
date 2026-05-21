@@ -55,8 +55,11 @@ export async function getSessionHealth(): Promise<SessionHealthReport> {
   const recommendations: string[] = [];
 
   const profilerSnap = getDetailedSnapshot();
-  const memoryPressureLevel = profilerSnap.memoryPressure?.level ?? null;
-  if (memoryPressureLevel === "high") {
+  const memoryRatio = profilerSnap.memory?.ratio ?? 0;
+  const memoryPressureLevel: string | null = profilerSnap.memory
+    ? memoryRatio > 0.85 ? "high" : memoryRatio > 0.7 ? "moderate" : "low"
+    : null;
+  if (memoryRatio > 0.85) {
     issues.push("High heap memory pressure");
     recommendations.push("Reduce inference frequency or reload the page");
   }

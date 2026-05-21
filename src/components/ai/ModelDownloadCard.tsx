@@ -4,7 +4,7 @@
 // emergency disable, Wi-Fi advisory, and error/recovery flows.
 
 import React from "react";
-import { Sparkles, Brain, AlertCircle, X, RefreshCw, ArrowUp, WifiOff, AlertTriangle } from "lucide-react";
+import { Sparkles, Brain, AlertCircle, X, RefreshCw, ArrowUp, WifiOff, AlertTriangle, Pause } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getRecommendedManifest } from "@/ai/models/modelRegistry";
@@ -67,6 +67,11 @@ export function ModelDownloadCard() {
   const [wifiConfirmPending, setWifiConfirmPending] = React.useState(false);
   const [migrationStage, setMigrationStage] = React.useState<string | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  // Tracks whether a user-controlled download is active. Guards the
+  // subscribeToModelLoad callback from calling handleAutoActivate prematurely.
+  const isDownloadingRef = React.useRef(false);
+  // "pause" preserves partial data; "cancel" deletes it and resets to idle.
+  const cancelIntentRef = React.useRef<"pause" | "cancel" | null>(null);
   const runtime = useAIRuntime();
 
   // ── Lifecycle subscription ────────────────────────────────────────────────
@@ -194,7 +199,11 @@ export function ModelDownloadCard() {
       } else if (state.phase === "verifying") {
         setProgressPct(99);
       } else if (state.phase === "not_loaded") {
-        void handleAutoActivate(manifest);
+        // Don't auto-activate while a user-controlled download is running —
+        // the startDownload .then() handler owns activation in that case.
+        if (!isDownloadingRef.current) {
+          void handleAutoActivate(manifest);
+        }
       } else if (state.phase === "failed") {
         const s = state as Extract<ModelLoadState, { phase: "failed" }>;
         setErrorReason(s.reason);
@@ -247,16 +256,44 @@ export function ModelDownloadCard() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    isDownloadingRef.current = true;
 
-    downloadAndStoreModel(targetManifest, controller.signal).catch((err) => {
-      if (controller.signal.aborted) {
-        setPhase(resumeBytes > 0 ? "install_resumable" : "install_idle");
-      } else {
+    downloadAndStoreModel(targetManifest, controller.signal)
+      .then(async () => {
+        isDownloadingRef.current = false;
+        abortRef.current = null;
+        const intent = cancelIntentRef.current;
+        cancelIntentRef.current = null;
+
+        if (controller.signal.aborted) {
+          if (intent === "cancel") {
+            // Full cancel — delete partial data and return to idle state
+            await deleteStoredModel(targetManifest).catch(() => null);
+            setPhase("install_idle");
+            setProgressPct(0);
+            setResumeBytes(0);
+          } else {
+            // Pause — chunks saved in storage; compute current resume offset
+            const saved = await getPartialDownloadBytes(targetManifest).catch(() => 0);
+            const savedPct = targetManifest.sizeBytes > 0
+              ? Math.round((saved / targetManifest.sizeBytes) * 100)
+              : 0;
+            setResumeBytes(saved);
+            setProgressPct(savedPct);
+            setPhase(saved > 0 ? "install_resumable" : "install_idle");
+          }
+        } else {
+          // Download completed and verified — activate the model
+          void handleAutoActivate(targetManifest);
+        }
+      })
+      .catch((err) => {
+        isDownloadingRef.current = false;
+        abortRef.current = null;
+        cancelIntentRef.current = null;
         setErrorReason(err instanceof Error ? err.message : "Download failed");
         setPhase("error");
-      }
-      abortRef.current = null;
-    });
+      });
   }
 
   async function startMigration(targetManifest: ModelManifest) {
@@ -266,6 +303,7 @@ export function ModelDownloadCard() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    isDownloadingRef.current = true;
 
     try {
       await performMigration(targetManifest, { signal: controller.signal });
@@ -277,11 +315,18 @@ export function ModelDownloadCard() {
         setPhase("update_available");
       }
     } finally {
+      isDownloadingRef.current = false;
       abortRef.current = null;
     }
   }
 
-  function handleCancel() {
+  function handlePause() {
+    cancelIntentRef.current = "pause";
+    abortRef.current?.abort();
+  }
+
+  function handleCancelDownload() {
+    cancelIntentRef.current = "cancel";
     abortRef.current?.abort();
   }
 
@@ -361,14 +406,37 @@ export function ModelDownloadCard() {
               <span className="text-[11.5px] text-muted-foreground/40 tabular-nums">
                 {progressPct}%
               </span>
-              <button
-                type="button"
-                onClick={handleCancel}
-                aria-label="Pause"
-                className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              {phase === "downloading" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePause}
+                    aria-label="Pause download"
+                    title="Pause"
+                    className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
+                  >
+                    <Pause className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelDownload}
+                    aria-label="Cancel download"
+                    title="Cancel"
+                    className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { abortRef.current?.abort(); }}
+                  aria-label="Cancel migration"
+                  className="text-muted-foreground/25 hover:text-muted-foreground/55 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="h-0.5 w-full bg-border/15 rounded-full overflow-hidden">
@@ -443,7 +511,7 @@ export function ModelDownloadCard() {
             <Button
               size="sm"
               onClick={() => requestDownload(target).then(() => {
-                if (phase !== "wifi_advisory") startMigration(target);
+                startMigration(target);
               })}
               className="text-[12.5px]"
             >

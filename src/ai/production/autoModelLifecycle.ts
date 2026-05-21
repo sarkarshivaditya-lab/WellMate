@@ -135,7 +135,7 @@ async function tryAutoDownload(): Promise<void> {
   if (currentLoadState.phase === "downloading") return;
 
   try {
-    await downloadAndStoreModel(manifest, () => {});
+    await downloadAndStoreModel(manifest);
     const state = loadPersistedState();
     state.downloadedModelId = manifest.id;
     state.downloadedAt = Date.now();
@@ -176,7 +176,8 @@ export function initAutoModelLifecycle(): void {
 
   watchLoadStateForCrash();
 
-  // Check crash recovery state — if within limit, attempt load from stored model
+  // Check crash recovery state — if within limit, attempt load from stored model.
+  // This only activates a model that is ALREADY downloaded, never initiates a download.
   const state = loadPersistedState();
   if (state.crashRecoveries < MAX_CRASH_RECOVERIES) {
     void tryLoadModel();
@@ -184,9 +185,9 @@ export function initAutoModelLifecycle(): void {
     _degraded = true;
   }
 
-  // Deferred wifi+idle check — don't download in the critical startup path
-  const t = setTimeout(() => void tryAutoDownload(), WIFI_IDLE_CHECK_DELAY_MS);
-  _pendingTimeouts.push(t);
+  // Auto-download intentionally removed: downloads must be initiated by explicit
+  // user action via ModelDownloadCard. Silently starting a large download is
+  // disruptive on Android (cellular data, battery, storage space).
 }
 
 export function getAutoModelLifecycleReport(): AutoModelLifecycleReport {

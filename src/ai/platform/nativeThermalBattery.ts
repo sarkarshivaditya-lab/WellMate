@@ -17,17 +17,18 @@
 //
 // Escalation prediction: if thermal has risen 2+ levels in last 4 samples → at risk
 
-import { getThermalState, type ThermalState } from "../runtime/thermalGuard";
+import { getThermalState } from "../runtime/thermalGuard";
+import type { ThermalState } from "../runtime/types";
 import { getThermalTrend } from "../runtime/hardwareCharacterizer";
 import { getThermalPlugin, getBatteryPlugin } from "./nativePluginContracts";
-import type { CognitionQualityTier } from "../cognition/cognitionScaler";
+import type { CognitionQuality } from "../cognition/cognitionScaler";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type ThermalRisk = "low" | "moderate" | "high" | "critical";
 
 export type ChargingPolicy = {
-  recommended: CognitionQualityTier;
+  recommended: CognitionQuality;
   reason: string;
   allowHeavySessions: boolean;
 };

@@ -155,7 +155,7 @@ class WebPlatformAdapter implements NativePlatformInterface {
     }
 
     const show = () => {
-      new Notification(opts.title, { body: opts.body, badge: opts.badge });
+      new Notification(opts.title, { body: opts.body });
     };
 
     if (opts.scheduledAt && opts.scheduledAt > new Date()) {

@@ -20,7 +20,7 @@ import {
 } from "./reflectionStore";
 import type { ReflectionType } from "./reflectionStore";
 import { retrievalBridge } from "../retrieval/retrievalBridge";
-import { serializeSummaryForPrompt } from "../memory/longitudinalSummary";
+import { serializeSummaryForPrompt, getLongitudinalSummary } from "../memory/longitudinalSummary";
 import { assistantRequest } from "../assistant/unifiedAssistantOrchestrator";
 
 export type ReflectionResult = {
@@ -79,7 +79,8 @@ export async function generateDailyReflection(
   // Assemble grounding context
   const parts: string[] = [];
 
-  const summaryText = serializeSummaryForPrompt();
+  const longitudinalSummary = getLongitudinalSummary();
+  const summaryText = longitudinalSummary ? serializeSummaryForPrompt(longitudinalSummary) : null;
   if (summaryText) parts.push(summaryText);
 
   const retrieved = await retrievalBridge.query({

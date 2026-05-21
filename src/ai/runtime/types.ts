@@ -17,7 +17,7 @@ export type ModelLoadStatus =
   | "failed"
   | "unloading";
 
-export type ThermalState = "nominal" | "warm" | "hot" | "critical";
+export type ThermalState = "nominal" | "warm" | "hot" | "critical" | "emergency";
 
 export type ProviderType = "local" | "openai" | "claude" | "stub";
 

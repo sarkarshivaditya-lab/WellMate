@@ -15,12 +15,12 @@
 //   import { guardedRequest } from "@/ai/production/productionInferenceBridge";
 //   const response = await guardedRequest(message, { surface: "habits" });
 
-import { assistantRequest, AssistantRequestOptions, AssistantResponse } from "@/ai/assistant/unifiedAssistantOrchestrator";
-import { getAssistantOrchestratorReport } from "@/ai/assistant/unifiedAssistantOrchestrator";
+import { assistantRequest, getAssistantOrchestratorReport } from "@/ai/assistant/unifiedAssistantOrchestrator";
+import type { AssistantRequestOptions, AssistantResponse } from "@/ai/assistant/unifiedAssistantOrchestrator";
 import { getInferenceWorkerBridgeState } from "@/ai/workers/inferenceWorkerBridge";
 import { canExecuteInferenceNow } from "@/ai/platform/mobileExecutionHardener";
 import { assertPsychologicalSafety } from "@/ai/assistant/psychologicalSafetyRuntime";
-import { AssistantSurface } from "@/ai/assistant/contextualBehaviorEngine";
+import type { AssistantSurface } from "@/ai/assistant/contextualBehaviorEngine";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

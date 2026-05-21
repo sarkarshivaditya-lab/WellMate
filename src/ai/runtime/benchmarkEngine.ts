@@ -176,9 +176,9 @@ async function runBenchmark(
       let contextSuffix = "";
       try {
         const { retrievalBridge } = await import("@/ai/retrieval/retrievalBridge");
-        const chunks = await retrievalBridge.query(prompt, { topK: 5, minScore: 0.1 });
-        contextSuffix = chunks.length
-          ? `\n\nContext:\n${chunks.map((c) => c.content).join("\n---\n")}`
+        const result = await retrievalBridge.query({ text: prompt, scope: ["all"], topK: 5, minScore: 0.1 });
+        contextSuffix = result.chunks.length
+          ? `\n\nContext:\n${result.chunks.map((c) => c.content).join("\n---\n")}`
           : "";
       } catch { /* retrieval not available — benchmark just inference */ }
       const retrievalMs = Date.now() - retrievalStart;

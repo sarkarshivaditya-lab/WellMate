@@ -9,7 +9,8 @@ import type {
   MemoryDomain,
 } from "@/intelligence/memory/types";
 import type { WellnessContext } from "@/intelligence/wellnessScore";
-import type { Citation, ConfidenceLevel } from "./types";
+import type { Citation } from "./types";
+import type { ConfidenceLevel } from "@/intelligence/memory/types";
 
 // ConfidenceLevel re-exported for convenience; imported from types above
 type _ConfidenceLevel = ConfidenceLevel; // used below to satisfy stricter inference

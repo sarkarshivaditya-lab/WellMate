@@ -15,6 +15,7 @@ import { getBridgeStatus } from "@/ai/providers/local/llamaBridge";
 import {
   getLongitudinalSummary,
   generateLongitudinalSummary,
+  serializeSummaryForPrompt,
   isSummaryStale,
 } from "@/ai/memory/longitudinalSummary";
 import {
@@ -25,7 +26,8 @@ import {
 import { getThermalState, getInferenceRate, resetThermal } from "@/ai/runtime/thermalGuard";
 import { validateModelIntegrity } from "@/ai/providers/local/modelLoader";
 import { getRecommendedManifest } from "@/ai/models/modelRegistry";
-import { getManifestResult, getReleaseChannel, setReleaseChannel, getRolloutSeed, type ReleaseChannel as ReleaseChannelType } from "@/ai/models/remoteManifest";
+import { getManifestResult, getReleaseChannel, setReleaseChannel, getRolloutSeed } from "@/ai/models/remoteManifest";
+import type { ReleaseChannel as ReleaseChannelType } from "@/ai/providers/local/modelMetadata";
 import { getDeviceProfile, type DeviceProfile } from "@/ai/platform/deviceProfile";
 import { evaluateModelUpdate, type UpdateEvaluation } from "@/ai/models/modelUpdateService";
 import { getStorageInventory, evictInactiveModels, type StorageInventory } from "@/ai/storage/storageAccountant";
@@ -43,7 +45,6 @@ import {
   clearReflection,
 } from "@/ai/reflection/reflectionStore";
 import { generateDailyReflection } from "@/ai/reflection/reflectionEngine";
-import { serializeSummaryForPrompt } from "@/ai/memory/longitudinalSummary";
 import { cn } from "@/lib/utils";
 import {
   getWorkerHealth,
@@ -51,8 +52,8 @@ import {
   spawnWorker,
   restartWorker,
   cleanupOrphanedWorkers,
-  type WorkerHealthReport,
 } from "@/ai/workers/workerOrchestrator";
+import type { WorkerHealthReport } from "@/ai/workers/workerContracts";
 import { getLifecycleState, subscribeToLifecycle, type AppLifecycleState } from "@/ai/runtime/appLifecycle";
 import { getCognitionProfile, subscribeToCognitionProfile, type CognitionProfile } from "@/ai/cognition/cognitionScaler";
 import { getBatteryScheduleState, getBatteryScheduleStateSync, type BatteryScheduleState } from "@/ai/runtime/batteryScheduler";
@@ -520,10 +521,10 @@ function StructuredTestsCard() {
       }
 
       if (id === "weekly") {
-        const { serializeSummaryForPrompt, getLongitudinalSummary, generateLongitudinalSummary } = await import("@/ai/memory/longitudinalSummary");
-        let summary = getLongitudinalSummary();
+        const { serializeSummaryForPrompt: _ssp, getLongitudinalSummary: _gls, generateLongitudinalSummary } = await import("@/ai/memory/longitudinalSummary");
+        let summary = _gls();
         if (!summary) summary = generateLongitudinalSummary();
-        const summaryText = serializeSummaryForPrompt();
+        const summaryText = summary ? _ssp(summary) : "";
         const controller = new AbortController();
         const r = await submitInference({
           id: crypto.randomUUID(),
@@ -987,22 +988,22 @@ function RuntimeGovernorCard() {
                   {profilerSnap.p90LatencyMs > 0 ? `${profilerSnap.p90LatencyMs}ms` : "—"}
                 </p>
               </div>
-              {profilerSnap.memoryPressure && (
+              {profilerSnap.memory && (
                 <div className="space-y-0.5">
                   <p className="text-muted-foreground">Heap pressure</p>
                   <p className={cn(
                     "font-mono text-[11px]",
-                    profilerSnap.memoryPressure.level === "high" ? "text-red-500" :
-                    profilerSnap.memoryPressure.level === "moderate" ? "text-amber-500" :
+                    profilerSnap.memory.ratio > 0.85 ? "text-red-500" :
+                    profilerSnap.memory.ratio > 0.7 ? "text-amber-500" :
                     "text-emerald-600",
                   )}>
-                    {profilerSnap.memoryPressure.level} ({(profilerSnap.memoryPressure.ratio * 100).toFixed(0)}%)
+                    {profilerSnap.memory.ratio > 0.85 ? "high" : profilerSnap.memory.ratio > 0.7 ? "moderate" : "low"} ({(profilerSnap.memory.ratio * 100).toFixed(0)}%)
                   </p>
                 </div>
               )}
               <div className="space-y-0.5">
                 <p className="text-muted-foreground">Sample count</p>
-                <p className="font-mono text-foreground/70">{profilerSnap.sampleCount}</p>
+                <p className="font-mono text-foreground/70">{profilerSnap.totalProfiled}</p>
               </div>
             </div>
           </div>
@@ -1215,7 +1216,8 @@ function IntelligenceObservabilityCard() {
   }
 
   function handleContextPreview() {
-    const summaryText = serializeSummaryForPrompt();
+    const longitudinalSummary = getLongitudinalSummary();
+    const summaryText = longitudinalSummary ? serializeSummaryForPrompt(longitudinalSummary) : null;
     setContextPreview(summaryText ?? "(no summary available)");
   }
 
@@ -5002,7 +5004,7 @@ function CognitionFeedbackLoopCard() {
   );
 }
 
-function SemanticMemoryExplorerCard() {
+function SemanticMemoryGraphCard() {
   const [report, setReport] = React.useState<SemanticMemoryReport>(() => getSemanticMemoryReport());
   const [computing, setComputing] = React.useState(false);
   const handleCompute = async () => {
@@ -5010,7 +5012,7 @@ function SemanticMemoryExplorerCard() {
     try {
       const { retrieveMemory } = await import("@/ai/memory/memoryHierarchy");
       const { computeSemanticMemoryReport } = await import("@/ai/cognition/semanticMemoryEngine");
-      const entries = retrieveMemory({ tiers: [3, 4], limit: 50 });
+      const entries = retrieveMemory({ maxTier: 4, limit: 50 });
       setReport(computeSemanticMemoryReport(entries));
     } finally {
       setComputing(false);
@@ -6343,7 +6345,7 @@ export function AIDevPanel() {
       <EmotionalContinuityGraphCard />
       <ContextInjectionAnalyzerCard />
       <CognitionFeedbackLoopCard />
-      <SemanticMemoryExplorerCard />
+      <SemanticMemoryGraphCard />
       <CognitiveCoherenceDashboardCard />
       <WellnessTrajectoryMonitorCard />
       <DisengagementRiskAnalyzerCard />

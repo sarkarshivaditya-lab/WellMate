@@ -114,7 +114,7 @@ function tokenOverlap(a: string, b: string): number {
 
 function isDuplicate(candidate: string): boolean {
   try {
-    const existing = retrieveMemory({ tiers: [2, 3, 4], limit: 30 });
+    const existing = retrieveMemory({ maxTier: 4, limit: 30 });
     return existing.some((e) => tokenOverlap(e.content, candidate) > 0.75);
   } catch {
     return false;
@@ -123,7 +123,7 @@ function isDuplicate(candidate: string): boolean {
 
 function findContradiction(candidate: string): string | undefined {
   try {
-    const existing = retrieveMemory({ tiers: [3, 4], limit: 20 });
+    const existing = retrieveMemory({ maxTier: 4, limit: 20 });
     const ANTONYM_PAIRS: [string, string][] = [
       ["never exercise", "exercise regularly"],
       ["can't sleep", "sleep well"],

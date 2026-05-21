@@ -188,7 +188,7 @@ const VALIDATION_SUITE: ValidationTest[] = [
     const report = getMemoryGovernorReport();
     if (report.currentTier === "critical") return { status: "fail", detail: "memory tier critical — inference unsafe" };
     if (report.currentTier === "tight") return { status: "warning", detail: "memory tier tight — reduce n_ctx" };
-    return { status: "pass", detail: `memory tier: ${report.currentTier}, budget nCtx: ${report.contextBudget.recommendedNCtx}` };
+    return { status: "pass", detail: `memory tier: ${report.currentTier}, budget nCtx: ${report.recommendedNCtx}` };
   }),
 
   makeTest("heap_fragmentation", "Heap Fragmentation", "memory_safety", 5, async () => {
@@ -220,9 +220,9 @@ const VALIDATION_SUITE: ValidationTest[] = [
 
   makeTest("storage_integrity", "Storage Integrity", "storage", 6, async () => {
     const report = getStorageHealthReport();
-    if (report.integrityScore < 50) return { status: "fail", detail: `integrity score ${report.integrityScore}/100 — ${report.quarantinedCount} quarantined` };
-    if (report.integrityScore < 80) return { status: "warning", detail: `integrity score ${report.integrityScore}/100` };
-    return { status: "pass", detail: `integrity score ${report.integrityScore}/100` };
+    if (report.healthScore < 50) return { status: "fail", detail: `integrity score ${report.healthScore}/100 — ${report.quarantined.length} quarantined` };
+    if (report.healthScore < 80) return { status: "warning", detail: `integrity score ${report.healthScore}/100` };
+    return { status: "pass", detail: `integrity score ${report.healthScore}/100` };
   }),
 
   // ── Deployment ──────────────────────────────────────────────────────────────
@@ -327,6 +327,6 @@ export function getDeploymentReadinessScore(): number {
   const coopOk = getCoopCoepStatus().sabDeploymentGate === "open" ? 20 : 0;
   const memOk = getMemoryGovernorReport().currentTier !== "critical" ? 20 : 0;
   const thermalOk = !["critical", "emergency"].includes(getThermalState()) ? 20 : 0;
-  const storageOk = getStorageHealthReport().integrityScore > 70 ? 20 : 0;
+  const storageOk = getStorageHealthReport().healthScore > 70 ? 20 : 0;
   return sabOk + coopOk + memOk + thermalOk + storageOk;
 }

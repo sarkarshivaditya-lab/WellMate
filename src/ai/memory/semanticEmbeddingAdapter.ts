@@ -20,6 +20,7 @@
 
 import type { MemoryEntry } from "./memoryHierarchy";
 import { computeSemanticSimilarity, detectContradictions, groupByConceptualSimilarity } from "@/ai/cognition/semanticMemoryEngine";
+import type { MemoryRelationKind } from "@/ai/cognition/semanticMemoryEngine";
 import { embedText, isEmbeddingReady } from "@/ai/embeddings/embeddingPipeline";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ export function conceptualRecall(query: string, entries: MemoryEntry[], topK = 5
   return results.slice(0, topK);
 }
 
-export function groupContradictions(entries: MemoryEntry[]): Array<{ a: MemoryEntry; b: MemoryEntry; reason: string }> {
+export function groupContradictions(entries: MemoryEntry[]): Array<{ a: MemoryEntry; b: MemoryEntry; reason: MemoryRelationKind }> {
   const contradictions = detectContradictions(entries);
   const entryMap = new Map(entries.map((e) => [e.id, e]));
 
@@ -231,7 +232,7 @@ export function groupContradictions(entries: MemoryEntry[]): Array<{ a: MemoryEn
       if (!a || !b) return null;
       return { a, b, reason: c.kind };
     })
-    .filter((x): x is { a: MemoryEntry; b: MemoryEntry; reason: string } => x !== null);
+    .filter((x): x is { a: MemoryEntry; b: MemoryEntry; reason: MemoryRelationKind } => x !== null);
 }
 
 export function semanticDeduplicate(entries: MemoryEntry[], threshold = 0.85): MemoryEntry[] {

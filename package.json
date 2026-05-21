@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "prettier-fix": "prettier --write .",
-    "prettier-check": "prettier --check ."
+    "prettier-check": "prettier --check .",
+    "generate-icons": "capacitor-assets generate --android --iconBackgroundColor '#FFFFFF' --iconBackgroundColorDark '#111E1C'"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.0.0",
@@ -78,6 +79,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@convex-dev/eslint-plugin": "^1.0.0",
     "@eslint/js": "^9.39.1",
     "@rolldown/pluginutils": "1.0.0-beta.55",

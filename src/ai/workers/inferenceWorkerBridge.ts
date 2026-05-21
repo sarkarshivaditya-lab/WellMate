@@ -101,7 +101,7 @@ function createSlot(slotId: string): void {
 
   const config: WorkerInitConfig = {
     workerId,
-    threadCount: computeThreadScaleDecision().targetThreads,
+    threadCount: computeThreadScaleDecision().recommendedThreads,
     maxTokens: 256, nCtx: 2048, temperature: 0.7, topP: 0.9, repeatPenalty: 1.1,
   };
   worker.postMessage({ type: "init", config });
@@ -274,7 +274,7 @@ function notifyListeners(): void {
 export function initInferenceWorkerBridge(): void {
   if (_initialized) return;
   _initialized = true;
-  const slotCount = isMultiThreadEligible() ? Math.min(computeThreadScaleDecision().targetThreads, 2) : 1;
+  const slotCount = isMultiThreadEligible() ? Math.min(computeThreadScaleDecision().recommendedThreads, 2) : 1;
   for (let i = 0; i < Math.max(1, slotCount); i++) createSlot(nextSlotId());
 }
 

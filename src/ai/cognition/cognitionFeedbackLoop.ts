@@ -139,10 +139,10 @@ function updateUserModel(analysis: ResponseAnalysis): boolean {
   const { valence } = analysis.emotionalSignals;
 
   if (analysis.commitments.length > 0) {
-    recordUserEvidence({ dimension: "motivation", observation: "commitment_detected", value: 0.7, weight: 0.6, timestamp: Date.now() });
+    recordUserEvidence({ dimension: "motivation_level", observation: "commitment_detected", value: 0.7, weight: 0.6, timestamp: Date.now() });
   }
   if (analysis.coachingOpportunities.includes("motivational recovery")) {
-    recordUserEvidence({ dimension: "motivation", observation: "struggle_signal", value: 0.2, weight: 0.5, timestamp: Date.now() });
+    recordUserEvidence({ dimension: "motivation_level", observation: "struggle_signal", value: 0.2, weight: 0.5, timestamp: Date.now() });
   }
   if (valence > 0.4) {
     recordUserEvidence({ dimension: "engagement_depth", observation: "positive_response", value: 0.7, weight: 0.4, timestamp: Date.now() });

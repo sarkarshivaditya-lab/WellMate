@@ -1,17 +1,12 @@
 import React from "react";
-import {
-  readOnboardingPayload,
-  OnboardingPayload,
-} from "@/data/local/onboardingPayload";
+import { readOnboardingPayload } from "@/data/local/onboardingPayload";
+import type { OnboardingPayload } from "@/data/local/onboardingPayload";
 import {
   saveProfilePatch,
   subscribeToProfileUpdates,
 } from "@/data/local/profileEditor";
-import {
-  readHealthExtras,
-  saveHealthExtras,
-  HealthExtras,
-} from "@/data/local/healthExtras";
+import { readHealthExtras, saveHealthExtras } from "@/data/local/healthExtras";
+import type { HealthExtras } from "@/data/local/healthExtras";
 import { appendWeightEntry } from "@/data/local/weightHistory";
 
 export function useEditableProfile() {

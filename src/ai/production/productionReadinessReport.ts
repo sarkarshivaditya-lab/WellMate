@@ -81,8 +81,8 @@ function scoreInference(): SubsystemReadiness {
     risks.push(`Bypass audit: ~${bypass.estimatedBypasses} direct inference calls detected (${(bypass.bypassRatio * 100).toFixed(0)}% bypass rate)`);
   }
 
-  if (throughput && throughput.p50TokPerSec < 2) {
-    risks.push(`Low throughput: p50 = ${throughput.p50TokPerSec.toFixed(1)} tok/s — mobile experience may be poor`);
+  if (throughput && throughput.avgTokPerSec < 2) {
+    risks.push(`Low throughput: avg = ${throughput.avgTokPerSec.toFixed(1)} tok/s — mobile experience may be poor`);
   }
 
   let score = 100;
@@ -107,14 +107,14 @@ function scoreCognition(): SubsystemReadiness {
   const highUncertainty = Object.values(emotional.profile.dimensions).filter((d) => d.uncertainty > 0.85).length;
   if (highUncertainty >= 4) risks.push(`${highUncertainty} emotional dimensions have very high uncertainty`);
 
-  if (coherence && coherence.score < 50) risks.push(`Cognitive coherence score low: ${coherence.score}/100`);
-  if (goals.totalThreads === 0) risks.push("No goal threads — assistant has no wellness context for the user");
+  if (coherence && coherence.overallScore < 50) risks.push(`Cognitive coherence score low: ${coherence.overallScore}/100`);
+  if (goals.topThreads.length === 0) risks.push("No goal threads — assistant has no wellness context for the user");
 
   const score = Math.min(100,
     (memory.totalItems > 0 ? 30 : 0) +
-    (goals.totalThreads > 0 ? 20 : 0) +
+    (goals.topThreads.length > 0 ? 20 : 0) +
     (highUncertainty < 3 ? 25 : 10) +
-    ((coherence?.score ?? 80) * 0.25),
+    ((coherence?.overallScore ?? 80) * 0.25),
   );
 
   return { id: "cognition", score: Math.round(score), grade: score >= 70 ? "ready" : score >= 40 ? "degraded" : "critical", blockers, risks };

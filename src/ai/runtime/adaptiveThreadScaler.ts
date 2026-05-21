@@ -13,7 +13,8 @@
 
 import { getThreadingCapability } from "./threadingCapability";
 import { getCurrentPolicy, type RuntimeMode } from "./runtimeGovernor";
-import { getThermalState, type ThermalState } from "./thermalGuard";
+import { getThermalState } from "./thermalGuard";
+import type { ThermalState } from "./types";
 import { getBatteryScheduleStateSync } from "./batteryScheduler";
 
 const SCALE_HISTORY_KEY = "ai_thread_scale_history_v1";

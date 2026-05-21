@@ -20,10 +20,11 @@ import { checkInterventionSafety, recordInterventionDelivered as recordSafetyDel
 import { evaluateInterventionTiming, recordInterventionDelivered as recordTimingDelivery } from "@/ai/wellness/interventionTimingEngine";
 import { synthesizeProactiveInsights } from "@/ai/wellness/proactiveInsightSynthesizer";
 import { detectRecoveryOpportunities } from "@/ai/wellness/recoveryOpportunityDetector";
-import { isSurfaceProactiveAllowed, AssistantSurface } from "./contextualBehaviorEngine";
+import { isSurfaceProactiveAllowed } from "./contextualBehaviorEngine";
+import type { AssistantSurface } from "./contextualBehaviorEngine";
 import { markInterventionDelivered } from "./assistantStateModel";
-import { ProactiveInsight } from "@/ai/wellness/proactiveInsightSynthesizer";
-import { RecoveryOpportunity } from "@/ai/wellness/recoveryOpportunityDetector";
+import type { ProactiveInsight } from "@/ai/wellness/proactiveInsightSynthesizer";
+import type { RecoveryOpportunity } from "@/ai/wellness/recoveryOpportunityDetector";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

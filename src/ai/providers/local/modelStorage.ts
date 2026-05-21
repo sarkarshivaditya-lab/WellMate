@@ -101,7 +101,7 @@ async function writeOPFSChunk(
   const fh = await dir.getFileHandle(`${modelId}.gguf`, { create: true });
   const writable = await fh.createWritable({ keepExistingData: true });
   await writable.seek(offset);
-  await writable.write(data);
+  await writable.write(data as Uint8Array<ArrayBuffer>);
   await writable.close();
 }
 
@@ -284,7 +284,7 @@ export async function getModelBlobUrl(modelId: string): Promise<string | null> {
     const meta = await readIdbMeta(modelId);
     if (!meta?.complete) return null;
     const chunks = await readAllIdbChunks(modelId, meta.chunkCount);
-    const blob = new Blob(chunks, { type: "application/octet-stream" });
+    const blob = new Blob(chunks as Uint8Array<ArrayBuffer>[], { type: "application/octet-stream" });
     return URL.createObjectURL(blob);
   } catch {
     return null;

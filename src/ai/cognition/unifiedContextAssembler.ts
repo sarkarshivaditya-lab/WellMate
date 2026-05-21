@@ -26,7 +26,7 @@ import { detectRecoveryOpportunities } from "@/ai/wellness/recoveryOpportunityDe
 import { synthesizeProactiveInsights } from "@/ai/wellness/proactiveInsightSynthesizer";
 import { getEmotionalContinuityReport } from "./emotionalContinuityEngine";
 import { getHighConfidenceDimensions } from "./userModel";
-import { AssistantSurface } from "@/ai/assistant/contextualBehaviorEngine";
+import type { AssistantSurface } from "@/ai/assistant/contextualBehaviorEngine";
 import { emitCognitionEvent } from "./cognitionEventBus";
 
 // ── Types ──────────────────────────────────────────────────────────────────────

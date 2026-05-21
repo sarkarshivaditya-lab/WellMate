@@ -20,7 +20,7 @@
 import { getEmotionalProfile } from "@/ai/cognition/emotionalContinuityEngine";
 import { getWellnessTrajectory } from "@/ai/wellness/wellnessTrajectoryEngine";
 import { getCurrentCoachingStyle } from "@/ai/coaching/adaptiveCoachingEngine";
-import { WellnessDomain } from "@/ai/wellness/wellnessTrajectoryEngine";
+import type { WellnessDomain } from "@/ai/wellness/wellnessTrajectoryEngine";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
