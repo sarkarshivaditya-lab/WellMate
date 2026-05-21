@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { Button } from "@/components/ui/button.tsx";
@@ -50,8 +50,20 @@ export default function PeriodTracker() {
     notes: "",
   });
 
-  // 1️⃣ Offline — Convex queries will never resolve; show a calm placeholder
-  if (connectivity === "offline" && user === undefined) {
+  // On Android/Capacitor, navigator.onLine reports "online" even when the
+  // Convex WebSocket fails to connect, so the offline guard below never fires
+  // and `user` stays undefined indefinitely — causing a permanent skeleton.
+  // This timeout fires after 5 s if the query still hasn't resolved, so the
+  // offline fallback triggers regardless of what the Network API reports.
+  const [queryTimedOut, setQueryTimedOut] = useState(false);
+  useEffect(() => {
+    if (user !== undefined) return;
+    const t = setTimeout(() => setQueryTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, [user]);
+
+  // 1️⃣ Offline or Convex unreachable on Android WebView
+  if ((connectivity === "offline" || queryTimedOut) && user === undefined) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
@@ -65,19 +77,11 @@ export default function PeriodTracker() {
     );
   }
 
-  // 2️⃣ Convex still loading
+  // 2️⃣ Convex queries still resolving — render nothing.
+  // Period tracking is opt-in; showing a skeleton for a feature the user may
+  // not have enabled creates false loading UX. Render nothing until we know.
   if (user === undefined) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <Skeleton className="h-4 w-36 rounded-md" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Skeleton className="h-10 w-full rounded-xl" />
-          <Skeleton className="h-10 w-3/4 rounded-xl" />
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   // 3️⃣ Authenticated route, but user record not ready yet
