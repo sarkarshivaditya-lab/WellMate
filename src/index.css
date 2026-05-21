@@ -322,6 +322,20 @@
   }
 
   /* ===============================
+     LOTUS FAB — CALM RESTING BREATH
+     Opacity-only pulse: 1 → 0.75 → 1 over 3.5 s.
+     Applied to the icon inside the FAB, not the button itself,
+     so it doesn't interfere with hover/active scale transforms.
+     =============================== */
+  @keyframes wm-lotus-breathe {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.75; }
+  }
+  .animate-lotus-breathe {
+    animation: wm-lotus-breathe 3.5s ease-in-out infinite;
+  }
+
+  /* ===============================
      REDUCED MOTION SUPPORT
      Respects prefers-reduced-motion: reduce system setting.
      Disables all decorative animation; preserves state continuity.
@@ -344,7 +358,8 @@
     /* Ambient loops — stop entirely, hold resting state */
     .animate-wm-float,
     .animate-wm-float-alt,
-    .animate-wm-glow {
+    .animate-wm-glow,
+    .animate-lotus-breathe {
       animation: none;
     }
 

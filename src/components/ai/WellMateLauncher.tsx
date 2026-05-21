@@ -1,5 +1,6 @@
 import * as React from "react";
-import { AlertTriangle, Sparkles, X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+import { LotusIcon } from "@/components/LotusIcon";
 import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -365,7 +366,12 @@ function WellMateLauncher() {
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         )}
       >
-        <Sparkles className="h-5 w-5" />
+        <LotusIcon
+          className={cn(
+            "h-5 w-5",
+            !open && "animate-lotus-breathe",
+          )}
+        />
       </button>
 
       {open && (

@@ -266,7 +266,10 @@ export default function Profile() {
 
       {/* Terms & Privacy bottom sheet */}
       <Sheet open={safetySheetOpen} onOpenChange={setSafetySheetOpen}>
-        <SheetContent side="bottom" className="max-h-[88dvh] flex flex-col rounded-t-2xl">
+        <SheetContent
+          side="bottom"
+          className="h-[90vh] flex flex-col rounded-t-2xl gap-0 overflow-hidden"
+        >
           <SheetHeader className="flex-shrink-0 pb-3">
             <SheetTitle>Terms &amp; Privacy Policy</SheetTitle>
             <SheetDescription>
@@ -275,7 +278,7 @@ export default function Profile() {
           </SheetHeader>
 
           <div className="relative flex-1 min-h-0">
-            <div className="h-full overflow-y-auto py-4 overscroll-y-contain">
+            <div className="absolute inset-0 overflow-y-auto py-4 overscroll-contain">
               <PolicyContent />
               <div className="h-4" />
             </div>

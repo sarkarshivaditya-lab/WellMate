@@ -51,7 +51,7 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
       aria-modal="true"
       aria-labelledby="disclaimer-title"
     >
-      <div className="w-full max-w-md max-h-[92dvh] flex flex-col rounded-2xl bg-card border border-border/50 shadow-2xl overflow-hidden">
+      <div className="w-full max-w-md h-[90vh] flex flex-col rounded-2xl bg-card border border-border/50 shadow-2xl overflow-hidden">
 
         {/* ── Header ─────────────────────────────────────────── */}
         <div className="flex-shrink-0 px-6 pt-7 pb-6 text-center">
@@ -76,7 +76,7 @@ export function DisclaimerModal({ onAck }: DisclaimerModalProps) {
 
         {/* ── Scrollable body ────────────────────────────────── */}
         <div className="relative flex-1 min-h-0">
-          <div className="h-full overflow-y-auto px-5 py-5 overscroll-y-contain">
+          <div className="absolute inset-0 overflow-y-auto px-5 py-5 overscroll-contain">
             <PolicyContent />
             {/* Bottom spacer so last card clears the footer fade */}
             <div className="h-4" />
