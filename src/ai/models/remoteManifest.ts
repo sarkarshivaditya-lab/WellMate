@@ -9,7 +9,7 @@
 // All other model code reads from this service.
 
 import type { ModelManifest, ReleaseChannel } from "@/ai/providers/local/modelMetadata";
-import { PHI3_MINI_MANIFEST } from "@/ai/providers/local/modelMetadata";
+import { QWEN25_15B_MANIFEST } from "@/ai/providers/local/modelMetadata";
 
 const REMOTE_URL = "https://wellmate.ai/models/manifest.json";
 const CACHE_KEY = "ai_remote_manifest_v1";
@@ -61,7 +61,7 @@ const STATIC_FALLBACK: RemoteManifestDocument = {
   schemaVersion: 1,
   generatedAt: "2025-05-01T00:00:00Z",
   platform: STATIC_PLATFORM,
-  models: [PHI3_MINI_MANIFEST],
+  models: [QWEN25_15B_MANIFEST],
 };
 
 // ── Release channel ────────────────────────────────────────────────────────────

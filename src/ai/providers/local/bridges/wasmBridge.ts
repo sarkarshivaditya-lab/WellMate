@@ -1,19 +1,24 @@
 // Real llama.cpp WASM bridge via @wllama/wllama v3.
-// Phi-3 Mini (GGUF) runs here, on-device, fully offline.
+// Qwen2.5-1.5B-Instruct Q4_K_M runs here, on-device, fully offline.
 //
 // Architecture:
 //   - Single WASM binary — maximum compatibility (iOS WKWebView, Android WebView)
 //   - Model loaded from a Blob — bypasses wllama's internal download/cache layer.
 //     (loadModelFromUrl with a blob URL triggers wllama's cache manager, which
-//      re-downloads and re-stores 2.4GB, doubling I/O and causing multi-minute hangs.)
+//      re-downloads and re-stores the model file, doubling I/O and causing hangs.)
 //   - Streaming via onData callback + AbortSignal for clean cancellation.
-//   - Conservative mobile settings: n_ctx=2048, n_batch=16, n_threads=1
+//   - Conservative mobile settings: n_ctx=1024, n_batch=16, n_threads=1
 //
-// Mobile inference speed expectations (Q4_0, single-thread WASM):
-//   High-end (A17 Pro, SD8 Gen 3): 15–25 tok/s
-//   Mid-range (SD7 Gen, A15):      8–15 tok/s
-//   Budget (SD4xx, older iPads):   4–8 tok/s
-//   At 8 tok/s × 256 max tokens = ~32s — acceptable for wellness reflection.
+// Why n_ctx=1024 (not 2048):
+//   Qwen2.5-1.5B has GQA (2 KV heads vs 12 Q heads).
+//   KV cache at n_ctx=1024: ~9 MB (vs ~502 MB for Phi-3 Mini at n_ctx=2048 with full attention).
+//   1K context fits full wellness prompt + user message + 256-token response with room to spare.
+//
+// Mobile inference speed expectations (Q4_K_M, single-thread WASM):
+//   High-end (A17 Pro, SD8 Gen 3): 12–20 tok/s
+//   Mid-range (SD7 Gen, A15):      6–12 tok/s
+//   Budget (SD4xx, older iPads):   3–7 tok/s
+//   At 6 tok/s × 256 max tokens = ~43s — acceptable for wellness reflection.
 
 import type { LlamaBridgeHandle } from "../llamaBridge";
 import type { InferenceRequest, InferenceResult } from "../../../runtime/types";
@@ -68,7 +73,12 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
       const lt0 = Date.now();
       const log = (phase: string, extra?: string) => aiLog(phase, lt0, extra);
 
-      log("loadModel begin", `blobSize=${blob.size} sizeExpected=${manifest.sizeBytes}`);
+      const modelMB = (blob.size / (1024 * 1024)).toFixed(0);
+      const nCtxActual = Math.min(manifest.contextLength, 1024);
+      log(
+        "loadModel begin",
+        `blobSize=${blob.size} (${modelMB} MB) sizeExpected=${manifest.sizeBytes} n_ctx=${nCtxActual}`,
+      );
 
       // Heartbeat: Android logcat must show activity every few seconds so the OS
       // doesn't consider the WebView frozen. Cleared after load completes/fails.
@@ -77,19 +87,25 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
       }, HEARTBEAT_INTERVAL_MS);
 
       try {
-        log("wllama.loadModel call start");
+        // CRASH PHASE INSTRUMENTATION
+        // If the app crashes on Android between these two log lines, the WebView renderer
+        // was killed by Android's LMK during WASM memory.grow() — the model is too large
+        // for this device's renderer process budget. The pre-flight check in LocalProvider
+        // should have caught this, but device memory reporting is not always reliable.
+        log("WASM alloc phase START — if crash follows, model exceeds renderer RAM budget");
 
         // Pass Blob directly to wllama — no URL fetch, no internal cache write.
-        // This avoids the caching layer that would re-download 2.4GB to wllama's
-        // own OPFS directory before loading (which caused multi-minute hangs).
         await wllama.loadModel([blob], {
-          // 2K context: halves KV cache vs 4096 — critical for mobile RAM budget.
-          // A 2K context still fits the full wellness prompt + user question + response.
-          n_ctx: Math.min(manifest.contextLength, 2048),
-          n_batch: 16,       // small batches — lower peak RAM, more stable on weak devices
-          n_threads: 1,      // single-thread for maximum cross-device compatibility
-          cache_type_k: "q4_0", // quantized KV cache — significant RAM reduction
+          // 1K context: safe for all target devices (Qwen2.5-1.5B GQA = tiny KV cache).
+          // Wellness prompt + question + 256-token response fits in 1K with room to spare.
+          n_ctx: nCtxActual,
+          n_batch: 16,          // small batches — lower peak RAM, more stable on weak devices
+          n_threads: 1,         // single-thread for maximum cross-device compatibility
+          cache_type_k: "q4_0", // quantized K cache — reduces KV RAM
+          cache_type_v: "q4_0", // quantized V cache — further reduces KV RAM
         });
+
+        log("WASM alloc phase COMPLETE — weights loaded, KV cache allocated");
 
         log("wllama.loadModel complete");
         _modelLoaded = true;
@@ -108,10 +124,10 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
 
       const start = Date.now();
 
-      // Phi-3 instruct format — adapted for wellness context
+      // Qwen2.5 / ChatML instruct format — used by Qwen2.5-1.5B-Instruct
       const prompt = request.systemContext
-        ? `<|system|>\n${request.systemContext}<|end|>\n<|user|>\n${request.prompt}<|end|>\n<|assistant|>\n`
-        : `<|user|>\n${request.prompt}<|end|>\n<|assistant|>\n`;
+        ? `<|im_start|>system\n${request.systemContext}<|im_end|>\n<|im_start|>user\n${request.prompt}<|im_end|>\n<|im_start|>assistant\n`
+        : `<|im_start|>user\n${request.prompt}<|im_end|>\n<|im_start|>assistant\n`;
 
       let fullText = "";
       let tokenCount = 0;
@@ -126,7 +142,7 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
         temperature: Math.min(request.temperature, 0.9), // clamp: prevent incoherent outputs
         top_p: 0.9,          // nucleus sampling — natural, non-repetitive text
         penalty_repeat: 1.1, // discourage looping phrases common in small models
-        stop: ["<|end|>", "<|endoftext|>", "<|im_end|>", "<|user|>"],
+        stop: ["<|im_end|>", "<|endoftext|>", "<|im_start|>"],
         stream: true,
         onData: (chunk) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -157,7 +173,7 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
             tokensGenerated: tokenCount,
             durationMs: Date.now() - start,
             provider: "local",
-            modelId: "phi3-mini-wasm",
+            modelId: "qwen2.5-1.5b-wasm",
             cached: false,
           };
           return result;
@@ -174,7 +190,7 @@ export async function createWasmBridge(): Promise<LlamaBridgeHandle> {
         tokensGenerated: tokenCount,
         durationMs,
         provider: "local",
-        modelId: "phi3-mini-wasm",
+        modelId: "qwen2.5-1.5b-wasm",
         cached: false,
       };
     },

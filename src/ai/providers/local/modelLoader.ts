@@ -53,12 +53,14 @@ let _downloadIntent: "pause" | "cancel" | null = null;
 
 /** Pause a component-initiated download. Saves partial data for resumption. */
 export function pauseActiveDownload(): void {
+  console.log(`[LIFECYCLE modelLoader] phase=pause_state controller=${_componentController !== null ? "active" : "null"} intent_before=${_downloadIntent ?? "null"}`);
   _downloadIntent = "pause";
   _componentController?.abort();
 }
 
 /** Cancel a component-initiated download. Partial data will be deleted by the component. */
 export function cancelActiveDownload(): void {
+  console.log(`[LIFECYCLE modelLoader] phase=cancel_state controller=${_componentController !== null ? "active" : "null"} intent_before=${_downloadIntent ?? "null"}`);
   _downloadIntent = "cancel";
   _componentController?.abort();
 }
@@ -114,6 +116,7 @@ export async function downloadAndStoreModel(
   // Determine if this is a fresh start or a resume
   const existingOffset = await getResumeOffset(manifest.id);
   const isResume = existingOffset > 0;
+  console.log(`[LIFECYCLE modelLoader] phase=resume_state modelId=${manifest.id} existingOffset=${existingOffset} isResume=${isResume} componentOwned=${componentOwned}`);
 
   emit({
     phase: "downloading",
@@ -126,6 +129,7 @@ export async function downloadAndStoreModel(
     await downloadModel(
       manifest,
       ({ downloadedBytes, totalBytes }) => {
+        console.log(`[LIFECYCLE modelLoader] phase=progress_state downloadedBytes=${downloadedBytes} totalBytes=${totalBytes} pct=${((downloadedBytes / totalBytes) * 100).toFixed(1)}%`);
         emit({
           phase: "downloading",
           progressBytes: downloadedBytes,
@@ -164,6 +168,12 @@ export async function downloadAndStoreModel(
         : err instanceof Error
           ? err.message
           : "Download failed";
+    // Surface the actual error — the card UI shows only "Something went wrong"
+    // so this log is the only way to see what actually failed.
+    console.error(
+      `[DOWNLOAD modelLoader] phase=download_FAILED reason="${reason}" errorName="${err instanceof Error ? err.name : "unknown"}" fullError=`,
+      err,
+    );
     emit({ phase: "failed", reason });
     throw err;
   }
@@ -174,19 +184,24 @@ export async function downloadAndStoreModel(
     _downloadIntent = null;
   }
 
+  console.log("[DOWNLOAD modelLoader] phase=verifying");
   emit({ phase: "verifying" });
 
   // GGUF integrity check — reads first 4 bytes, confirms magic header.
   // Catches truncated downloads before they reach the WASM runtime.
   const integrity = await validateModelIntegrity(manifest.id);
+  console.log(`[DOWNLOAD modelLoader] phase=integrity_check valid=${integrity.valid} reason=${integrity.reason ?? "none"}`);
   if (!integrity.valid) {
     // Auto-delete corrupted file so the next attempt starts fresh
+    console.log(`[LIFECYCLE modelLoader] phase=cleanup_state trigger=integrity_failed modelId=${manifest.id} reason=${integrity.reason ?? "unknown"}`);
     await storageDeleteModel(manifest.id).catch(() => null);
     const reason = `Downloaded file is corrupted: ${integrity.reason ?? "invalid"}. Deleted — please try again.`;
+    console.error(`[DOWNLOAD modelLoader] phase=integrity_FAILED reason="${reason}"`);
     emit({ phase: "failed", reason });
     throw new Error(reason);
   }
 
+  console.log("[DOWNLOAD modelLoader] phase=complete — model stored and verified");
   emit({ phase: "not_loaded" }); // stored and verified — not yet loaded into inference engine
 }
 

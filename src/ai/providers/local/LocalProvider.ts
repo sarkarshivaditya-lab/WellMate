@@ -56,6 +56,58 @@ export class LocalProvider implements AIProvider {
     log("begin", `modelId=${this.manifest.id}`);
     patchRuntimeState({ status: "initializing", modelLoad: "loading" });
 
+    // ── Phase 0: pre-flight RAM feasibility check ─────────────────────────────
+    // Estimate total peak WASM heap the model will require:
+    //   model weights in WASM linear memory ≈ file size × 1.1
+    //   KV cache at manifest.contextLength tokens (upper bound, conservative)
+    //   compute buffers + WASM runtime overhead = 200 MB flat
+    //
+    // Android WebView renderer process budget ≈ 35% of device RAM.
+    // If the estimate exceeds the budget, the WASM memory.grow() calls will trigger
+    // Android's Low Memory Killer, killing the renderer process silently (black screen).
+    // We reject here with a clear OOM error rather than let the renderer die.
+    {
+      const deviceRamGB = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+      const rendererBudgetMB = deviceRamGB * 1024 * 0.35;
+
+      const modelMB = this.manifest.sizeBytes / (1024 * 1024);
+      // KV cache per-token cost: conservative 0.3 MB/token for full-attention models,
+      // much lower for GQA models — the 0.3 figure errs on the side of safety.
+      const kvCacheMB = this.manifest.contextLength * 0.3;
+      const estimatedPeakMB = modelMB * 1.1 + kvCacheMB + 200;
+
+      log(
+        "preflight RAM check",
+        `modelMB=${modelMB.toFixed(0)} kvMB=${kvCacheMB.toFixed(0)} ` +
+        `estimatedPeakMB=${estimatedPeakMB.toFixed(0)} rendererBudgetMB=${rendererBudgetMB.toFixed(0)} ` +
+        `deviceRamGB=${deviceRamGB}`,
+      );
+
+      if (estimatedPeakMB > rendererBudgetMB) {
+        const msg =
+          `Model "${this.manifest.name}" requires ~${estimatedPeakMB.toFixed(0)} MB peak WASM heap ` +
+          `but the Android WebView renderer budget on this ${deviceRamGB} GB device is ` +
+          `~${rendererBudgetMB.toFixed(0)} MB. ` +
+          `Use a smaller model (≤${(rendererBudgetMB * 0.75).toFixed(0)} MB file size).`;
+        log("preflight RAM check FAILED — model is infeasible on this device", msg);
+        patchRuntimeState({ status: "error", modelLoad: "failed_oom", lastError: msg });
+        throw new Error(msg);
+      }
+
+      // Enforce manifest's declared minRamMB hard floor (e.g. 4096 for Qwen2.5-1.5B)
+      if (this.manifest.minRamMB && deviceRamGB * 1024 < this.manifest.minRamMB) {
+        const msg =
+          `Model "${this.manifest.name}" requires ${this.manifest.minRamMB} MB device RAM ` +
+          `but this device reports ${(deviceRamGB * 1024).toFixed(0)} MB. ` +
+          `Loading would likely crash the WebView renderer.`;
+        log("preflight minRamMB check FAILED", msg);
+        patchRuntimeState({ status: "error", modelLoad: "failed_oom", lastError: msg });
+        throw new Error(msg);
+      }
+
+      log("preflight RAM check PASSED");
+    }
+
     // ── Phase 1: confirm model is stored ─────────────────────────────────────
     log("checking storage");
     const stored = await isModelStored(this.manifest.id);

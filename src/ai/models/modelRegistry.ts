@@ -2,12 +2,12 @@
 // their versions, and which one to recommend for this device.
 //
 // Priority: remote manifest (fresh) > remote manifest (cached) > static fallback.
-// Static fallback (PHI3_MINI_MANIFEST) ensures the app always has a model to offer.
+// Static fallback (QWEN25_15B_MANIFEST) ensures the app always has a model to offer.
 // Remote manifest is fetched by remoteManifest.ts and written into this registry
 // via hydrateFromRemote().
 
 import type { ModelManifest, CapabilityTier, DeviceTier } from "@/ai/providers/local/modelMetadata";
-import { PHI3_MINI_MANIFEST } from "@/ai/providers/local/modelMetadata";
+import { QWEN25_15B_MANIFEST } from "@/ai/providers/local/modelMetadata";
 import { getAvailableModels } from "./remoteManifest";
 
 export type ModelVersion = {
@@ -26,8 +26,8 @@ export type RegistryEntry = {
 // Static registry — serves as hardcoded fallback when remote manifest unavailable.
 const STATIC_REGISTRY: RegistryEntry[] = [
   {
-    manifest: PHI3_MINI_MANIFEST,
-    version: { major: 1, minor: 0, patch: 0 },
+    manifest: QWEN25_15B_MANIFEST,
+    version: { major: 1, minor: 1, patch: 0 },
     recommended: true,
     releasedAt: "2025-05-01",
   },
