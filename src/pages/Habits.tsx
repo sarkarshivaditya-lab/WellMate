@@ -51,15 +51,12 @@ import {
   toggleEntry,
   listEntriesByDate,
   listAllEntries,
-  computeStreak,
   type LocalHabit,
   type LocalHabitEntry,
 } from "@/data/local/habitsStore";
 import { localDateIso } from "@/services/dateUtils";
 import { useFeatureTracker, emitAnalyticsEvent } from "@/analytics";
 import { haptics } from "@/motion";
-
-// ── Category system ───────────────────────────────────────────────────────────
 
 type HabitCategory =
   | "sleep"
@@ -94,8 +91,6 @@ function inferCategory(title: string, description?: string): HabitCategory | nul
   if (/foam.?roll|massage|ice|recover|recovery|rehabilit|cool.?down/.test(text)) return "recovery";
   return null;
 }
-
-// ── Suggested habits ──────────────────────────────────────────────────────────
 
 type SuggestedHabit = {
   title: string;
@@ -173,20 +168,6 @@ const SUGGESTED_HABITS: SuggestedHabit[] = [
   },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getHabitWeekDots(habitLocalId: string, allEntries: LocalHabitEntry[]): boolean[] {
-  const today = new Date();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (6 - i));
-    const iso = d.toLocaleDateString("en-CA");
-    return allEntries.some(
-      (e) => e.habitLocalId === habitLocalId && e.dateIso === iso && e.completed,
-    );
-  });
-}
-
 function getWeekAggregate(habits: LocalHabit[], allEntries: LocalHabitEntry[]): boolean[] {
   if (habits.length === 0) return Array(7).fill(false) as boolean[];
   const today = new Date();
@@ -201,8 +182,6 @@ function getWeekAggregate(habits: LocalHabit[], allEntries: LocalHabitEntry[]): 
     );
   });
 }
-
-// ── Components ────────────────────────────────────────────────────────────────
 
 function TodayMomentumCard({
   completedToday,
@@ -234,39 +213,24 @@ function TodayMomentumCard({
     <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-4">
       <div className="flex items-start justify-between gap-3 mb-3.5">
         <div>
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
-            Today
-          </p>
-          <p className="text-[13px] font-medium text-foreground/80 leading-snug">
-            {headline}
-          </p>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Today</p>
+          <p className="text-[13px] font-medium text-foreground/80 leading-snug">{headline}</p>
         </div>
         {totalHabits > 0 && (
           <div className="text-right flex-shrink-0">
-            <span className="text-2xl font-bold tabular-nums text-foreground/90">
-              {completedToday}
-            </span>
+            <span className="text-2xl font-bold tabular-nums text-foreground/90">{completedToday}</span>
             <span className="text-sm text-muted-foreground">/{totalHabits}</span>
           </div>
         )}
       </div>
-
       <div className="flex items-end gap-[7px]">
         {weekAggregate.map((done, i) => (
           <div key={i} className="flex flex-col items-center gap-[5px]">
-            <span
-              className={cn(
-                "inline-block h-[7px] w-[7px] rounded-full transition-colors",
-                done
-                  ? "bg-primary/55"
-                  : i === 6
-                  ? "ring-1 ring-primary/25 bg-transparent"
-                  : "bg-muted-foreground/12",
-              )}
-            />
-            <span className="text-[9px] text-muted-foreground/35 font-medium select-none">
-              {dayLabels[i]}
-            </span>
+            <span className={cn(
+              "inline-block h-[7px] w-[7px] rounded-full transition-colors",
+              done ? "bg-primary/55" : i === 6 ? "ring-1 ring-primary/25 bg-transparent" : "bg-muted-foreground/12",
+            )} />
+            <span className="text-[9px] text-muted-foreground/35 font-medium select-none">{dayLabels[i]}</span>
           </div>
         ))}
       </div>
@@ -281,29 +245,15 @@ function SuggestedHabits({
 }) {
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">
-        Suggested habits to start with
-      </p>
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Suggested habits to start with</p>
       {SUGGESTED_HABITS.map((s) => {
         const config = CATEGORY_CONFIG[s.category];
         const Icon = s.icon;
         return (
-          <button
-            key={s.title}
-            type="button"
-            onClick={() => onAdd(s.title, s.description, s.cadence)}
-            className="w-full flex items-start gap-3 rounded-2xl border border-border/15 bg-muted/10 px-4 py-3.5 text-left hover:bg-muted/20 active:bg-muted/25 transition-colors touch-manipulation"
-          >
-            <div className="mt-0.5 flex-shrink-0 rounded-lg bg-muted/25 p-1.5">
-              <Icon className={cn("h-3.5 w-3.5", config.textColor)} />
-            </div>
+          <button key={s.title} type="button" onClick={() => onAdd(s.title, s.description, s.cadence)} className="w-full flex items-start gap-3 rounded-2xl border border-border/15 bg-muted/10 px-4 py-3.5 text-left hover:bg-muted/20 active:bg-muted/25 transition-colors touch-manipulation">
+            <div className="mt-0.5 flex-shrink-0 rounded-lg bg-muted/25 p-1.5"><Icon className={cn("h-3.5 w-3.5", config.textColor)} /></div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="text-[13px] font-medium text-foreground/85">{s.title}</span>
-                <span className={cn("text-[10px] font-medium", config.textColor)}>
-                  {config.label}
-                </span>
-              </div>
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap"><span className="text-[13px] font-medium text-foreground/85">{s.title}</span><span className={cn("text-[10px] font-medium", config.textColor)}>{config.label}</span></div>
               <p className="text-[12px] text-muted-foreground/65 leading-snug">{s.why}</p>
             </div>
             <PlusIcon className="h-4 w-4 text-muted-foreground/30 flex-shrink-0 mt-1" />
@@ -313,8 +263,6 @@ function SuggestedHabits({
     </div>
   );
 }
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Habits() {
   useFeatureTracker("habits");
@@ -327,21 +275,14 @@ export default function Habits() {
   const [reminderTime, setReminderTime] = useState("09:00");
 
   const today = localDateIso();
-
   const [habits, setHabits] = useState(() => listHabits());
   const [todayEntries, setTodayEntries] = useState(() => listEntriesByDate(today));
   const [allEntries, setAllEntries] = useState(() => listAllEntries());
 
-  const habitScore = useMemo(() => computeHabitScore(), [allEntries]);
-  const habitStats = useMemo(() => computeHabitStats(), [allEntries]);
-  const consistencyProfile = useMemo(
-    () => computeHabitConsistencyProfile(),
-    [allEntries, habits],
-  );
-  const weekAggregate = useMemo(
-    () => getWeekAggregate(habits, allEntries),
-    [habits, allEntries],
-  );
+  const habitScore = useMemo(() => computeHabitScore(), []);
+  const habitStats = useMemo(() => computeHabitStats(), []);
+  const consistencyProfile = useMemo(() => computeHabitConsistencyProfile(), []);
+  const weekAggregate = useMemo(() => getWeekAggregate(habits, allEntries), [habits, allEntries]);
   const completedTodayCount = useMemo(
     () => habits.filter((h) => todayEntries.some((e) => e.habitLocalId === h.localId && e.completed)).length,
     [habits, todayEntries],
@@ -432,155 +373,30 @@ export default function Habits() {
       title="Habits"
       subtitle="Small, repeatable actions that add up."
       headerRight={
-        <Button
-          size="sm"
-          disabled={!canAddMoreHabits()}
-          onClick={() => setShowDialog(true)}
-        >
+        <Button size="sm" disabled={!canAddMoreHabits()} onClick={() => setShowDialog(true)}>
           <PlusIcon className="h-4 w-4" />
           New Habit
         </Button>
       }
     >
-      <Dialog
-        open={showDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setTitle("");
-            setDescription("");
-            setCadence("daily");
-            setRemindersEnabled(false);
-          }
-          setShowDialog(open);
-        }}
-      >
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        if (!open) {
+          setTitle("");
+          setDescription("");
+          setCadence("daily");
+          setRemindersEnabled(false);
+        }
+        setShowDialog(open);
+      }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Habit</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>Create Habit</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Frequency</Label>
-              <Select
-                value={cadence}
-                onValueChange={(v: typeof cadence) => setCadence(v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label>Reminders</Label>
-              <Switch
-                checked={remindersEnabled}
-                onCheckedChange={setRemindersEnabled}
-              />
-            </div>
-
-            {remindersEnabled && (
-              <Input
-                type="time"
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-              />
-            )}
-
-            <Button className="w-full" onClick={handleAddHabit}>
-              Create Habit
-            </Button>
+            <div className="space-y-1.5"><Label htmlFor="title">Title</Label><Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="description">Description</Label><Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
+            <div className="space-y-1.5"><Label>Frequency</Label><Select value={cadence} onValueChange={(v: typeof cadence) => setCadence(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="daily">Daily</SelectItem><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="custom">Custom</SelectItem></SelectContent></Select></div>
+            <div className="flex items-center justify-between"><Label>Reminders</Label><Switch checked={remindersEnabled} onCheckedChange={setRemindersEnabled} /></div>
+            {remindersEnabled && <Input type="time" value={reminderTime} onChange={(e) => setReminderTime(e.target.value)} />}
+            <Button className="w-full" onClick={handleAddHabit}>Create Habit</Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      <div className="space-y-4">
-        {!canAddMoreHabits() && (
-          <GatedFeatureBanner
-            feature="Unlimited Habits"
-            description={`You've reached the free plan limit of ${getFeatureLimit("habits-max", null)} habits`}
-            onUpgrade={() => navigate("/pricing")}
-          />
-        )}
-
-        <TodayMomentumCard
-          completedToday={completedTodayCount}
-          totalHabits={habits.length}
-          weekAggregate={weekAggregate}
-        />
-
-        {habits.length === 0 ? (
-          <SuggestedHabits onAdd={handleAddSuggested} />
-        ) : (
-          <>
-            <HabitMomentumCard habitScore={habitScore} habitStats={habitStats} />
-
-            {consistencyProfile.overloadRisk && (
-              <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground/80 mb-0.5">Many habits active</p>
-                <p>
-                  Focusing on one or two habits at a time often builds more lasting consistency
-                  than maintaining many at once. Consider archiving a few until these feel steady.
-                </p>
-              </div>
-            )}
-
-            {!consistencyProfile.overloadRisk &&
-              consistencyProfile.hasReturnOpportunity &&
-              habits.length > 0 && (
-                <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                  <p>Some habits are ready to continue whenever you are. Every return counts.</p>
-                </div>
-              )}
-
-            <div className="space-y-3">
-              {habits.map((habit) => {
-                const category = inferCategory(habit.title, habit.description);
-                const categoryConfig = category ? CATEGORY_CONFIG[category] : null;
-                const weekDots = getHabitWeekDots(habit.localId, allEntries);
-                return (
-                  <HabitCard
-                    key={habit.localId}
-                    habit={habit as never}
-                    isCompletedToday={isCompletedToday(habit.localId)}
-                    streak={computeStreak(habit.localId, allEntries)}
-                    onToggle={() => handleToggle(habit.localId)}
-                    onArchive={() => handleArchive(habit.localId)}
-                    categoryLabel={categoryConfig?.label}
-                    categoryColor={categoryConfig?.textColor}
-                    weekDots={weekDots}
-                  />
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </PageLayout>
-  );
-}
