@@ -1,6 +1,6 @@
 import React from "react";
 import { Auth0Provider } from "@auth0/auth0-react";
-import { isCapacitorNative, resolveRedirectUri } from "./authConfig";
+import { resolveRedirectUri } from "./authConfig";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const domain = import.meta.env.VITE_AUTH0_DOMAIN as string | undefined;
@@ -43,6 +43,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </Auth0Provider>
   );
 }
-
-export { isCapacitorNative } from "./authConfig";
-export { getCapacitorCallbackUri, resolveRedirectUri } from "./authConfig";
