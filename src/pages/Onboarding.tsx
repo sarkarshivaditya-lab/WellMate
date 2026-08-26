@@ -315,13 +315,17 @@ export default function Onboarding() {
           </>
         )}
 
-        {step === 4 && <ChoiceGroup label="Average daily steps" value={dailySteps} onChange={setDailySteps} options={[["<5k", "< 5,000"], ["5–7k", "5,000 – 7,500"], ["7–10k", "7,500 – 10,000"], ["10k+", "10,000+"]] />}
+        {step === 4 && (
+          <ChoiceGroup label="Average daily steps" value={dailySteps} onChange={setDailySteps} options={[["<5k", "< 5,000"], ["5–7k", "5,000 – 7,500"], ["7–10k", "7,500 – 10,000"], ["10k+", "10,000+"]]} />
+        )}
+
         {step === 5 && (
           <>
             <ChoiceGroup label="Primary weight goal" value={weightGoal} onChange={setWeightGoal} options={[["lose", "Lose fat"], ["maintain", "Maintain weight"], ["gain", "Gain weight"]]} />
             {attemptedNext && !weightGoal && <ValidationError />}
           </>
         )}
+
         {step === 6 && <ChoiceGroup label="Muscle goal" value={muscleGoal} onChange={setMuscleGoal} options={[["gain", "Gain muscle"], ["maintain", "Maintain muscle"], ["none", "Not a priority"]]} />}
 
         {step === 7 && sex === "female" && (
@@ -332,7 +336,6 @@ export default function Onboarding() {
         )}
         {step === 7 && sex !== "female" && <ChoiceGroup label="Anything else you'd like to include?" value={additionalHealthChoice} onChange={setAdditionalHealthChoice} options={[["yes", "Yes, I'll add something"], ["none", "No, that's all"], ["skip", "Skip for now"]]} />}
         {step === 7 && sex !== "female" && additionalHealthChoice === "yes" && <Field label="Additional health information" value={additionalHealthNotes} onChange={setAdditionalHealthNotes} />}
-        </div>
 
         {step === 8 && (
           <div className="space-y-6">
