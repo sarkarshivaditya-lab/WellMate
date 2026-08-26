@@ -45,7 +45,7 @@ describe("AccidentStateMachine", () => {
     machine.ingest(signal({ timestamp: 1_000, speedMps: 8 }));
     machine.ingest(signal({
       timestamp: 2_000,
-      speedMps: 3,
+      speedMps: 8,
       accelerationMagnitudeG: DEFAULT_ACCIDENT_DETECTION_CONFIG.suspiciousAccelerationG,
     }));
     const result = machine.ingest(signal({ timestamp: 4_000, speedMps: 0 }));
