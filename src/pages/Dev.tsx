@@ -15,7 +15,6 @@ import { getConflictLog } from "@/reliability/conflictResolver";
 import { getDeadletterQueue as getLegacyDeadLetter, restoreDeadletterTask, discardDeadletterTask } from "@/sync/syncQueue";
 import { runReliabilityStressTests, type StressTestReport } from "@/reliability/__tests__/stressTest";
 import { getAnalyticsSnapshot, getDailySummaries, getOnboardingState, subscribeToAnalytics } from "@/analytics";
-import type { AnalyticsSnapshot } from "@/analytics";
 import { getNotificationSnapshot, forceEvaluate, resetFatigue, clearHistory } from "@/notifications";
 import type { NotificationSnapshot } from "@/notifications";
 
@@ -25,14 +24,14 @@ function NotificationPanel() {
   const handleForceEvaluate = () => { forceEvaluate(); setTimeout(refresh, 100); toast.info("Notification engine evaluated"); };
   const handleResetFatigue = () => { resetFatigue(); refresh(); toast.info("Fatigue state reset"); };
   const handleClearHistory = () => { clearHistory(); refresh(); toast.info("Notification history cleared"); };
-  return <Card><CardHeader><CardTitle>Notification Engine</CardTitle><CardDescription>Engineering-only notification diagnostics</CardDescription></CardHeader><CardContent className="space-y-3 text-xs font-mono"><div>Evaluations: {snap.evaluations}</div><div>Suppressed: {snap.suppressed}</div><div>Delivered: {snap.delivered}</div><div>Fatigue score: {snap.fatigueScore.toFixed(2)}</div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleForceEvaluate}>Evaluate</Button><Button size="sm" variant="outline" onClick={handleResetFatigue}>Reset fatigue</Button><Button size="sm" variant="outline" onClick={handleClearHistory}>Clear history</Button></div></CardContent></Card>;
+  return <Card><CardHeader><CardTitle>Notification Engine</CardTitle><CardDescription>Engineering-only notification diagnostics</CardDescription></CardHeader><CardContent className="space-y-3 text-xs font-mono"><div>Enabled: {snap.enabled ? "yes" : "no"}</div><div>Queued: {snap.queueLength}</div><div>Today: {snap.fatigueState.todayCount} / {snap.preferences.dailyCap}</div><div>Quiet hours: {snap.isInQuietHours ? "yes" : "no"}</div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleForceEvaluate}>Evaluate</Button><Button size="sm" variant="outline" onClick={handleResetFatigue}>Reset fatigue</Button><Button size="sm" variant="outline" onClick={handleClearHistory}>Clear history</Button></div></CardContent></Card>;
 }
 
 function AnalyticsPanel() {
   const snap = useSyncExternalStore(subscribeToAnalytics, getAnalyticsSnapshot, getAnalyticsSnapshot);
   const onboarding = getOnboardingState();
   const daily = getDailySummaries();
-  return <Card><CardHeader><CardTitle>Analytics</CardTitle><CardDescription>Engineering-only analytics state</CardDescription></CardHeader><CardContent className="space-y-2 text-xs font-mono"><div>Events: {snap.events.length}</div><div>Onboarding step: {onboarding?.step ?? "—"}</div><div>Daily summaries: {daily.length}</div></CardContent></Card>;
+  return <Card><CardHeader><CardTitle>Analytics</CardTitle><CardDescription>Engineering-only analytics state</CardDescription></CardHeader><CardContent className="space-y-2 text-xs font-mono"><div>Sessions: {snap.aggregates.totalSessions}</div><div>Actions: {snap.aggregates.totalActions}</div><div>Onboarding: {onboarding?.phase ?? "—"}</div><div>Daily summaries: {daily.length}</div></CardContent></Card>;
 }
 
 function ReliabilityDiagnostics() {
@@ -46,7 +45,16 @@ function ReliabilityDiagnostics() {
   const [showEvents, setShowEvents] = useState(false);
   const [stressRunning, setStressRunning] = useState(false);
   const [stressReport, setStressReport] = useState<StressTestReport | null>(null);
-  useEffect(() => { const unsubs = [subscribeToDiagnostics(setDiag), subscribeToOperationQueue(() => setSummary(getQueueSummary())), subscribeToHydration((state) => setHydrationStatus(state.status)), subscribeToConnectivity(setConnectivity)]; const interval = setInterval(() => { setDeadLetter(getDeadLetterQueue()); setLegacyDeadLetter(getLegacyDeadLetter()); setConflicts(getConflictLog()); }, 1000); return () => { unsubs.forEach((unsubscribe) => unsubscribe()); clearInterval(interval); }; }, []);
+  useEffect(() => {
+    const unsubs = [
+      subscribeToDiagnostics(() => setDiag(getDiagnosticsSnapshot())),
+      subscribeToOperationQueue(() => setSummary(getQueueSummary())),
+      subscribeToHydration((state) => setHydrationStatus(state.status)),
+      subscribeToConnectivity(setConnectivity),
+    ];
+    const interval = setInterval(() => { setDeadLetter(getDeadLetterQueue()); setLegacyDeadLetter(getLegacyDeadLetter()); setConflicts(getConflictLog()); }, 1000);
+    return () => { unsubs.forEach((unsubscribe) => unsubscribe()); clearInterval(interval); };
+  }, []);
   return <Card><CardHeader><CardTitle>Reliability Diagnostics</CardTitle><CardDescription>Engineering-only — sync, hydration, queue, and conflict state</CardDescription></CardHeader><CardContent className="space-y-5 text-xs font-mono"><div className="flex flex-wrap gap-4"><div>Hydration: {hydrationStatus}</div><div>Network: {connectivity}</div><div>Sync OK: {diag.syncSuccess}</div><div>Sync Err: {diag.syncError}</div><div>Retries: {diag.syncRetry}</div><div>Auth aborts: {diag.authAbort}</div></div><div><div className="font-semibold text-sm mb-1 text-foreground">Operation Queue</div><div className="flex flex-wrap gap-3"><span>Pending: {summary.pending}</span><span>Syncing: {summary.syncing}</span><span>Synced: {summary.synced}</span><span>Failed: {summary.failed}</span><span>Retry: {summary.retryScheduled}</span><span>Conflict: {summary.conflict}</span><span>Dead-letter: {summary.deadLetter}</span><span>Cancelled: {summary.cancelled}</span></div></div>{deadLetter.length > 0 && <div><div className="font-semibold text-sm mb-1 text-red-400">Dead-Letter Queue ({deadLetter.length})</div><div className="space-y-1 max-h-40 overflow-y-auto">{deadLetter.map((op) => <div key={op.operationId} className="flex items-center gap-2 p-2 bg-secondary/40 rounded text-xs"><span className="flex-1 truncate">{op.entityType}/{op.entityId.slice(0, 8)} — {op.operationType}</span><Button size="sm" variant="outline" className="h-5 text-xs px-2" onClick={() => { restoreFromDeadLetter(op.operationId); toast.info("Op restored to queue"); }}>Restore</Button><Button size="sm" variant="destructive" className="h-5 text-xs px-2" onClick={() => { discardDeadLetter(op.operationId); toast.info("Op discarded"); }}>Discard</Button></div>)}</div></div>}{legacyDeadLetter.length > 0 && <div><div className="font-semibold text-sm mb-1 text-red-400">Legacy Dead-Letter ({legacyDeadLetter.length})</div><div className="space-y-1 max-h-32 overflow-y-auto">{legacyDeadLetter.map((task) => <div key={task.id} className="flex items-center gap-2 p-2 bg-secondary/40 rounded text-xs"><span className="flex-1 truncate">{task.entity}/{task.localId.slice(0, 8)} — {task.action}</span><Button size="sm" variant="outline" className="h-5 text-xs px-2" onClick={() => { restoreDeadletterTask(task.id); toast.info("Legacy task restored"); }}>Restore</Button><Button size="sm" variant="destructive" className="h-5 text-xs px-2" onClick={() => { discardDeadletterTask(task.id); toast.info("Legacy task discarded"); }}>Discard</Button></div>)}</div></div>}{conflicts.length > 0 && <div><div className="font-semibold text-sm mb-1 text-orange-400">Recent Conflicts ({conflicts.length})</div><div className="space-y-1 max-h-32 overflow-y-auto">{conflicts.slice(-5).map((c) => <div key={c.id} className="p-2 bg-secondary/40 rounded text-xs">{c.entityType}/{c.entityId.slice(0, 8)} — {c.conflictType} → {c.resolution}</div>)}</div></div>}<div><button className="text-xs text-muted-foreground underline" onClick={() => setShowEvents((v) => !v)}>{showEvents ? "Hide" : "Show"} recent events ({diag.recentEvents.length})</button>{showEvents && <div className="mt-2 space-y-0.5 max-h-48 overflow-y-auto">{diag.recentEvents.slice(-30).map((e, i) => <div key={i} className="flex gap-2 text-xs text-muted-foreground"><span>{new Date(e.ts).toISOString().slice(11, 23)}</span><span className="text-foreground">{e.type}</span>{e.data && <span className="truncate">{JSON.stringify(e.data)}</span>}</div>)}</div>}</div><div><div className="flex items-center gap-2 mb-2"><Button size="sm" variant="outline" disabled={stressRunning} onClick={async () => { setStressRunning(true); setStressReport(null); try { const report = await runReliabilityStressTests(); setStressReport(report); if (report.failed === 0) { toast.success(`All ${report.total} reliability tests passed in ${report.durationMs}ms`); } else { toast.error(`${report.failed}/${report.total} reliability tests FAILED`); } } finally { setStressRunning(false); } }}>{stressRunning ? "Running…" : "Run Stress Tests"}</Button>{stressReport && <span className={`text-xs font-mono ${stressReport.failed === 0 ? "text-green-400" : "text-red-400"}`}>{stressReport.passed}/{stressReport.total} passed ({stressReport.durationMs}ms)</span>}</div></div><div className="flex gap-2 pt-1"><Button size="sm" variant="outline" onClick={() => { resetDiagnostics(); toast.info("Diagnostics reset"); }}>Reset Diagnostics</Button><Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(JSON.stringify({ queue: getQueueSummary(), deadLetter: getDeadLetterQueue(), diagnostics: getDiagnosticsSnapshot(), hydration: getHydrationState(), ops: getOperationQueue() }, null, 2)).then(() => toast.success("Reliability snapshot copied to clipboard"))}>Copy Snapshot</Button></div></CardContent></Card>;
 }
 
@@ -54,8 +62,6 @@ export default function Dev() {
   const navigate = useNavigate();
   const user = useQuery(api.users.getCurrentUser);
   const meals = useQuery(api.meals.getRecentMeals, { days: 30 });
-  const moods = useQuery(api.moods.listMoods, { limit: 30 });
-  const journalEntries = useQuery(api.journal.listJournalEntries, { limit: 30 });
   const generateInsights = useAction(api.insights.generateWeeklyInsights);
   const [adapterMode, setAdapterMode] = useState<"mock" | "api">("mock");
   const [insights, setInsights] = useState<{ moodAverage: number; stressIndicators: string[]; notes: string } | null>(null);
