@@ -315,7 +315,7 @@ export default function Onboarding() {
           </>
         )}
 
-        {step === 4 && <ChoiceGroup label="Average daily steps" value={dailySteps} onChange={setDailySteps} options=[["<5k", "< 5,000"], ["5–7k", "5,000 – 7,500"], ["7–10k", "7,500 – 10,000"], ["10k+", "10,000+"]] />}
+        {step === 4 && <ChoiceGroup label="Average daily steps" value={dailySteps} onChange={setDailySteps} options={[["<5k", "< 5,000"], ["5–7k", "5,000 – 7,500"], ["7–10k", "7,500 – 10,000"], ["10k+", "10,000+"]] />}
         {step === 5 && (
           <>
             <ChoiceGroup label="Primary weight goal" value={weightGoal} onChange={setWeightGoal} options={[["lose", "Lose fat"], ["maintain", "Maintain weight"], ["gain", "Gain weight"]]} />
@@ -332,6 +332,7 @@ export default function Onboarding() {
         )}
         {step === 7 && sex !== "female" && <ChoiceGroup label="Anything else you'd like to include?" value={additionalHealthChoice} onChange={setAdditionalHealthChoice} options={[["yes", "Yes, I'll add something"], ["none", "No, that's all"], ["skip", "Skip for now"]]} />}
         {step === 7 && sex !== "female" && additionalHealthChoice === "yes" && <Field label="Additional health information" value={additionalHealthNotes} onChange={setAdditionalHealthNotes} />}
+        </div>
 
         {step === 8 && (
           <div className="space-y-6">
@@ -387,46 +388,38 @@ export default function Onboarding() {
   );
 }
 
-type FieldProps = { label: string; type?: React.HTMLInputTypeAttribute; value: string; onChange: (value: string) => void };
-type SelectOption = { label: string; value: string };
-type SelectProps = { label: string; value: string; onChange: (value: string) => void; options: SelectOption[] };
-type ChoiceOption = [value: string, title: string, subtitle?: string];
-type ChoiceGroupProps = { label: string; value: string; onChange: (value: string) => void; options: ChoiceOption[] };
-type SummaryProps = { label: string; value: React.ReactNode };
-
-function ValidationError({ message = "This field is required" }: { message?: string }) {
-  return <p className="text-xs text-destructive">{message}</p>;
-}
-
-function Field({ label, type, value, onChange }: FieldProps) {
+function Field({ label, type = "text", value, onChange }: { label: string; type?: string; value: string; onChange: (value: string) => void }) {
   return (
-    <div className="space-y-1.5">
-      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl bg-muted/50 border border-border px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60 transition-premium" />
-    </div>
+    <label className="block space-y-2">
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+    </label>
   );
 }
 
-function Select({ label, value, onChange, options }: SelectProps) {
+function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }> }) {
   return (
-    <div className="space-y-1.5">
-      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl bg-muted/50 border border-border px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/60 transition-premium">
+    <label className="block space-y-2">
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/30">
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
-    </div>
+    </label>
   );
 }
 
-function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
+function ChoiceGroup({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[][] }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="space-y-2">
-        {options.map(([optionValue, title, subtitle]) => (
-          <button key={optionValue} type="button" onClick={() => onChange(optionValue)} aria-pressed={value === optionValue} className={`w-full text-left rounded-xl border px-4 py-3 transition-premium ${value === optionValue ? "border-primary bg-primary/[0.07]" : "border-border bg-muted/20 hover:bg-muted/40"}`}>
-            <span className="block text-sm font-medium text-foreground">{title}</span>
-            {subtitle && <span className="block text-xs text-muted-foreground mt-0.5">{subtitle}</span>}
+        {options.map(([optionValue, title, description]) => (
+          <button key={optionValue} type="button" onClick={() => onChange(optionValue)} className={`w-full text-left rounded-2xl border p-4 transition-premium ${value === optionValue ? "border-primary bg-primary/[0.06]" : "border-border hover:bg-muted/40"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">{title}</span>
+              <span className={`h-4 w-4 rounded-full border ${value === optionValue ? "border-primary bg-primary" : "border-muted-foreground/40"}`} />
+            </div>
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
           </button>
         ))}
       </div>
@@ -434,6 +427,15 @@ function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
   );
 }
 
-function Summary({ label, value }: SummaryProps) {
-  return <div className="flex items-center justify-between gap-4 px-4 py-3 text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium text-foreground text-right">{value}</span></div>;
+function ValidationError({ message = "Please complete this field." }: { message?: string }) {
+  return <p className="text-xs font-medium text-destructive">{message}</p>;
+}
+
+function Summary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-foreground">{value}</span>
+    </div>
+  );
 }
