@@ -43,30 +43,33 @@ describe("AccidentStateMachine", () => {
     const machine = new AccidentStateMachine();
     machine.start(0);
     machine.ingest(signal({ timestamp: 1_000, speedMps: 8 }));
-    const result = machine.ingest(signal({
+    machine.ingest(signal({
       timestamp: 2_000,
-      speedMps: 0,
+      speedMps: 3,
       accelerationMagnitudeG: DEFAULT_ACCIDENT_DETECTION_CONFIG.suspiciousAccelerationG,
     }));
-    expect(result.type).toBe("NONE");
-    expect(machine.getSnapshot().state).not.toBe("CONFIRMATION_WINDOW");
-
-    const next = machine.ingest(signal({ timestamp: 10_000, speedMps: 0 }));
-    expect(next.type).toBe("START_CONFIRMATION");
+    const result = machine.ingest(signal({ timestamp: 4_000, speedMps: 0 }));
+    expect(result.type).toBe("START_CONFIRMATION");
     expect(machine.getSnapshot().state).toBe("CONFIRMATION_WINDOW");
   });
 
   it("starts confirmation after sustained inactivity following suspicious motion", () => {
     const machine = new AccidentStateMachine();
     machine.start(0);
-    machine.ingest(signal({
-      timestamp: 1_000,
-      speedMps: 5,
-      angularVelocityDps: 300,
-    }));
+    machine.ingest(signal({ timestamp: 1_000, speedMps: 5, angularVelocityDps: 300 }));
     const result = machine.ingest(signal({ timestamp: 10_000, speedMps: 0 }));
     expect(result.type).toBe("START_CONFIRMATION");
     expect(machine.getSnapshot().confirmationDeadlineAt).toBe(25_000);
+  });
+
+  it("freezes sensor transitions during confirmation", () => {
+    const machine = new AccidentStateMachine();
+    machine.start(0);
+    machine.ingest(signal({ timestamp: 1_000, speedMps: 5, accelerationMagnitudeG: 3 }));
+    machine.ingest(signal({ timestamp: 10_000, speedMps: 0 }));
+    expect(machine.getSnapshot().state).toBe("CONFIRMATION_WINDOW");
+    expect(machine.ingest(signal({ timestamp: 11_000, speedMps: 20 })).type).toBe("NONE");
+    expect(machine.getSnapshot().state).toBe("CONFIRMATION_WINDOW");
   });
 
   it("supports immediate user cancellation", () => {
@@ -101,5 +104,14 @@ describe("AccidentStateMachine", () => {
     const result = machine.ingest(signal({ sensorAvailable: false, locationAvailable: false }));
     expect(result.type).toBe("UNAVAILABLE");
     expect(machine.getSnapshot().state).toBe("UNAVAILABLE");
+  });
+
+  it("does not reopen confirmation after escalation starts", () => {
+    const machine = new AccidentStateMachine();
+    machine.start(0);
+    machine.ingest(signal({ timestamp: 1_000, speedMps: 5, accelerationMagnitudeG: 3 }));
+    machine.ingest(signal({ timestamp: 10_000, speedMps: 0 }));
+    expect(machine.tick(25_000).type).toBe("ESCALATE");
+    expect(machine.ingest(signal({ timestamp: 26_000, speedMps: 0, accelerationMagnitudeG: 4 })).type).toBe("NONE");
   });
 });
