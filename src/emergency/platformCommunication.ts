@@ -2,6 +2,7 @@ import type {
   EmergencyContact,
   EmergencyEscalationAdapter,
   EmergencyEvent,
+  EmergencyDeliveryOutcome,
 } from "./emergencyEscalation";
 
 export type EmergencyCommunicationCapability =
@@ -28,7 +29,7 @@ function buildEmergencyMessage(event: EmergencyEvent): string {
 }
 
 export class BrowserCommunicationAdapter implements EmergencyEscalationAdapter {
-  public async notifyContact(contact: EmergencyContact, event: EmergencyEvent): Promise<void> {
+  public async notifyContact(contact: EmergencyContact, event: EmergencyEvent): Promise<EmergencyDeliveryOutcome> {
     const message = encodeURIComponent(buildEmergencyMessage(event));
     const uri = `sms:${contact.phone}?body=${message}`;
 
@@ -37,14 +38,10 @@ export class BrowserCommunicationAdapter implements EmergencyEscalationAdapter {
     }
 
     window.location.assign(uri);
-    // Opening the system composer does not confirm delivery. Keep the caller's
-    // delivery status pending rather than reporting success.
-    await Promise.resolve();
+    return "PENDING";
   }
 
   public async requestEmergencyCall(): Promise<"SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE"> {
-    // A normal browser/third-party WebView cannot silently place an emergency
-    // call. The app must use an explicit user-driven tel: handoff instead.
     return "REQUIRES_USER";
   }
 }
