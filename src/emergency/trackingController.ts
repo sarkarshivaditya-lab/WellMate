@@ -15,6 +15,7 @@ import {
 import type { LocalProfile } from "@/hooks/useLocalProfile";
 
 export type TrackingMode = "AUTOMATIC" | "MANUAL";
+export type EmergencyCallCapability = "SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE";
 
 export type TrackingSnapshot = {
   mode: TrackingMode | null;
@@ -139,6 +140,10 @@ export class EmergencyTrackingController {
 
   public async manualEmergency(): Promise<void> {
     await this.escalate("MANUAL");
+  }
+
+  public requestEmergencyCall(): Promise<EmergencyCallCapability> {
+    return this.escalationAdapter.requestEmergencyCall();
   }
 
   private handleSignal(signal: AccidentSignal): void {
