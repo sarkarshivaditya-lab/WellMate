@@ -109,7 +109,7 @@ export class AccidentStateMachine {
   }
 
   public stop(): AccidentDetectionAction {
-    this.snapshot = { ...this.snapshot, state: "IDLE" };
+    this.snapshot = { ...this.snapshot, state: "IDLE", confirmationDeadlineAt: null };
     return { type: "CANCEL" };
   }
 
@@ -119,7 +119,11 @@ export class AccidentStateMachine {
   }
 
   public ingest(signal: AccidentSignal): AccidentDetectionAction {
-    if (this.snapshot.state === "ESCALATED" || this.snapshot.state === "ESCALATING") {
+    if (
+      this.snapshot.state === "CONFIRMATION_WINDOW" ||
+      this.snapshot.state === "ESCALATED" ||
+      this.snapshot.state === "ESCALATING"
+    ) {
       return { type: "NONE" };
     }
 
@@ -134,9 +138,10 @@ export class AccidentStateMachine {
     const moving = hasMeaningfulMovement(signal, this.config);
     const suspicious = hasSuspiciousMotion(signal, this.config);
     const previousSpeed = this.snapshot.previousSpeedMps;
+    const currentSpeed = signal.speedMps ?? 0;
     const abruptStop =
       previousSpeed !== null &&
-      previousSpeed - (signal.speedMps ?? 0) >= this.config.abruptStopSpeedDeltaMps;
+      previousSpeed - currentSpeed >= this.config.abruptStopSpeedDeltaMps;
 
     if (moving) {
       this.snapshot.lastMeaningfulMovementAt = signal.timestamp;
@@ -161,7 +166,9 @@ export class AccidentStateMachine {
       }
     }
 
-    this.snapshot.previousSpeedMps = signal.speedMps ?? null;
+    if (signal.speedMps !== undefined) {
+      this.snapshot.previousSpeedMps = signal.speedMps;
+    }
 
     if (this.snapshot.state === "POSSIBLE_ACCIDENT" && this.snapshot.confirmationDeadlineAt === null) {
       const deadlineAt = signal.timestamp + this.config.confirmationWindowMs;
@@ -216,14 +223,8 @@ export class AccidentStateMachine {
   }
 
   public markEscalated(timestamp: number): void {
-    if (this.snapshot.lastEscalationAt !== null) {
-      if (timestamp - this.snapshot.lastEscalationAt < this.config.duplicateEventWindowMs) {
-        this.snapshot.state = "ESCALATED";
-        return;
-      }
-    }
     this.snapshot.state = "ESCALATED";
-    this.snapshot.lastEscalationAt = timestamp;
+    this.snapshot.lastEscalationAt = this.snapshot.lastEscalationAt ?? timestamp;
   }
 
   public markFailed(): void {
