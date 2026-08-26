@@ -14,7 +14,11 @@ type ActivityLevel =
   | "active"
   | "veryActive";
 
-const EMPTY_CONTACT: EmergencyContactPayload = { id: "", name: "", phone: "" };
+const makeId = () =>
+  globalThis.crypto?.randomUUID?.() ??
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const EMPTY_CONTACT = (): EmergencyContactPayload => ({ id: makeId(), name: "", phone: "" });
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -35,16 +39,12 @@ export default function Onboarding() {
   const [muscleGoal, setMuscleGoal] = useState(() => draft?.muscleGoal ?? "");
   const [cycleLength, setCycleLength] = useState(() => draft?.cycleLength ?? "");
   const [lastPeriod, setLastPeriod] = useState(() => draft?.lastPeriod ?? "");
-  const [additionalHealthChoice, setAdditionalHealthChoice] = useState(
-    () => draft?.additionalHealthChoice ?? "",
-  );
-  const [additionalHealthNotes, setAdditionalHealthNotes] = useState(
-    () => draft?.additionalHealthNotes ?? "",
-  );
+  const [additionalHealthChoice, setAdditionalHealthChoice] = useState(() => draft?.additionalHealthChoice ?? "");
+  const [additionalHealthNotes, setAdditionalHealthNotes] = useState(() => draft?.additionalHealthNotes ?? "");
   const [bloodType, setBloodType] = useState(() => draft?.bloodType ?? "");
   const [allergies, setAllergies] = useState(() => draft?.allergies ?? "");
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContactPayload[]>(
-    () => (draft?.emergencyContacts?.length ? draft.emergencyContacts : [{ ...EMPTY_CONTACT, id: crypto.randomUUID() }]),
+    () => (draft?.emergencyContacts?.length ? draft.emergencyContacts : [EMPTY_CONTACT()]),
   );
   const [attemptedNext, setAttemptedNext] = useState(false);
 
@@ -129,26 +129,29 @@ export default function Onboarding() {
     if (heightIn !== "" && rawIn !== clampedIn) setHeightIn(String(clampedIn));
     const cm = (Number.isFinite(ft) ? ft : 0) * 30.48 + clampedIn * 2.54;
     setHeight(cm > 0 ? String(cm) : "");
-  }, [heightUnit, heightFt, heightIn, heightIn]);
+  }, [heightUnit, heightFt, heightIn]);
 
   function buildOnboardingProfile() {
+    const parsedHeight = Number(height);
+    const parsedWeight = Number(weight);
+    const normalizedHeight = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : 0;
+    const normalizedWeight = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 0;
+
     return {
       dob,
-      sex,
-      heightCm: Number(height) || null,
-      weightKg: Number(weight) || null,
+      sex: sex as "male" | "female" | "other" | "",
+      heightCm: normalizedHeight,
+      weightKg: normalizedWeight,
       activityLevel,
       dailySteps,
       weightGoal,
       muscleGoal,
-      cycleLength: sex === "female" ? Number(cycleLength) || null : null,
-      lastPeriod: sex === "female" ? lastPeriod || null : null,
-      additionalHealth: sex !== "female" && additionalHealthChoice === "yes" ? additionalHealthNotes || null : null,
+      cycleLength: sex === "female" ? Number(cycleLength) || undefined : undefined,
+      lastPeriod: sex === "female" ? lastPeriod || undefined : undefined,
+      additionalHealthNotes:
+        sex !== "female" && additionalHealthChoice === "yes" ? additionalHealthNotes || undefined : undefined,
       bloodType: bloodType || undefined,
-      allergies: allergies
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
+      allergies: allergies.split(",").map((value) => value.trim()).filter(Boolean),
       emergencyContacts: emergencyContacts
         .filter((contact) => contact.name.trim() && contact.phone.trim())
         .map((contact) => ({
@@ -157,7 +160,6 @@ export default function Onboarding() {
           phone: contact.phone.trim(),
         })),
       createdAt: Date.now(),
-      source: "onboarding",
     };
   }
 
@@ -179,7 +181,6 @@ export default function Onboarding() {
     }
     if (step === 3) return Boolean(activityLevel);
     if (step === 5) return Boolean(weightGoal);
-    if (step === 7) return sex === "female" ? true : true;
     if (step === 8) return isEmergencyStepValid;
     return true;
   }
@@ -225,13 +226,11 @@ export default function Onboarding() {
   if (weightGoal === "gain") goalCalories += 300;
 
   const updateContact = (id: string, patch: Partial<EmergencyContactPayload>) => {
-    setEmergencyContacts((contacts) =>
-      contacts.map((contact) => (contact.id === id ? { ...contact, ...patch } : contact)),
-    );
+    setEmergencyContacts((contacts) => contacts.map((contact) => (contact.id === id ? { ...contact, ...patch } : contact)));
   };
 
   const addContact = () => {
-    setEmergencyContacts((contacts) => [...contacts, { ...EMPTY_CONTACT, id: crypto.randomUUID() }]);
+    setEmergencyContacts((contacts) => [...contacts, EMPTY_CONTACT()]);
   };
 
   const removeContact = (id: string) => {
@@ -279,12 +278,7 @@ export default function Onboarding() {
           <div className="space-y-5">
             <Field label="Date of Birth" type="date" value={dob} onChange={setDob} />
             {attemptedNext && !dob && <ValidationError />}
-            <Select
-              label="Biological Sex"
-              value={sex}
-              onChange={setSex}
-              options={[{ value: "", label: "Select" }, { value: "female", label: "Female" }, { value: "male", label: "Male" }, { value: "other", label: "Other" }]}
-            />
+            <Select label="Biological Sex" value={sex} onChange={setSex} options={[{ value: "", label: "Select" }, { value: "female", label: "Female" }, { value: "male", label: "Male" }, { value: "other", label: "Other" }]} />
             {attemptedNext && !sex && <ValidationError />}
           </div>
         )}
@@ -346,30 +340,18 @@ export default function Onboarding() {
               <p className="text-sm text-foreground mt-1">WellMate uses this information only when an emergency workflow needs it.</p>
             </div>
 
-            <Select
-              label="Blood type"
-              value={bloodType}
-              onChange={setBloodType}
-              options={[{ value: "", label: "Select" }, { value: "A+", label: "A+" }, { value: "A-", label: "A−" }, { value: "B+", label: "B+" }, { value: "B-", label: "B−" }, { value: "AB+", label: "AB+" }, { value: "AB-", label: "AB−" }, { value: "O+", label: "O+" }, { value: "O-", label: "O−" }, { value: "unknown", label: "Unknown" }]}
-            />
-
+            <Select label="Blood type" value={bloodType} onChange={setBloodType} options={[{ value: "", label: "Select" }, { value: "A+", label: "A+" }, { value: "A-", label: "A−" }, { value: "B+", label: "B+" }, { value: "B-", label: "B−" }, { value: "AB+", label: "AB+" }, { value: "AB-", label: "AB−" }, { value: "O+", label: "O+" }, { value: "O-", label: "O−" }, { value: "unknown", label: "Unknown" }]} />
             <Field label="Allergies (comma separated)" value={allergies} onChange={setAllergies} />
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Emergency contacts</p>
-                  <p className="text-xs text-muted-foreground mt-1">At least one is required for escalation.</p>
-                </div>
+                <div><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Emergency contacts</p><p className="text-xs text-muted-foreground mt-1">At least one is required for escalation.</p></div>
                 <button type="button" onClick={addContact} className="text-xs font-semibold text-primary">Add contact</button>
               </div>
               <div className="space-y-3">
                 {emergencyContacts.map((contact) => (
                   <div key={contact.id} className="rounded-2xl border border-border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Emergency contact</span>
-                      {emergencyContacts.length > 1 && <button type="button" onClick={() => removeContact(contact.id)} className="text-xs text-destructive">Remove</button>}
-                    </div>
+                    <div className="flex items-center justify-between"><span className="text-xs text-muted-foreground">Emergency contact</span>{emergencyContacts.length > 1 && <button type="button" onClick={() => removeContact(contact.id)} className="text-xs text-destructive">Remove</button>}</div>
                     <Field label="Name" value={contact.name} onChange={(value) => updateContact(contact.id, { name: value })} />
                     <Field label="Phone" type="tel" value={contact.phone} onChange={(value) => updateContact(contact.id, { phone: value })} />
                   </div>
@@ -453,10 +435,5 @@ function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
 }
 
 function Summary({ label, value }: SummaryProps) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground text-right">{value}</span>
-    </div>
-  );
+  return <div className="flex items-center justify-between gap-4 px-4 py-3 text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium text-foreground text-right">{value}</span></div>;
 }
