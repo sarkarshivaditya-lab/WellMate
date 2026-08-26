@@ -25,6 +25,7 @@ export interface EmergencySensorAdapter {
 
 const MAX_ACCEPTABLE_ACCURACY_M = 100;
 const MAX_PLAUSIBLE_SPEED_MPS = 90;
+const MOTION_SAMPLE_INTERVAL_MS = 50;
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
@@ -164,7 +165,12 @@ export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
       throw new Error("Motion sensor permission was denied or is unavailable");
     }
 
+    let lastMotionAt = 0;
     const onMotion = (event: DeviceMotionEvent) => {
+      const now = Date.now();
+      if (now - lastMotionAt < MOTION_SAMPLE_INTERVAL_MS) return;
+      lastMotionAt = now;
+
       const acceleration = event.accelerationIncludingGravity;
       const x = acceleration?.x ?? 0;
       const y = acceleration?.y ?? 0;
@@ -178,7 +184,7 @@ export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
       const angularVelocityDps = Math.sqrt(alpha * alpha + beta * beta + gamma * gamma);
 
       options.onSignal({
-        timestamp: Date.now(),
+        timestamp: now,
         accelerationMagnitudeG: magnitudeG,
         angularVelocityDps,
         sensorAvailable: true,
