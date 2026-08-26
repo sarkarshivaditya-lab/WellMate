@@ -1,13 +1,13 @@
 import type { AccidentSignal } from "./accidentStateMachine";
-import type { EmergencySensorAdapter } from "./sensorService";
+import type { EmergencySensorService } from "./sensorService";
 
 const MOVEMENT_SPEED_MPS = 1.4;
 
 export class AutomaticTrackingPolicy {
-  private motionStop: (() => void) | null = null;
+  private motionStop: (() => Promise<void>) | null = null;
   private motionActive = false;
 
-  public constructor(private readonly adapter: EmergencySensorAdapter) {}
+  public constructor(private readonly sensors: EmergencySensorService) {}
 
   public async handleLocationSignal(
     signal: AccidentSignal,
@@ -16,8 +16,9 @@ export class AutomaticTrackingPolicy {
     onSignal(signal);
 
     const moving = (signal.speedMps ?? 0) >= MOVEMENT_SPEED_MPS;
-    if (moving && !this.motionActive && signal.sensorAvailable !== false) {
-      await this.startMotion(onSignal);
+    if (moving && !this.motionActive) {
+      this.motionStop = await this.sensors.startMotion(onSignal);
+      this.motionActive = true;
       return;
     }
 
@@ -26,17 +27,9 @@ export class AutomaticTrackingPolicy {
     }
   }
 
-  public async startMotion(onSignal: (signal: AccidentSignal) => void): Promise<void> {
-    if (this.motionActive) return;
-    const stop = await this.adapter.startMotion({ onSignal });
-    this.motionStop = stop;
-    this.motionActive = true;
-  }
-
   public async stopMotion(): Promise<void> {
-    this.motionStop?.();
+    await this.motionStop?.();
     this.motionStop = null;
     this.motionActive = false;
-    await this.adapter.stopMotion();
   }
 }
