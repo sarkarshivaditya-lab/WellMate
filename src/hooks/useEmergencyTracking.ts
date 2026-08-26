@@ -1,12 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { BrowserEmergencySensorAdapter, EmergencySensorService } from "@/emergency/sensorService";
 import { BrowserCommunicationAdapter } from "@/emergency/platformCommunication";
-import { EmergencyTrackingController, type TrackingMode, type TrackingSnapshot } from "@/emergency/trackingController";
+import {
+  EmergencyTrackingController,
+  type EmergencyCallCapability,
+  type TrackingMode,
+  type TrackingSnapshot,
+} from "@/emergency/trackingController";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 
 function createController(profile: ReturnType<typeof useLocalProfile>): EmergencyTrackingController {
   const sensorService = new EmergencySensorService(new BrowserEmergencySensorAdapter());
-  const communication = new BrowserCommunicationAdapter();
+  const configuredEmergencyNumber = (import.meta.env.VITE_EMERGENCY_NUMBER as string | undefined) ?? null;
+  const communication = new (class extends BrowserCommunicationAdapter {
+    public override async requestEmergencyCall(): Promise<EmergencyCallCapability> {
+      if (!configuredEmergencyNumber || typeof window === "undefined") return "UNAVAILABLE";
+      window.location.assign(`tel:${configuredEmergencyNumber}`);
+      return "REQUIRES_USER";
+    }
+  })();
+
   return new EmergencyTrackingController(sensorService, () => profile, communication);
 }
 
@@ -40,5 +53,6 @@ export function useEmergencyTracking() {
     userIsOk: () => controller.userIsOk(),
     userIsNotOk: () => controller.userIsNotOk(),
     manualEmergency: () => controller.manualEmergency(),
+    requestEmergencyCall: () => controller.requestEmergencyCall(),
   };
 }
