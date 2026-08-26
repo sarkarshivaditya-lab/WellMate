@@ -2,7 +2,6 @@ import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Search, User } from "lucide-react";
 import BottomNav from "./BottomNav";
-import { WellMateLauncher } from "@/components/ai/WellMateLauncher";
 import { DisclaimerModal } from "@/components/DisclaimerModal";
 import { hasAckedDisclaimer } from "@/data/disclaimerStore";
 import OfflineBanner from "@/components/OfflineBanner";
@@ -12,11 +11,6 @@ import { WellmateCommandPalette } from "@/components/search/WellmateCommandPalet
 import { haptics } from "@/motion/haptics";
 import { emitAnalyticsEvent } from "@/analytics/eventBus";
 import { cn } from "@/lib/utils";
-
-// ── Top search bar ────────────────────────────────────────────────────────────
-// Sits at the very top of the AppShell flex column, outside the scrollable
-// main container — so it stays visible regardless of scroll position without
-// needing fixed positioning. pt-[env(safe-area-inset-top)] handles notches.
 
 function TopSearchBar() {
   const { openPalette } = useCommandPalette();
@@ -43,7 +37,6 @@ function TopSearchBar() {
       )}
     >
       <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2.5">
-        {/* Search pill — flex-1 so it fills available space */}
         <button
           type="button"
           onClick={handleOpen}
@@ -67,7 +60,6 @@ function TopSearchBar() {
           </kbd>
         </button>
 
-        {/* Profile access — circular, lightweight, system-level */}
         <button
           type="button"
           onClick={handleProfile}
@@ -89,8 +81,6 @@ function TopSearchBar() {
   );
 }
 
-// ── Keyboard shortcut handler ─────────────────────────────────────────────────
-
 function KeyboardShortcut() {
   const { openPalette, open } = useCommandPalette();
 
@@ -109,9 +99,6 @@ function KeyboardShortcut() {
   return null;
 }
 
-// ── Shell inner (requires palette context) ───────────────────────
-// ──────────────
-
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [showDisclaimer, setShowDisclaimer] = React.useState(
@@ -120,19 +107,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Skip-to-content — keyboard accessibility */}
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>
 
-      {/* Global search bar — above all page content, never scrolls */}
       <TopSearchBar />
-
-      {/* Connectivity + sync status strips */}
       <OfflineBanner />
       <SyncPulse />
 
-      {/* Main scrollable content */}
       <main
         id="main-content"
         aria-label="Main content"
@@ -143,27 +125,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Persistent bottom navigation */}
       <BottomNav />
-
-      {/* Persistent WellMate launcher — bottom-right, above nav */}
-      <WellMateLauncher />
-
-      {/* Command palette — rendered in portal, lives here so all children can open it */}
       <WellmateCommandPalette />
-
-      {/* Keyboard shortcut listener */}
       <KeyboardShortcut />
 
-      {/* First-launch disclaimer — non-dismissable until acknowledged */}
       {showDisclaimer && (
         <DisclaimerModal onAck={() => setShowDisclaimer(false)} />
       )}
     </div>
   );
 }
-
-// ── AppShell root (provides palette context) ──────────────────────────────────
 
 export default function AppShell({
   children,
