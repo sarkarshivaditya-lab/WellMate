@@ -31,7 +31,7 @@ jobs:
 
       - name: Restore pre-cleanup lockfile for dependency reconciliation
         if: github.ref_name == 'feat/golden-hour-emergency'
-        run: git show e2835e74e204d2e85412aed39b9fc15adad5e87b:pnpm-lock.yaml > pnpm-lock.yaml
+        run: git show 3ad85ea95d3839550e39173cbc2d828355859cd7:pnpm-lock.yaml > pnpm-lock.yaml
 
       - name: Regenerate lockfile with pnpm
         run: pnpm install --lockfile-only --no-frozen-lockfile
