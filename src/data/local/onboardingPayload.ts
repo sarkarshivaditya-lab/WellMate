@@ -1,9 +1,5 @@
 /* ONBOARDING PAYLOAD — LOCAL FIRST */
 
-/**
- * Data captured before authentication is established.
- * The completed local snapshot remains the canonical onboarding/profile source.
- */
 export type EmergencyContactPayload = {
   id: string;
   name: string;
@@ -36,11 +32,57 @@ export type OnboardingPayload = {
 
 const STORAGE_KEY = "onboarding_profile";
 
+function isEmergencyContact(value: unknown): value is EmergencyContactPayload {
+  if (!value || typeof value !== "object") return false;
+  const contact = value as Record<string, unknown>;
+  return (
+    typeof contact.id === "string" &&
+    typeof contact.name === "string" &&
+    typeof contact.phone === "string"
+  );
+}
+
 export function readOnboardingPayload(): OnboardingPayload | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as OnboardingPayload;
+    const value = JSON.parse(raw) as Partial<OnboardingPayload>;
+    if (
+      typeof value.dob !== "string" ||
+      typeof value.sex !== "string" ||
+      typeof value.heightCm !== "number" ||
+      !Number.isFinite(value.heightCm) ||
+      typeof value.weightKg !== "number" ||
+      !Number.isFinite(value.weightKg)
+    ) {
+      return null;
+    }
+
+    const contacts = Array.isArray(value.emergencyContacts)
+      ? value.emergencyContacts.filter(isEmergencyContact)
+      : undefined;
+    const allergies = Array.isArray(value.allergies)
+      ? value.allergies.filter((item): item is string => typeof item === "string")
+      : undefined;
+
+    return {
+      dob: value.dob,
+      sex: value.sex as OnboardingPayload["sex"],
+      heightCm: value.heightCm,
+      weightKg: value.weightKg,
+      activityLevel: value.activityLevel ?? null,
+      dailySteps: value.dailySteps ?? "",
+      weightGoal: value.weightGoal ?? "",
+      muscleGoal: value.muscleGoal ?? "",
+      cycleLength: typeof value.cycleLength === "number" ? value.cycleLength : undefined,
+      lastPeriod: typeof value.lastPeriod === "string" ? value.lastPeriod : undefined,
+      additionalHealthNotes:
+        typeof value.additionalHealthNotes === "string" ? value.additionalHealthNotes : undefined,
+      bloodType: typeof value.bloodType === "string" ? value.bloodType : undefined,
+      allergies,
+      emergencyContacts: contacts,
+      createdAt: typeof value.createdAt === "number" ? value.createdAt : Date.now(),
+    };
   } catch {
     return null;
   }
