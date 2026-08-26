@@ -33,8 +33,10 @@ function getLast7Days() {
 
 function useWeeklyActivity() {
   const allExercises = useAllExercises();
-  const days = getLast7Days();
-  return useMemo(() => days.map((day) => ({ label: day.label, fullLabel: day.fullLabel, totalDuration: allExercises.filter((e) => e.dateIso === day.dateIso).reduce((sum, e) => sum + e.durationMinutes, 0) })), [allExercises]);
+  return useMemo(() => {
+    const days = getLast7Days();
+    return days.map((day) => ({ label: day.label, fullLabel: day.fullLabel, totalDuration: allExercises.filter((e) => e.dateIso === day.dateIso).reduce((sum, e) => sum + e.durationMinutes, 0) }));
+  }, [allExercises]);
 }
 
 function TodayActivitySummary() {
