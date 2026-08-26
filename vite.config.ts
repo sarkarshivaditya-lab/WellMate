@@ -4,9 +4,6 @@ import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // Treat WASM binaries as static assets so ?url imports resolve correctly.
-  // Required for @wllama/wllama which delivers its llama.cpp binary this way.
-  assetsInclude: ["**/*.wasm"],
   server: {
     host: "0.0.0.0",
     port: 5173,
@@ -18,10 +15,7 @@ export default defineConfig({
   plugins: [react(), hercules()],
   resolve: {
     alias: {
-      // MUST come first – fixes Convex generated client resolution
       "@/convex": path.resolve(__dirname, "./convex"),
-
-      // App source
       "@": path.resolve(__dirname, "./src"),
     },
   },
@@ -29,7 +23,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // React core — tiny, shared everywhere, cache forever
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/") ||
@@ -38,18 +31,15 @@ export default defineConfig({
           ) {
             return "vendor-react";
           }
-          // Convex + Auth — change together, separate from UI
           if (
             id.includes("node_modules/convex/") ||
             id.includes("node_modules/@auth0/")
           ) {
             return "vendor-auth";
           }
-          // All Radix UI — large collective, changes infrequently
           if (id.includes("node_modules/@radix-ui/")) {
             return "vendor-radix";
           }
-          // Sheet/dialog overlays — cmdk, vaul, sonner
           if (
             id.includes("node_modules/cmdk/") ||
             id.includes("node_modules/vaul/") ||
