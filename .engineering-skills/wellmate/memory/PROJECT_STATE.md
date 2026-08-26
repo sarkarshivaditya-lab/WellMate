@@ -4,52 +4,108 @@
 
 Current protected application baseline:
 
+- Application rollback baseline: 5575511c4372896318a2dc1185475f00ed231465
+- Engineering baseline: d595c16ceb2c0d09ac836e914c616a1508fca3a3
 - Branch: main
-- Baseline commit: 5575511c4372896318a2dc1185475f00ed231465
+
+Do not rewrite either protected baseline commit.
 
 ## Stack
 
-- React
-- TypeScript
-- Vite
-- Convex
-- Auth0
-- Capacitor
-- Offline-first/local-first architecture
+- Frontend: React 19 + TypeScript 5.9 + Vite 7
+- Routing: React Router
+- Backend/sync: Convex
+- Authentication: Auth0 React SDK; Capacitor native callback handler exists
+- Mobile runtime: Capacitor Android/iOS 7.x
+- Architecture: mobile-first, local-first, privacy-first, deferred server sync
 
-## Architecture priorities
+## Current source architecture
 
-1. Stability
-2. Privacy-first local ownership
-3. Offline reliability
-4. Architecture consistency
-5. Mobile UX
-6. Performance
-7. Visual polish
+Primary frontend roots observed under `src/` include:
 
-## Locked systems
+- `components/` shared UI/layout/providers
+- `contexts/` application contexts
+- `hooks/` reusable local/state hooks
+- `adapters/` integration boundaries
+- `data/` local data ownership including onboarding payloads
+- `pages/` route-level experiences including Welcome, Onboarding, Transition, PhysicalDashboard, Habits, Sleep, mental pages, Profile, Chat, Tools, Roadmap and Pricing
+- `ai/` current AI runtime/provider/assistant/cognition infrastructure
+- `analytics/`, `notifications/`, `reliability/`, `intelligence/`, `insights/`, `export/`, `design/` supporting systems
 
-- src/pages/Onboarding.tsx
-- src/hooks/useLocalProfile.ts
-- existing sync architecture
-- existing local storage persistence model
-- local-first onboarding architecture
-- onboarding_profile canonical ownership model
+Backend Convex modules include users, habits, meals, moods, journal, sleep, subscriptions and AI coach modules.
 
-## Current engineering layer
+## Routing and authentication
 
-External skill collections are stored under:
+`src/App.tsx` uses `BrowserRouter` and lazy route loading. Key routes are `/`, `/welcome`, `/onboarding`, `/overview`, `/physical`, `/mental`, `/journal`, `/mental/coach`, `/habits`, `/tools`, `/profile`, `/chat`, `/sleep`, `/roadmap`, and `/pricing` plus development routes.
 
-- .engineering-skills/0xMassi-claude-skills/
-- .engineering-skills/troykelly-claude-skills/
-- .engineering-skills/typescript-review/
+Authenticated application routes use `RequireAuth` and then `RequireOnboarding`. `RequireAuth` invokes Auth0 login; on Capacitor it opens Auth0 through the system browser and relies on `CapacitorAuthHandler`/`appUrlOpen` handling for the native callback. `RootEntry` currently routes unauthenticated users based on local `onboarded` and welcome flags.
 
-WellMate-specific controls are under:
+The requested transformation explicitly requires repairing the onboarding-to-Auth0-to-authenticated-app flow while preserving the ability to render onboarding/profile locally without network availability.
 
-- .engineering-skills/wellmate/
+## Onboarding and canonical profile ownership
 
-## Rule
+`src/pages/Onboarding.tsx` is the existing 8-step onboarding experience. It stores an in-progress draft through `src/data/local/onboardingPayload.ts` and writes the completed snapshot to `localStorage` key `onboarding_profile` before navigating to `/physical`.
 
-This memory file is supplemental context.
+`src/hooks/useLocalProfile.ts` derives the canonical local profile directly from the local onboarding payload. The source code and `CLAUDE.md` treat this local profile as authoritative for onboarding/profile rendering and local wellness calculations.
 
-`CLAUDE.md` and the actual source code remain authoritative.
+The transformation requires adding blood type, allergies and emergency contacts to this same local ownership model. Do not create a duplicate canonical profile store and do not make completion network-dependent. The user request explicitly authorizes changing the locked onboarding behavior for this feature, but not replacing its architecture.
+
+## Existing emergency/sensor capability
+
+Initial repository search did not find an existing production accident-detection state machine or a dedicated GPS/accelerometer/gyroscope service. The current package contains Capacitor core/mobile packages but no dedicated motion plugin was identified in the initial dependency inspection. The emergency subsystem therefore needs a new sensor-service abstraction with platform adapters and a deterministic accident state machine rather than UI-level sensor logic.
+
+Requested automatic mode semantics: low-frequency location sampling around 20 seconds while stable, then higher-frequency motion sensing when meaningful movement is detected. Accident detection must use multiple signals and temporal windows rather than a zero-speed shortcut.
+
+Requested manual mode: explicit tracking state with clear `TRACKING ACTIVE` status and user stop control.
+
+## Platform constraints discovered during initial research
+
+- Capacitor is the supported native bridge and can expose native device APIs through plugins/custom native plugins. Authoritative Capacitor documentation describes Geolocation as a native-capability bridge and supports adding custom plugins for platform-specific functionality. See current research in execution notes.
+- Android exposes a `KEYCODE_POWER`, but the key is system-controlled; a normal app cannot assume it will receive repeated power-button events. The requested three-press shortcut must therefore be treated as an explicit platform adapter/fallback, not simulated in JavaScript.
+- iOS currently documents hardware-button capture event APIs, but they are constrained to camera/capture use cases and only delivered to apps actively using capture. This does not provide a general power-button triple-press interception mechanism for WellMate.
+- iOS supports user-configurable Action Button/App Shortcut and Controls pathways, which are legitimate alternatives for a hardware-assisted emergency shortcut where appropriate; this is not equivalent to silently intercepting the power button.
+
+## Auth0 risk
+
+`src/App.tsx` currently contains both web and Capacitor-specific Auth0 entry handling. Native auth explicitly opens the Auth0 URL with Capacitor Browser and expects the native app callback handler to complete the exchange. A timeout fallback currently routes users back toward onboarding instead of permanently trapping the app. This area is a priority because the requested product flow currently gets stuck after onboarding.
+
+## AI architecture and removal boundary
+
+The current application has a large local/offline AI subsystem under `src/ai/`, including runtime lifecycle management, local provider implementations, model bridges, cognition/assistant infrastructure, memory/consolidation, workers and related state. Initial search confirms direct local-provider implementations using Wllama and Transformers libraries, and the package currently declares `@wllama/wllama` and `@xenova/transformers` dependencies.
+
+The requested transformation requires complete removal of the offline AI runtime/provider/model-download/cache/inference graph and all obsolete dependencies, while preserving a clean application-facing AI service boundary for a future online adapter. The future provider must not be invented in this change.
+
+## Privacy and data handling
+
+Blood type, allergies, emergency contacts, location and motion data are sensitive. The canonical local-first profile must remain device-resident by default. Emergency escalation may transmit only the minimum necessary emergency information to configured recipients when required. Sensitive information must not be placed in generic diagnostics or logs.
+
+## Validation requirements
+
+Every meaningful change must be validated with targeted tests plus TypeScript/build/lint where applicable. Emergency detection requires deterministic unit coverage for normal movement, normal stops, GPS jitter, suspicious movement, sudden stop, sustained inactivity, sensor/GPS unavailability, permission denial and duplicate escalation protection. Confirmation-window tests must cover cancellation, explicit escalation and timeout escalation. Auth tests must cover launch, callback, hydration and route transition. Offline-AI removal must be checked with dependency/import searches and production build.
+
+## Likely files to change
+
+- `src/data/local/onboardingPayload.ts`
+- `src/pages/Onboarding.tsx`
+- `src/hooks/useLocalProfile.ts`
+- `src/App.tsx`
+- new emergency/sensor/state-machine services and tests under `src/`
+- Auth0/Capacitor integration files under `src/components/providers/` and `src/pages/auth/` as required by inspection
+- `package.json` and lockfile after offline-AI graph removal
+- AI service boundary files after local runtime removal
+- memory/documentation files as durable discoveries are made
+
+## Known technical debt / risks
+
+- Existing auth flow has a known post-onboarding failure mode.
+- Existing AI startup in `App.tsx` initializes a broad local AI runtime and related self-healing/cognition infrastructure; this must be excised without breaking unrelated app startup.
+- The repository includes an extensive engineering-skill system and several historical Claude memory documents; source code plus `CLAUDE.md` remain authoritative.
+- No repository-local clone is available in the current tool workspace, so repository writes are being performed through the GitHub connector. Local command execution must only be claimed when a real checkout is present.
+
+## Current transformation direction
+
+WellMate is being repositioned around the Golden Hour emergency-response workflow: detect possible accidents conservatively, provide an approximately 15-second confirmation window, then escalate with current location and the minimum necessary medical/emergency-contact context. Existing wellness surfaces should remain intact unless they conflict with this emergency center of gravity.
+
+## Memory maintenance rule
+
+Update this file whenever durable architecture, platform constraints, root causes, dependency relationships, emergency-state behavior, AI-removal findings or rollback information materially changes. Source code and `CLAUDE.md` remain authoritative if any discrepancy appears.
