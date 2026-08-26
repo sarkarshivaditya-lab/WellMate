@@ -1,31 +1,6 @@
 import React from "react";
 import { Auth0Provider } from "@auth0/auth0-react";
-
-declare global {
-  interface Window {
-    Capacitor?: { isNativePlatform?: () => boolean };
-  }
-}
-
-export const isCapacitorNative =
-  typeof window !== "undefined" &&
-  window.Capacitor?.isNativePlatform?.() === true;
-
-export function getCapacitorCallbackUri(domain: string): string {
-  const configured = import.meta.env.VITE_AUTH0_NATIVE_REDIRECT_URI as string | undefined;
-  return configured ?? `com.wellmate.app://${domain}/capacitor/com.wellmate.app/callback`;
-}
-
-function resolveRedirectUri(domain?: string): string {
-  if (isCapacitorNative) {
-    if (!domain) return "";
-    return getCapacitorCallbackUri(domain);
-  }
-
-  const envUri = import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined;
-  if (envUri) return envUri;
-  return typeof window !== "undefined" ? window.location.origin : "";
-}
+import { isCapacitorNative, resolveRedirectUri } from "./authConfig";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const domain = import.meta.env.VITE_AUTH0_DOMAIN as string | undefined;
@@ -39,7 +14,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       <Auth0Provider
         domain="placeholder.auth0.com"
         clientId="placeholder"
-        authorizationParams={{ redirect_uri: typeof window !== "undefined" ? window.location.origin : "" }}
+        authorizationParams={{
+          redirect_uri: typeof window !== "undefined" ? window.location.origin : "",
+        }}
         cacheLocation="localstorage"
       >
         {children}
@@ -66,3 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </Auth0Provider>
   );
 }
+
+export { isCapacitorNative } from "./authConfig";
+export { getCapacitorCallbackUri, resolveRedirectUri } from "./authConfig";
