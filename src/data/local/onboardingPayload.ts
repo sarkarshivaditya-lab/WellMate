@@ -1,27 +1,20 @@
-/* ======================================================
-   ONBOARDING PAYLOAD — LOCAL FIRST
-   ====================================================== */
+/* ONBOARDING PAYLOAD — LOCAL FIRST */
 
 /**
- * This represents onboarding data captured
- * BEFORE authentication is established.
- *
- * It is:
- * - written by Onboarding.tsx
- * - consumed by AuthSyncBoundary
- * - promoted to Convex user profile exactly once
+ * Data captured before authentication is established.
+ * The completed local snapshot remains the canonical onboarding/profile source.
  */
+export type EmergencyContactPayload = {
+  id: string;
+  name: string;
+  phone: string;
+};
 
 export type OnboardingPayload = {
-  // identity
   dob: string;
   sex: "male" | "female" | "other" | "";
-
-  // body
   heightCm: number;
   weightKg: number;
-
-  // activity
   activityLevel:
     | "sedentary"
     | "light"
@@ -29,33 +22,21 @@ export type OnboardingPayload = {
     | "active"
     | "veryActive"
     | null;
-
   dailySteps: string;
-
-  // goals
   weightGoal: string;
   muscleGoal: string;
-
-  // female health (optional)
   cycleLength?: number;
   lastPeriod?: string;
-
-  // other health (optional)
   additionalHealthNotes?: string;
-
-  // metadata
+  bloodType?: string;
+  allergies?: string[];
+  emergencyContacts?: EmergencyContactPayload[];
   createdAt: number;
 };
 
-/* ======================================================
-   STORAGE HELPERS
-   ====================================================== */
-
 const STORAGE_KEY = "onboarding_profile";
 
-export function readOnboardingPayload():
-  | OnboardingPayload
-  | null {
+export function readOnboardingPayload(): OnboardingPayload | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
@@ -65,20 +46,13 @@ export function readOnboardingPayload():
   }
 }
 
-export function clearOnboardingPayload() {
+export function clearOnboardingPayload(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // ignore
+    // ignore storage errors
   }
 }
-
-/* ======================================================
-   ONBOARDING DRAFT — IN-PROGRESS FORM STATE
-   Persists the user's work-in-progress across reloads,
-   auth redirects, and app-backgrounding so no data is
-   lost before finish() is called.
-   ====================================================== */
 
 export type OnboardingDraft = {
   step: number;
@@ -97,6 +71,9 @@ export type OnboardingDraft = {
   lastPeriod: string;
   additionalHealthChoice: string;
   additionalHealthNotes: string;
+  bloodType: string;
+  allergies: string;
+  emergencyContacts: EmergencyContactPayload[];
 };
 
 const DRAFT_KEY = "onboarding_draft";
@@ -123,6 +100,6 @@ export function clearOnboardingDraft(): void {
   try {
     localStorage.removeItem(DRAFT_KEY);
   } catch {
-    // ignore
+    // ignore storage errors
   }
 }
