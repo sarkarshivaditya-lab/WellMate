@@ -5,6 +5,7 @@ import {
   type AccidentState,
 } from "./accidentStateMachine";
 import { EmergencySensorService } from "./sensorService";
+import { AutomaticTrackingPolicy } from "./automaticTracking";
 import {
   createEmergencyEvent,
   escalateEmergency,
@@ -29,6 +30,7 @@ export type TrackingListener = (snapshot: TrackingSnapshot) => void;
 
 export class EmergencyTrackingController {
   private readonly stateMachine: AccidentStateMachine;
+  private readonly automaticPolicy: AutomaticTrackingPolicy;
   private locationStop: (() => Promise<void>) | null = null;
   private motionStop: (() => Promise<void>) | null = null;
   private confirmationTimer: ReturnType<typeof setInterval> | null = null;
@@ -45,6 +47,7 @@ export class EmergencyTrackingController {
     private readonly escalationAdapter: EmergencyEscalationAdapter,
   ) {
     this.stateMachine = new AccidentStateMachine();
+    this.automaticPolicy = new AutomaticTrackingPolicy(sensors);
   }
 
   public subscribe(listener: TrackingListener): () => void {
@@ -58,7 +61,9 @@ export class EmergencyTrackingController {
     return {
       mode: this.mode,
       state: machine.state,
-      trackingActive: this.mode !== null && !["IDLE", "CANCELLED", "FAILED", "UNAVAILABLE"].includes(machine.state),
+      trackingActive:
+        this.mode !== null &&
+        !["IDLE", "CANCELLED", "FAILED", "UNAVAILABLE"].includes(machine.state),
       confirmationDeadlineAt: machine.confirmationDeadlineAt,
       latestSignal: this.latestSignal,
       lastEscalation: this.lastEscalation,
@@ -76,9 +81,17 @@ export class EmergencyTrackingController {
 
     try {
       if (mode === "AUTOMATIC") {
-        this.locationStop = await this.sensors.startAutomaticMode((signal) => this.handleSignal(signal));
+        this.locationStop = await this.sensors.startAutomaticMode(
+          (signal) => {
+            void this.automaticPolicy.handleLocationSignal(signal, (next) => this.handleSignal(next));
+          },
+          20_000,
+        );
       } else {
-        this.locationStop = await this.sensors.startAutomaticMode((signal) => this.handleSignal(signal), 2_000);
+        this.locationStop = await this.sensors.startAutomaticMode(
+          (signal) => this.handleSignal(signal),
+          2_000,
+        );
         this.motionStop = await this.sensors.startMotion((signal) => this.handleSignal(signal));
       }
     } catch (error) {
@@ -93,11 +106,14 @@ export class EmergencyTrackingController {
       clearInterval(this.confirmationTimer);
       this.confirmationTimer = null;
     }
+
     await Promise.allSettled([
       this.locationStop?.() ?? Promise.resolve(),
       this.motionStop?.() ?? Promise.resolve(),
+      this.automaticPolicy.stopMotion(),
       this.sensors.stopAll(),
     ]);
+
     this.locationStop = null;
     this.motionStop = null;
     this.stateMachine.stop();
@@ -112,15 +128,17 @@ export class EmergencyTrackingController {
       this.confirmationTimer = null;
     }
     this.publish();
-    if (this.mode) {
-      await this.start(this.mode);
-    }
+    if (this.mode) await this.start(this.mode);
   }
 
   public async userIsNotOk(): Promise<void> {
     const action = this.stateMachine.userIsNotOk();
     if (action.type !== "ESCALATE") return;
     await this.escalate(action.reason);
+  }
+
+  public async manualEmergency(): Promise<void> {
+    await this.escalate("MANUAL");
   }
 
   private handleSignal(signal: AccidentSignal): void {
@@ -131,20 +149,20 @@ export class EmergencyTrackingController {
   }
 
   private handleAction(action: AccidentDetectionAction): void {
-    if (action.type === "START_CONFIRMATION") {
-      if (this.confirmationTimer) clearInterval(this.confirmationTimer);
-      this.confirmationTimer = setInterval(() => {
-        const next = this.stateMachine.tick(Date.now());
-        if (next.type === "ESCALATE") {
-          if (this.confirmationTimer) {
-            clearInterval(this.confirmationTimer);
-            this.confirmationTimer = null;
-          }
-          void this.escalate(next.reason);
+    if (action.type !== "START_CONFIRMATION") return;
+
+    if (this.confirmationTimer) clearInterval(this.confirmationTimer);
+    this.confirmationTimer = setInterval(() => {
+      const next = this.stateMachine.tick(Date.now());
+      if (next.type === "ESCALATE") {
+        if (this.confirmationTimer) {
+          clearInterval(this.confirmationTimer);
+          this.confirmationTimer = null;
         }
-        this.publish();
-      }, 250);
-    }
+        void this.escalate(next.reason);
+      }
+      this.publish();
+    }, 250);
   }
 
   private async escalate(reason: "TIMEOUT" | "USER_NOT_OK" | "MANUAL" | "SHORTCUT"): Promise<void> {
@@ -162,10 +180,7 @@ export class EmergencyTrackingController {
       triggeredAt: now,
       reason,
       location: this.latestSignal?.position
-        ? {
-            ...this.latestSignal.position,
-            capturedAt: now,
-          }
+        ? { ...this.latestSignal.position, capturedAt: now }
         : null,
       profile: {
         bloodType: profile?.bloodType,
