@@ -38,7 +38,7 @@ export const DEFAULT_ACCIDENT_DETECTION_CONFIG: AccidentDetectionConfig = {
   suspiciousAngularVelocityDps: 240,
   abruptStopSpeedDeltaMps: 4.5,
   sustainedInactivityMs: 8_000,
-  suspiciousWindowMs: 8_000,
+  suspiciousWindowMs: 15_000,
   confirmationWindowMs: 15_000,
   duplicateEventWindowMs: 30_000,
 };
@@ -143,12 +143,13 @@ export class AccidentStateMachine {
       previousSpeed !== null &&
       previousSpeed - currentSpeed >= this.config.abruptStopSpeedDeltaMps;
 
+    if (suspicious && this.snapshot.suspiciousMotionAt === null) {
+      this.snapshot.suspiciousMotionAt = signal.timestamp;
+    }
+
     if (moving) {
       this.snapshot.lastMeaningfulMovementAt = signal.timestamp;
       this.snapshot.state = suspicious ? "SUSPICIOUS_MOTION" : "MOTION_DETECTED";
-      if (suspicious && this.snapshot.suspiciousMotionAt === null) {
-        this.snapshot.suspiciousMotionAt = signal.timestamp;
-      }
     } else if (this.snapshot.lastMeaningfulMovementAt !== null) {
       const inactivityMs = signal.timestamp - this.snapshot.lastMeaningfulMovementAt;
       const recentSuspicious =
