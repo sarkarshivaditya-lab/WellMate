@@ -6,11 +6,7 @@ export type SensorAvailability = {
   gyroscope: boolean;
 };
 
-export type SensorPermissionStatus =
-  | "granted"
-  | "denied"
-  | "prompt"
-  | "unavailable";
+export type SensorPermissionStatus = "granted" | "denied" | "prompt" | "unavailable";
 
 export type SensorServiceStatus = {
   availability: SensorAvailability;
@@ -20,50 +16,113 @@ export type SensorServiceStatus = {
 
 export interface EmergencySensorAdapter {
   getStatus(): Promise<SensorServiceStatus>;
+  requestMotionPermission?(): Promise<SensorPermissionStatus>;
   startLocation(options: { intervalMs: number; onSignal: (signal: AccidentSignal) => void }): Promise<() => void>;
   stopLocation(): Promise<void>;
   startMotion(options: { onSignal: (signal: AccidentSignal) => void }): Promise<() => void>;
   stopMotion(): Promise<void>;
 }
 
+const MAX_ACCEPTABLE_ACCURACY_M = 100;
+const MAX_PLAUSIBLE_SPEED_MPS = 90;
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function haversineMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const earthRadiusM = 6_371_000;
+  const dLat = toRadians(b.latitude - a.latitude);
+  const dLon = toRadians(b.longitude - a.longitude);
+  const lat1 = toRadians(a.latitude);
+  const lat2 = toRadians(b.latitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * earthRadiusM * Math.asin(Math.sqrt(h));
+}
+
 export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
   private locationStop: (() => void) | null = null;
   private motionStop: (() => void) | null = null;
+  private previousLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
 
   public async getStatus(): Promise<SensorServiceStatus> {
     const location = typeof navigator !== "undefined" && "geolocation" in navigator;
     const accelerometer = typeof window !== "undefined" && "DeviceMotionEvent" in window;
-    const gyroscope = typeof window !== "undefined" && "DeviceOrientationEvent" in window;
+    const gyroscope = typeof window !== "undefined" && "DeviceMotionEvent" in window;
+
+    let motionPermission: SensorPermissionStatus = accelerometer ? "prompt" : "unavailable";
+    if (
+      typeof window !== "undefined" &&
+      "DeviceMotionEvent" in window &&
+      typeof (window.DeviceMotionEvent as typeof DeviceMotionEvent & { requestPermission?: () => Promise<string> }).requestPermission === "function"
+    ) {
+      motionPermission = "prompt";
+    }
 
     return {
       availability: { location, accelerometer, gyroscope },
       locationPermission: location ? "prompt" : "unavailable",
-      motionPermission: accelerometer || gyroscope ? "prompt" : "unavailable",
+      motionPermission,
     };
+  }
+
+  public async requestMotionPermission(): Promise<SensorPermissionStatus> {
+    if (typeof window === "undefined" || !("DeviceMotionEvent" in window)) return "unavailable";
+
+    const eventType = window.DeviceMotionEvent as typeof DeviceMotionEvent & {
+      requestPermission?: () => Promise<string>;
+    };
+    if (typeof eventType.requestPermission !== "function") return "granted";
+
+    try {
+      const result = await eventType.requestPermission();
+      return result === "granted" ? "granted" : "denied";
+    } catch {
+      return "denied";
+    }
   }
 
   public async startLocation(options: {
     intervalMs: number;
     onSignal: (signal: AccidentSignal) => void;
   }): Promise<() => void> {
-    if (!navigator.geolocation) {
-      throw new Error("Geolocation is unavailable");
-    }
+    if (!navigator.geolocation) throw new Error("Geolocation is unavailable");
 
     let lastEmittedAt = 0;
+    this.previousLocation = null;
+
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const now = Date.now();
         if (now - lastEmittedAt < options.intervalMs) return;
+
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const accuracyM = position.coords.accuracy;
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+        if (!Number.isFinite(accuracyM) || accuracyM > MAX_ACCEPTABLE_ACCURACY_M) return;
+
+        let derivedSpeedMps: number | undefined = position.coords.speed ?? undefined;
+        if (this.previousLocation) {
+          const elapsedS = (now - this.previousLocation.timestamp) / 1000;
+          if (elapsedS > 0) {
+            const distanceM = haversineMeters(this.previousLocation, { latitude, longitude });
+            const computed = distanceM / elapsedS;
+            if (computed <= MAX_PLAUSIBLE_SPEED_MPS) derivedSpeedMps = computed;
+          }
+        }
+
+        this.previousLocation = { latitude, longitude, timestamp: now };
         lastEmittedAt = now;
+
         options.onSignal({
           timestamp: now,
-          speedMps: position.coords.speed ?? undefined,
-          position: {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracyM: position.coords.accuracy,
-          },
+          speedMps: derivedSpeedMps,
+          position: { latitude, longitude, accuracyM },
           sensorAvailable: false,
           locationAvailable: true,
         });
@@ -75,10 +134,17 @@ export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
           locationAvailable: false,
         });
       },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: Math.max(options.intervalMs, 15_000) },
+      {
+        enableHighAccuracy: true,
+        maximumAge: Math.min(10_000, options.intervalMs),
+        timeout: Math.max(options.intervalMs, 15_000),
+      },
     );
 
-    const stop = () => navigator.geolocation.clearWatch(watchId);
+    const stop = () => {
+      navigator.geolocation.clearWatch(watchId);
+      this.previousLocation = null;
+    };
     this.locationStop = stop;
     return stop;
   }
@@ -89,8 +155,13 @@ export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
   }
 
   public async startMotion(options: { onSignal: (signal: AccidentSignal) => void }): Promise<() => void> {
-    if (!("DeviceMotionEvent" in window) && !("DeviceOrientationEvent" in window)) {
+    if (typeof window === "undefined" || !("DeviceMotionEvent" in window)) {
       throw new Error("Motion sensors are unavailable");
+    }
+
+    const permission = await this.requestMotionPermission?.();
+    if (permission === "denied" || permission === "unavailable") {
+      throw new Error("Motion sensor permission was denied or is unavailable");
     }
 
     const onMotion = (event: DeviceMotionEvent) => {
@@ -100,10 +171,16 @@ export class BrowserEmergencySensorAdapter implements EmergencySensorAdapter {
       const z = acceleration?.z ?? 0;
       const magnitudeG = Math.sqrt(x * x + y * y + z * z) / 9.80665;
 
+      const rotation = event.rotationRate;
+      const alpha = rotation?.alpha ?? 0;
+      const beta = rotation?.beta ?? 0;
+      const gamma = rotation?.gamma ?? 0;
+      const angularVelocityDps = Math.sqrt(alpha * alpha + beta * beta + gamma * gamma);
+
       options.onSignal({
         timestamp: Date.now(),
         accelerationMagnitudeG: magnitudeG,
-        angularVelocityDps: undefined,
+        angularVelocityDps,
         sensorAvailable: true,
         locationAvailable: false,
       });
@@ -128,20 +205,18 @@ export class EmergencySensorService {
     return this.adapter.getStatus();
   }
 
+  public requestMotionPermission(): Promise<SensorPermissionStatus> {
+    return this.adapter.requestMotionPermission?.() ?? Promise.resolve("unavailable");
+  }
+
   public startAutomaticMode(
     onSignal: (signal: AccidentSignal) => void,
     locationIntervalMs = 20_000,
   ): Promise<() => Promise<void>> {
-    let motionStop: (() => void) | null = null;
-
     return this.adapter.startLocation({
       intervalMs: locationIntervalMs,
-      onSignal: (signal) => {
-        onSignal(signal);
-      },
+      onSignal,
     }).then((locationStop) => async () => {
-      motionStop?.();
-      motionStop = null;
       locationStop();
       await this.adapter.stopLocation();
     });
