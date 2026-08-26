@@ -4,6 +4,8 @@ export type EmergencyNotificationStatus =
   | "PARTIAL_SUCCESS"
   | "FAILED";
 
+export type EmergencyDeliveryOutcome = "SUCCESS" | "PENDING";
+
 export type EmergencyLocation = {
   latitude: number;
   longitude: number;
@@ -44,12 +46,14 @@ export type EmergencyEscalationResult = {
 };
 
 export interface EmergencyEscalationAdapter {
-  notifyContact(contact: EmergencyContact, event: EmergencyEvent): Promise<void>;
+  notifyContact(contact: EmergencyContact, event: EmergencyEvent): Promise<EmergencyDeliveryOutcome>;
   requestEmergencyCall(): Promise<"SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE">;
 }
 
 export function createEmergencyEvent(input: Omit<EmergencyEvent, "eventId">): EmergencyEvent {
-  const eventId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const eventId =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return { ...input, eventId };
 }
 
@@ -63,14 +67,11 @@ export async function escalateEmergency(
   }));
 
   if (event.contacts.length === 0) {
-    return {
-      event,
-      status: "FAILED",
-      deliveries,
-    };
+    return { event, status: "FAILED", deliveries };
   }
 
   let successful = 0;
+  let pending = 0;
 
   for (const delivery of deliveries) {
     const contact = event.contacts.find((item) => item.id === delivery.contactId);
@@ -81,21 +82,22 @@ export async function escalateEmergency(
     }
 
     try {
-      await adapter.notifyContact(contact, event);
-      delivery.status = "SUCCESS";
-      successful += 1;
+      const outcome = await adapter.notifyContact(contact, event);
+      delivery.status = outcome;
+      if (outcome === "SUCCESS") successful += 1;
+      if (outcome === "PENDING") pending += 1;
     } catch (error) {
       delivery.status = "FAILED";
       delivery.error = error instanceof Error ? error.message : "Notification failed";
     }
   }
 
-  const status: EmergencyNotificationStatus =
-    successful === deliveries.length
-      ? "SUCCESS"
-      : successful > 0
-        ? "PARTIAL_SUCCESS"
-        : "FAILED";
+  const allSuccessful = successful === deliveries.length;
+  const status: EmergencyNotificationStatus = allSuccessful
+    ? "SUCCESS"
+    : successful > 0 || pending > 0
+      ? "PARTIAL_SUCCESS"
+      : "FAILED";
 
   return { event, status, deliveries };
 }
