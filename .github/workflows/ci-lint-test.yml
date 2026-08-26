@@ -29,8 +29,15 @@ jobs:
           node-version: '22.x'
           cache: 'pnpm'
 
-      - name: Install dependencies and generate lockfile
-        run: pnpm install --no-frozen-lockfile
+      - name: Restore pre-cleanup lockfile for dependency reconciliation
+        if: github.ref_name == 'feat/golden-hour-emergency'
+        run: git show e2835e74e204d2e85412aed39b9fc15adad5e87b:pnpm-lock.yaml > pnpm-lock.yaml
+
+      - name: Regenerate lockfile with pnpm
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Validate frozen install
+        run: pnpm install --frozen-lockfile
 
       - name: Synchronize generated lockfile on feature branch
         if: github.ref_name == 'feat/golden-hour-emergency'
