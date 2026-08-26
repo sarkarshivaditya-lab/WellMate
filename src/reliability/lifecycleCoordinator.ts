@@ -1,44 +1,9 @@
 // src/reliability/lifecycleCoordinator.ts
 
-/* ======================================================
-   APP LIFECYCLE COORDINATOR — PHASE 2
-
-   Centralises ALL app lifecycle event handling:
-   - Document visibility (foreground/background)
-   - Page focus/blur
-   - App resume after suspension
-   - Memory pressure events
-   - beforeunload / persistence flush
-   - Connectivity transitions (bridged from connectivity.ts)
-   - Auth transitions (bridged from React layer)
-   - Timer management
-
-   Design rules:
-   - Components never register their own lifecycle listeners
-   - Feature code subscribes to coordinator events instead
-   - Coordinator is initialized ONCE in App.tsx
-   - All listeners are cleaned up on dispose()
-   - Timer state is tracked so resumed timers can be validated
-
-   Mobile survival requirements:
-   - App suspended for hours → resume correctly
-   - OS timer drift after suspension → detect and re-anchor
-   - Low memory → flush pending writes immediately
-   - Connectivity changes → dispatch synchronously
-====================================================== */
-
 import { subscribeToConnectivity, type ConnectivityState } from "./connectivity";
-import {
-  startHydration,
-  markHydrationStale,
-  isHydrationReady,
-} from "./hydration";
+import { startHydration, markHydrationStale, isHydrationReady } from "./hydration";
 import { recordDiagnosticEvent } from "./diagnostics";
 import { track } from "@/telemetry/telemetry";
-
-/* --------------------------------------------------
-   TYPES
-   -------------------------------------------------- */
 
 export type AppFocusState = "foreground" | "background" | "suspended";
 
@@ -62,25 +27,23 @@ type MemoryPressureWindow = Window & {
   memory?: unknown;
 };
 
-/* --------------------------------------------------
-   CONFIG
-   -------------------------------------------------- */
-
-/** If app was backgrounded longer than this, treat as "stale resume" */
-const STALE_RESUME_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
-
-/** If app was backgrounded longer than this, re-trigger hydration */
-const REHYDRATION_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-/* --------------------------------------------------
-   STATE
-   -------------------------------------------------- */
+const STALE_RESUME_THRESHOLD_MS = 60 * 60 * 1000;
+const REHYDRATION_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 let focusState: AppFocusState = "foreground";
-let lastBackgroundAt: number | null = null;
+let backgroundedAt: number | null = null;
 let isDisposed = false;
-let cleanupFns: Array<() => void> = [];
 const listeners = new Set<LifecycleListener>();
+const cleanupFns: Array<() => void> = [];
+
+export function subscribeTo(listener: LifecycleListener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function subscribe(listener: LifecycleListener): () => void {
+  return subscribeTo(listener);
+}
 
 function dispatch(event: LifecycleEvent): void {
   for (const listener of listeners) {
@@ -92,36 +55,61 @@ function dispatch(event: LifecycleEvent): void {
   }
 }
 
+export function getAppFocusState(): AppFocusState {
+  return focusState;
+}
+
+export function getFocusState(): AppFocusState {
+  return focusState;
+}
+
+export function notifyAuthChange(authenticated: boolean): void {
+  dispatch({ type: "auth_change", authenticated });
+  if (authenticated) {
+    recordDiagnosticEvent("auth_acquired");
+    dispatch({ type: "sync_requested" });
+  } else {
+    recordDiagnosticEvent("auth_lost");
+  }
+}
+
+export function requestSync(): void {
+  dispatch({ type: "sync_requested" });
+}
+
 function handleVisibilityChange(): void {
-  if (document.visibilityState === "hidden") {
+  if (document.hidden) {
     focusState = "background";
-    lastBackgroundAt = Date.now();
+    backgroundedAt = Date.now();
+    recordDiagnosticEvent("app_backgrounded");
     dispatch({ type: "background" });
     return;
   }
 
   const now = Date.now();
-  const backgroundDurationMs = lastBackgroundAt ? now - lastBackgroundAt : 0;
+  const backgroundDuration = backgroundedAt ? now - backgroundedAt : 0;
   focusState = "foreground";
-  lastBackgroundAt = null;
-  dispatch({ type: "foreground" });
+  backgroundedAt = null;
+  recordDiagnosticEvent("app_foregrounded", { backgroundDurationMs: backgroundDuration });
 
-  if (backgroundDurationMs >= STALE_RESUME_THRESHOLD_MS) {
-    dispatch({ type: "stale_resume", backgroundDurationMs });
-  }
-  if (backgroundDurationMs >= REHYDRATION_THRESHOLD_MS) {
-    markHydrationStale();
+  if (backgroundDuration > REHYDRATION_THRESHOLD_MS) {
+    markHydrationStale(backgroundDuration);
     startHydration();
+    dispatch({ type: "stale_resume", backgroundDurationMs: backgroundDuration });
+  } else if (backgroundDuration > STALE_RESUME_THRESHOLD_MS) {
+    if (isHydrationReady()) markHydrationStale(backgroundDuration);
+    dispatch({ type: "stale_resume", backgroundDurationMs: backgroundDuration });
   }
+
+  dispatch({ type: "foreground" });
+  dispatch({ type: "sync_requested" });
 }
 
 function handleFocus(): void {
-  focusState = "foreground";
   dispatch({ type: "focus" });
 }
 
 function handleBlur(): void {
-  focusState = "background";
   dispatch({ type: "blur" });
 }
 
@@ -130,55 +118,30 @@ function handleBeforeUnload(): void {
 }
 
 function handleMemoryPressure(): void {
+  recordDiagnosticEvent("memory_pressure");
   dispatch({ type: "memory_pressure" });
 }
 
-export function getFocusState(): AppFocusState {
-  return focusState;
-}
-
-export function subscribe(listener: LifecycleListener): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-/* --------------------------------------------------
-   INIT
-   -------------------------------------------------- */
-
 export function init(): void {
-  if (isDisposed) return;
-  if (typeof window === "undefined") return;
+  if (isDisposed || typeof window === "undefined") return;
 
-  const memoryPressureWindow = window as MemoryPressureWindow;
-
-  // Visibility API
   document.addEventListener("visibilitychange", handleVisibilityChange);
-  cleanupFns.push(() =>
-    document.removeEventListener("visibilitychange", handleVisibilityChange),
-  );
+  cleanupFns.push(() => document.removeEventListener("visibilitychange", handleVisibilityChange));
 
-  // Focus/blur
   window.addEventListener("focus", handleFocus);
   window.addEventListener("blur", handleBlur);
   cleanupFns.push(() => window.removeEventListener("focus", handleFocus));
   cleanupFns.push(() => window.removeEventListener("blur", handleBlur));
 
-  // Before unload
   window.addEventListener("beforeunload", handleBeforeUnload);
-  cleanupFns.push(() =>
-    window.removeEventListener("beforeunload", handleBeforeUnload),
-  );
+  cleanupFns.push(() => window.removeEventListener("beforeunload", handleBeforeUnload));
 
-  // Memory pressure (supported in some browsers)
+  const memoryPressureWindow = window as MemoryPressureWindow;
   if (memoryPressureWindow.memory !== undefined) {
     memoryPressureWindow.addEventListener("memorypressure", handleMemoryPressure);
-    cleanupFns.push(() =>
-      memoryPressureWindow.removeEventListener("memorypressure", handleMemoryPressure),
-    );
+    cleanupFns.push(() => memoryPressureWindow.removeEventListener("memorypressure", handleMemoryPressure));
   }
 
-  // Connectivity bridge
   const unsubConnectivity = subscribeToConnectivity((connState) => {
     dispatch({ type: "connectivity_change", state: connState });
     if (connState === "online") {
@@ -194,9 +157,14 @@ export function init(): void {
 }
 
 export function dispose(): void {
-  for (const cleanup of cleanupFns.splice(0)) {
-    cleanup();
-  }
-  listeners.clear();
   isDisposed = true;
+  cleanupFns.forEach((cleanup) => {
+    try {
+      cleanup();
+    } catch (error) {
+      console.error("Lifecycle cleanup failed:", error instanceof Error ? error.message : "unknown error");
+    }
+  });
+  cleanupFns.length = 0;
+  listeners.clear();
 }
