@@ -13,7 +13,6 @@ import PhysicalInsightsCard from "./PhysicalInsightsCard";
 import PhysicalGoalAdvisor from "./PhysicalGoalAdvisor";
 import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 import { SleepTabContent } from "../Sleep";
-
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
@@ -27,11 +26,7 @@ function getLast7Days() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    days.push({
-      dateIso: localDateIso(d),
-      label: d.toLocaleDateString(undefined, { weekday: "short" }),
-      fullLabel: d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }),
-    });
+    days.push({ dateIso: localDateIso(d), label: d.toLocaleDateString(undefined, { weekday: "short" }), fullLabel: d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }) });
   }
   return days;
 }
@@ -39,19 +34,13 @@ function getLast7Days() {
 function useWeeklyActivity() {
   const allExercises = useAllExercises();
   const days = getLast7Days();
-  return useMemo(() => days.map((day) => ({
-    label: day.label,
-    fullLabel: day.fullLabel,
-    totalDuration: allExercises.filter((e) => e.dateIso === day.dateIso).reduce((sum, e) => sum + e.durationMinutes, 0),
-  })), [allExercises, days]);
+  return useMemo(() => days.map((day) => ({ label: day.label, fullLabel: day.fullLabel, totalDuration: allExercises.filter((e) => e.dateIso === day.dateIso).reduce((sum, e) => sum + e.durationMinutes, 0) })), [allExercises]);
 }
 
 function TodayActivitySummary() {
   const today = localDateIso();
   const { exercises } = useExercisesByDate(today);
-  if (!exercises || exercises.length === 0) {
-    return <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Today’s Activity</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground/70">Nothing logged yet today.</p></CardContent></Card>;
-  }
+  if (!exercises || exercises.length === 0) return <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Today’s Activity</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground/70">Nothing logged yet today.</p></CardContent></Card>;
   const totalDuration = exercises.reduce((sum, e) => sum + e.durationMinutes, 0);
   const totalCalories = exercises.reduce((sum, e) => sum + e.caloriesBurnedEst, 0);
   return <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Today’s Activity</CardTitle></CardHeader><CardContent><div className="grid grid-cols-3 gap-4"><div><div className="text-xs text-muted-foreground">Exercises</div><div className="text-lg font-semibold tabular-nums">{exercises.length}</div></div><div><div className="text-xs text-muted-foreground">Duration</div><div className="text-lg font-semibold tabular-nums">{totalDuration} min</div></div><div><div className="text-xs text-muted-foreground">Calories</div><div className="text-lg font-semibold tabular-nums">{totalCalories} cal</div></div></div></CardContent></Card>;
@@ -102,11 +91,7 @@ function PhysicalSummaryCard() {
   const heightCm = profile?.heightCm ?? null;
   const weightKg = profile?.weightKg ?? null;
   let bmiDisplay = "—";
-  if (heightCm && weightKg) {
-    const hM = heightCm / 100;
-    const bmi = weightKg / (hM * hM);
-    if (Number.isFinite(bmi)) bmiDisplay = bmi.toFixed(1);
-  }
+  if (heightCm && weightKg) { const hM = heightCm / 100; const bmi = weightKg / (hM * hM); if (Number.isFinite(bmi)) bmiDisplay = bmi.toFixed(1); }
   return <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Profile</CardTitle></CardHeader><CardContent><div className="grid grid-cols-3 gap-4"><div><div className="text-xs text-muted-foreground">Height</div><div className="text-sm font-medium tabular-nums">{heightCm ? `${heightCm} cm` : "—"}</div></div><div><div className="text-xs text-muted-foreground">Weight</div><div className="text-sm font-medium tabular-nums">{weightKg ? `${weightKg} kg` : "—"}</div></div><div><div className="text-xs text-muted-foreground">BMI</div><div className="text-sm font-medium tabular-nums">{bmiDisplay}</div></div></div></CardContent></Card>;
 }
 
@@ -117,13 +102,10 @@ export default function PhysicalDashboard() {
     if (saved === "nutrition" || saved === "activity" || saved === "sleep") return saved;
     return "overview";
   });
-
-  return (
-    <PageLayout title="Physical Health" subtitle="Golden Hour emergency response first, wellness tracking alongside it." tabs={[{ label: "Emergency", value: "overview" }, { label: "Nutrition", value: "nutrition" }, { label: "Activity", value: "activity" }, { label: "Sleep", value: "sleep" }]} activeTab={tab} onTabChange={(v) => { const next = v as "overview" | "nutrition" | "activity" | "sleep"; sessionStorage.setItem("physical_tab", next); setTab(next); }}>
-      {tab === "overview" && <div key="overview" className="space-y-6 animate-wm-tab-in"><EmergencyTrackingPanel /><WelcomeCard /><PhysicalConfidenceCard /><TodayActivitySummary /><WeeklyActivityTrend /><PhysicalInsightsCard /><PhysicalGoalAdvisor /><PhysicalSummaryCard /></div>}
-      {tab === "nutrition" && <div key="nutrition" className="space-y-6 animate-wm-tab-in"><NutritionAINotice /><Progress /><FoodLog /></div>}
-      {tab === "activity" && <div key="activity" className="space-y-6 animate-wm-tab-in"><FitnessEcosystemNotice /><ExerciseLog /><PeriodTracker /></div>}
-      {tab === "sleep" && <div key="sleep" className="space-y-6 animate-wm-tab-in"><SleepTabContent /></div>}
-    </PageLayout>
-  );
+  return <PageLayout title="Physical Health" subtitle="Golden Hour emergency response first, wellness tracking alongside it." tabs={[{ label: "Emergency", value: "overview" }, { label: "Nutrition", value: "nutrition" }, { label: "Activity", value: "activity" }, { label: "Sleep", value: "sleep" }]} activeTab={tab} onTabChange={(v) => { const next = v as "overview" | "nutrition" | "activity" | "sleep"; sessionStorage.setItem("physical_tab", next); setTab(next); }}>
+    {tab === "overview" && <div key="overview" className="space-y-6 animate-wm-tab-in"><EmergencyTrackingPanel /><WelcomeCard /><PhysicalConfidenceCard /><TodayActivitySummary /><WeeklyActivityTrend /><PhysicalInsightsCard /><PhysicalGoalAdvisor /><PhysicalSummaryCard /></div>}
+    {tab === "nutrition" && <div key="nutrition" className="space-y-6 animate-wm-tab-in"><NutritionAINotice /><Progress /><FoodLog /></div>}
+    {tab === "activity" && <div key="activity" className="space-y-6 animate-wm-tab-in"><FitnessEcosystemNotice /><ExerciseLog /><PeriodTracker /></div>}
+    {tab === "sleep" && <div key="sleep" className="space-y-6 animate-wm-tab-in"><SleepTabContent /></div>}
+  </PageLayout>;
 }
