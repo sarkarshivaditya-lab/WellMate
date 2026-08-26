@@ -29,18 +29,20 @@ const DevPage = import.meta.env.DEV ? React.lazy(() => import("./pages/Dev")) : 
 const StateInspectorPage = import.meta.env.DEV ? React.lazy(() => import("./pages/StateInspector")) : null;
 
 import AppShell from "./components/layout/AppShell";
-import {
-  init as initLifecycle,
-  dispose as disposeLifecycle,
-} from "./reliability/lifecycleCoordinator";
+import { init as initLifecycle, dispose as disposeLifecycle } from "./reliability/lifecycleCoordinator";
 import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
 
-const AUTH_TIMEOUT_MS = 8000;
+const AUTH_TIMEOUT_MS = 8_000;
 
-function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
+type AppLoadingScreenProps = {
+  onRetry?: () => void;
+  onTimeout?: () => void;
+};
+
+function AppLoadingScreen({ onRetry, onTimeout }: AppLoadingScreenProps = {}) {
   const [timedOut, setTimedOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -54,10 +56,29 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
 
   if (timedOut) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
         <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
-        <p className="text-sm text-muted-foreground max-w-xs">Taking longer than expected. Check your connection or continue offline.</p>
-        <button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={() => window.location.replace("/onboarding")}>Continue offline</button>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Authentication is taking longer than expected. Your local emergency and wellness profile is still safe on this device.
+        </p>
+        <div className="flex flex-col gap-2 w-full max-w-xs">
+          {onRetry && (
+            <button
+              type="button"
+              className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
+              onClick={onRetry}
+            >
+              Retry sign in
+            </button>
+          )}
+          <button
+            type="button"
+            className="rounded-xl border border-border bg-background text-foreground text-sm font-semibold px-6 py-3"
+            onClick={() => window.location.reload()}
+          >
+            Reload WellMate
+          </button>
+        </div>
       </div>
     );
   }
@@ -77,21 +98,24 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      if (isCapacitorNative) {
-        loginWithRedirect({
-          openUrl: (url) => Browser.open({ url, presentationStyle: "popover" }),
-        }).catch(() => undefined);
-      } else {
-        loginWithRedirect().catch(() => undefined);
-      }
-    }
-  }, [isLoading, isAuthenticated, loginWithRedirect]);
+  const login = React.useCallback(() => {
+    setTimedOut(false);
+    const options = isCapacitorNative
+      ? { openUrl: (url: string) => Browser.open({ url, presentationStyle: "popover" }) }
+      : undefined;
 
-  if (timedOut) return <Navigate to="/onboarding" replace />;
+    const promise = options ? loginWithRedirect(options) : loginWithRedirect();
+    void promise.catch((error) => {
+      console.error("[Auth] login redirect failed", error instanceof Error ? error.message : "unknown error");
+    });
+  }, [loginWithRedirect]);
+
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) login();
+  }, [isLoading, isAuthenticated, login]);
+
   if (isLoading || !isAuthenticated) {
-    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} />;
+    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} onRetry={timedOut ? login : undefined} />;
   }
   return <>{children}</>;
 }
@@ -104,11 +128,18 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
 
 function RootEntry() {
-  const { isAuthenticated, isLoading } = useAuth0();
+  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
 
+  const retryAuth = React.useCallback(() => {
+    setTimedOut(false);
+    void loginWithRedirect().catch((error) => {
+      console.error("[Auth] root login redirect failed", error instanceof Error ? error.message : "unknown error");
+    });
+  }, [loginWithRedirect]);
+
   if (isLoading && !timedOut) {
-    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} />;
+    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} onRetry={retryAuth} />;
   }
 
   const isOnboarded = localStorage.getItem("onboarded") === "true";
