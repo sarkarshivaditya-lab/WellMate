@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
-import { isCapacitorNative } from "./providers/auth";
+import { isCapacitorNative } from "./providers/authConfig";
 
 function isAuth0Callback(url: string): boolean {
   try {
@@ -33,7 +33,10 @@ export default function CapacitorAuthHandler() {
         await handleRedirectCallback(url);
       } catch (error) {
         handledCallbacks.current.delete(url);
-        console.error("[CapacitorAuthHandler] Auth0 callback failed", error instanceof Error ? error.message : "unknown error");
+        console.error(
+          "[CapacitorAuthHandler] Auth0 callback failed",
+          error instanceof Error ? error.message : "unknown error",
+        );
       } finally {
         await Browser.close().catch(() => undefined);
       }
@@ -45,13 +48,9 @@ export default function CapacitorAuthHandler() {
       });
 
       const launchUrl = await CapApp.getLaunchUrl();
-      if (launchUrl?.url) {
-        await handleCallback(launchUrl.url);
-      }
+      if (launchUrl?.url) await handleCallback(launchUrl.url);
 
-      if (disposed && listener) {
-        await listener.remove();
-      }
+      if (disposed && listener) await listener.remove();
     };
 
     void setup();
