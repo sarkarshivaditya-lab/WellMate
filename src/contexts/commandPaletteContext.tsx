@@ -1,5 +1,12 @@
-import React, { useContext, useState, useCallback } from "react";
-import { CommandPaletteContext } from "./commandPaletteContextValue";
+import React, { createContext, useState, useCallback } from "react";
+
+export type CommandPaletteContextValue = {
+  open: boolean;
+  openPalette: () => void;
+  closePalette: () => void;
+};
+
+export const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
 
 export function CommandPaletteProvider({
   children,
@@ -15,10 +22,4 @@ export function CommandPaletteProvider({
       {children}
     </CommandPaletteContext.Provider>
   );
-}
-
-export function useCommandPalette() {
-  const ctx = useContext(CommandPaletteContext);
-  if (!ctx) throw new Error("useCommandPalette must be within CommandPaletteProvider");
-  return ctx;
 }
