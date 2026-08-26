@@ -1,13 +1,9 @@
 import { useMemo } from "react";
-import { readOnboardingPayload } from "@/data/local/onboardingPayload";
+import {
+  readOnboardingPayload,
+  type EmergencyContactPayload,
+} from "@/data/local/onboardingPayload";
 
-/**
- * The canonical local profile shape — derived from onboarding_profile
- * and used as primary data source for all health calculations.
- *
- * This is local-first and device-resident. The `goal` field is the
- * normalized form of `weightGoal` (Convex-compatible naming).
- */
 export type LocalProfile = {
   dob: string;
   sex: "male" | "female" | "other" | "";
@@ -21,18 +17,12 @@ export type LocalProfile = {
   cycleLength?: number;
   lastPeriod?: string;
   additionalHealthNotes?: string;
+  bloodType?: string;
+  allergies?: string[];
+  emergencyContacts?: EmergencyContactPayload[];
   createdAt: number;
 };
 
-/**
- * Reads the completed onboarding profile from local storage.
- *
- * Returns immediately (no network, no auth dependency).
- * Returns null if onboarding has not been completed.
- *
- * The profile is stable for the lifetime of the session — it is written
- * once at onboarding completion and never modified by in-app navigation.
- */
 export function useLocalProfile(): LocalProfile | null {
   return useMemo(() => {
     const payload = readOnboardingPayload();

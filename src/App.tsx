@@ -6,11 +6,8 @@ import { Browser } from "@capacitor/browser";
 
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
-import { isCapacitorNative } from "./components/providers/auth";
+import { isCapacitorNative } from "./components/providers/authConfig";
 
-// Route-level lazy loading — only the active route's code is parsed at startup.
-// Onboarding and PhysicalDashboard are the two most-likely initial routes, so
-// they get a short preload hint via webpackPrefetch (Vite respects this).
 const WelcomePage = React.lazy(() => import("./pages/Welcome"));
 const Onboarding = React.lazy(() => import("./pages/Onboarding"));
 const TransitionGate = React.lazy(() => import("./pages/Transition"));
@@ -28,8 +25,6 @@ const Sleep = React.lazy(() => import("./pages/Sleep"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
-// Development-only routes — tree-shaken from production by import.meta.env.DEV
-// These modules are never bundled when building for production (Vite dead-code elimination).
 const DevPage = import.meta.env.DEV ? React.lazy(() => import("./pages/Dev")) : null;
 const StateInspectorPage = import.meta.env.DEV ? React.lazy(() => import("./pages/StateInspector")) : null;
 
@@ -42,22 +37,6 @@ import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
-import {
-  initAIRuntime,
-  disposeAIRuntime,
-} from "./ai/runtime/aiRuntime";
-import { initAssistantBehaviorRuntime } from "./ai/assistant/assistantBehaviorRuntime";
-import { bindProactiveCognitionToLifecycle, unbindProactiveCognition } from "./ai/cognition/proactiveCognitionLoop";
-import { initMobileHardener } from "./ai/platform/mobileExecutionHardener";
-import { initSelfHealingRuntime, disposeSelfHealingRuntime } from "./ai/runtime/selfHealingRuntime";
-import { initAutoModelLifecycle } from "./ai/production/autoModelLifecycle";
-import { scheduleConsolidation } from "./ai/memory/memoryConsolidationScheduler";
-
-/* ======================================================
-   LOADING SCREEN — with timeout guard
-   Never stays loading forever: after AUTH_TIMEOUT_MS with no
-   resolution it shows a recovery button so the user isn't frozen.
-   ====================================================== */
 
 const AUTH_TIMEOUT_MS = 8000;
 
@@ -66,37 +45,26 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
 
   React.useEffect(() => {
     if (!onTimeout) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setTimedOut(true);
       onTimeout();
     }, AUTH_TIMEOUT_MS);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [onTimeout]);
 
   if (timedOut) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-          WellMate
-        </p>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Taking longer than expected. Check your connection or continue offline.
-        </p>
-        <button
-          className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
-          onClick={() => window.location.replace("/onboarding")}
-        >
-          Continue offline
-        </button>
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+        <p className="text-sm text-muted-foreground max-w-xs">Taking longer than expected. Check your connection or continue offline.</p>
+        <button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={() => window.location.replace("/onboarding")}>Continue offline</button>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
-      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-        WellMate
-      </p>
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
       <div className="flex flex-col items-center gap-2 w-28">
         <Skeleton className="h-1.5 w-full" />
         <Skeleton className="h-1.5 w-2/3" />
@@ -105,10 +73,6 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   );
 }
 
-/* ======================================================
-   ROUTE HELPERS
-   ====================================================== */
-
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
@@ -116,34 +80,25 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       if (isCapacitorNative) {
-        // On Capacitor, open Auth0 in the system browser so the OS can intercept
-        // the com.wellmate.app:// callback and route it back to the app.
-        // CapacitorAuthHandler listens for appUrlOpen and completes the exchange.
         loginWithRedirect({
           openUrl: (url) => Browser.open({ url, presentationStyle: "popover" }),
-        }).catch(() => {});
+        }).catch(() => undefined);
       } else {
-        loginWithRedirect().catch(() => {});
+        loginWithRedirect().catch(() => undefined);
       }
     }
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
-
   if (timedOut) return <Navigate to="/onboarding" replace />;
   if (isLoading || !isAuthenticated) {
-    return <AppLoadingScreen onTimeout={handleTimeout} />;
+    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} />;
   }
-
   return <>{children}</>;
 }
 
 function RequireOnboarding({ children }: { children: React.ReactNode }) {
   const onboardingComplete = localStorage.getItem("onboarded") === "true";
-  if (!onboardingComplete) {
-    return <Navigate to="/onboarding" replace />;
-  }
-  return <>{children}</>;
+  return onboardingComplete ? <>{children}</> : <Navigate to="/onboarding" replace />;
 }
 
 const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
@@ -151,80 +106,40 @@ const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
 function RootEntry() {
   const { isAuthenticated, isLoading } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
 
   if (isLoading && !timedOut) {
-    return <AppLoadingScreen onTimeout={handleTimeout} />;
+    return <AppLoadingScreen onTimeout={() => setTimedOut(true)} />;
   }
 
   const isOnboarded = localStorage.getItem("onboarded") === "true";
   const hasSeenWelcome = !!localStorage.getItem(WELCOME_SEEN_KEY);
 
   if (!isAuthenticated) {
-    // Auth is slow or timed out. If already onboarded, go to /physical — RequireAuth
-    // there will re-prompt login if the session is genuinely expired.
     if (isOnboarded) return <Navigate to="/physical" replace />;
-    // First-time users see the welcome experience before onboarding.
     if (!hasSeenWelcome) return <Navigate to="/welcome" replace />;
     return <Navigate to="/onboarding" replace />;
   }
 
-  // Authenticated — but new users who haven't seen welcome should still see it.
   if (!isOnboarded && !hasSeenWelcome) return <Navigate to="/welcome" replace />;
   return <Navigate to="/physical" replace />;
 }
 
-/* ======================================================
-   APP STARTUP — lifecycle init + interrupted write recovery
-   ====================================================== */
-
 function useAppStartup() {
   React.useEffect(() => {
-    // Recover any writes interrupted by prior tab crash / kill
     recoverAllInterruptedWrites();
-
-    // Start hydration state machine
     startHydration();
-
-    // Initialize lifecycle coordinator (visibility, connectivity, memory pressure)
     initLifecycle();
-
-    // Mark hydration ready — stores are synchronously available from localStorage
     markHydrationReady();
-
-    // Initialize privacy-first analytics (must come after lifecycle init)
     initAnalytics();
-
-    // Initialize calm notification system (must come after analytics init)
     initNotifications();
-
-    // Initialize AI runtime — post-hydration, non-blocking, failure-tolerant.
-    // Uses Promise.resolve() scheduling so it never runs before the first paint.
-    void Promise.resolve().then(async () => {
-      await initAIRuntime();
-      // Phase 20: unified AI convergence — all inits are idempotent
-      initMobileHardener();
-      initAssistantBehaviorRuntime();
-      bindProactiveCognitionToLifecycle();
-      initSelfHealingRuntime();
-      initAutoModelLifecycle();
-      scheduleConsolidation();
-    });
 
     return () => {
       disposeLifecycle();
       disposeAnalytics();
       disposeNotifications();
-      void disposeAIRuntime();
-      unbindProactiveCognition();
-      disposeSelfHealingRuntime();
     };
   }, []);
 }
-
-/* ======================================================
-   GLOBAL RUNTIME SAFETY (NON-VISUAL)
-   ====================================================== */
 
 function useGlobalRuntimeGuards() {
   React.useEffect(() => {
@@ -234,7 +149,6 @@ function useGlobalRuntimeGuards() {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
-        error: event.error,
       });
     };
 
@@ -244,17 +158,12 @@ function useGlobalRuntimeGuards() {
 
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onUnhandledRejection);
-
     return () => {
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onUnhandledRejection);
     };
   }, []);
 }
-
-/* ======================================================
-   APP
-   ====================================================== */
 
 export default function App() {
   useAppStartup();
@@ -264,183 +173,27 @@ export default function App() {
     <BrowserRouter>
       <AuthSyncBoundary />
       <CapacitorAuthHandler />
-
       <React.Suspense fallback={<AppLoadingScreen />}>
-      <Routes>
-        <Route path="/" element={<RootEntry />} />
-        <Route path="/welcome" element={<WelcomePage />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-
-        <Route
-          path="/overview"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Index />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/physical"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <TransitionGate>
-                    <PhysicalDashboard />
-                  </TransitionGate>
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        {/* /mental — the mental wellness hub (tabs: Overview, Journal, Tools) */}
-        <Route
-          path="/mental"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <MentalOverview />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        {/* /journal — legacy route, kept for backwards compat */}
-        <Route
-          path="/journal"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Journal />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/mental/coach"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <AiMentalCoach />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/habits"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Habits />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/tools"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Tools />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Profile />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/chat"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Chat />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/sleep"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Sleep />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/roadmap"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Roadmap />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/pricing"
-          element={
-            <RequireAuth>
-              <RequireOnboarding>
-                <AppShell>
-                  <Pricing />
-                </AppShell>
-              </RequireOnboarding>
-            </RequireAuth>
-          }
-        />
-
-        {/* Development-only routes — excluded from production builds */}
-        {import.meta.env.DEV && DevPage && (
-          <Route path="/dev" element={<DevPage />} />
-        )}
-        {import.meta.env.DEV && StateInspectorPage && (
-          <Route path="/dev/state" element={<StateInspectorPage />} />
-        )}
-
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+        <Routes>
+          <Route path="/" element={<RootEntry />} />
+          <Route path="/welcome" element={<WelcomePage />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/overview" element={<RequireAuth><RequireOnboarding><AppShell><Index /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/physical" element={<RequireAuth><RequireOnboarding><AppShell><TransitionGate><PhysicalDashboard /></TransitionGate></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/mental" element={<RequireAuth><RequireOnboarding><AppShell><MentalOverview /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/journal" element={<RequireAuth><RequireOnboarding><AppShell><Journal /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/mental/coach" element={<RequireAuth><RequireOnboarding><AppShell><AiMentalCoach /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/habits" element={<RequireAuth><RequireOnboarding><AppShell><Habits /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/tools" element={<RequireAuth><RequireOnboarding><AppShell><Tools /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/profile" element={<RequireAuth><RequireOnboarding><AppShell><Profile /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/chat" element={<RequireAuth><RequireOnboarding><AppShell><Chat /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/sleep" element={<RequireAuth><RequireOnboarding><AppShell><Sleep /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/roadmap" element={<RequireAuth><RequireOnboarding><AppShell><Roadmap /></AppShell></RequireOnboarding></RequireAuth>} />
+          <Route path="/pricing" element={<RequireAuth><RequireOnboarding><AppShell><Pricing /></AppShell></RequireOnboarding></RequireAuth>} />
+          {import.meta.env.DEV && DevPage && <Route path="/dev" element={<DevPage />} />}
+          {import.meta.env.DEV && StateInspectorPage && <Route path="/dev/state" element={<StateInspectorPage />} />}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </React.Suspense>
     </BrowserRouter>
   );

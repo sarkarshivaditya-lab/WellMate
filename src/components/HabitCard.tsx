@@ -14,10 +14,9 @@ interface HabitCardProps {
   onToggle: () => void;
   onArchive?: () => void;
   onClick?: () => void;
-  // Visual enhancements — all optional, backward-compatible
   categoryLabel?: string;
-  categoryColor?: string;   // Tailwind text-color class
-  weekDots?: boolean[];     // 7 booleans: index 0 = 6 days ago, index 6 = today
+  categoryColor?: string;
+  weekDots?: boolean[];
 }
 
 export default function HabitCard({
@@ -37,7 +36,6 @@ export default function HabitCard({
     <Card className="hover:bg-accent/30 transition-premium">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
-          {/* Content area — keyboard-accessible button when onClick is provided */}
           {onClick ? (
             <button
               type="button"
@@ -45,69 +43,11 @@ export default function HabitCard({
               className="flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
               aria-label={`View details for ${habit.title}`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold">{habit.title}</h3>
-                {streak > 0 && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground" aria-label={`${streak} days of consistent activity`}>
-                    {streak} day{streak > 1 ? "s" : ""}
-                  </Badge>
-                )}
-              </div>
-              {habit.description && (
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {habit.description}
-                </p>
-              )}
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {habit.cadence}
-                </Badge>
-                {categoryLabel && (
-                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>
-                    {categoryLabel}
-                  </span>
-                )}
-                {habit.reminderTime && (
-                  <span className="text-xs text-muted-foreground">
-                    <span aria-hidden>⏰</span>{" "}
-                    <span className="sr-only">Reminder at</span>
-                    {habit.reminderTime}
-                  </span>
-                )}
-              </div>
+              <HabitContent habit={habit} streak={streak} categoryLabel={categoryLabel} categoryColor={categoryColor} />
             </button>
           ) : (
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-semibold">{habit.title}</h3>
-                {streak > 0 && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground" aria-label={`${streak} days of consistent activity`}>
-                    {streak} day{streak > 1 ? "s" : ""}
-                  </Badge>
-                )}
-              </div>
-              {habit.description && (
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {habit.description}
-                </p>
-              )}
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {habit.cadence}
-                </Badge>
-                {categoryLabel && (
-                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>
-                    {categoryLabel}
-                  </span>
-                )}
-                {habit.reminderTime && (
-                  <span className="text-xs text-muted-foreground">
-                    <span aria-hidden>⏰</span>{" "}
-                    <span className="sr-only">Reminder at</span>
-                    {habit.reminderTime}
-                  </span>
-                )}
-              </div>
+              <HabitContent habit={habit} streak={streak} categoryLabel={categoryLabel} categoryColor={categoryColor} />
             </div>
           )}
 
@@ -118,11 +58,7 @@ export default function HabitCard({
                   key={i}
                   className={cn(
                     "inline-block h-[6px] w-[6px] rounded-full transition-colors",
-                    done
-                      ? "bg-primary/60"
-                      : i === 6
-                        ? "ring-1 ring-primary/30 bg-transparent"
-                        : "bg-muted-foreground/15",
+                    done ? "bg-primary/60" : i === 6 ? "ring-1 ring-primary/30 bg-transparent" : "bg-muted-foreground/15",
                   )}
                 />
               ))}
@@ -186,19 +122,56 @@ export default function HabitCard({
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirming(false);
-                isCompletedToday ? haptics.light() : haptics.complete();
+                if (isCompletedToday) {
+                  haptics.light();
+                } else {
+                  haptics.complete();
+                }
                 onToggle();
               }}
             >
-              {isCompletedToday ? (
-                <CheckCircle2 className="h-5 w-5" aria-hidden />
-              ) : (
-                <Circle className="h-5 w-5" aria-hidden />
-              )}
+              {isCompletedToday ? <CheckCircle2 className="h-5 w-5" aria-hidden /> : <Circle className="h-5 w-5" aria-hidden />}
             </Button>
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function HabitContent({
+  habit,
+  streak,
+  categoryLabel,
+  categoryColor,
+}: {
+  habit: Doc<"habits">;
+  streak: number;
+  categoryLabel?: string;
+  categoryColor?: string;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="font-semibold">{habit.title}</h3>
+        {streak > 0 && (
+          <Badge variant="outline" className="text-xs text-muted-foreground" aria-label={`${streak} days of consistent activity`}>
+            {streak} day{streak > 1 ? "s" : ""}
+          </Badge>
+        )}
+      </div>
+      {habit.description && <p className="text-sm text-muted-foreground line-clamp-1">{habit.description}</p>}
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        <Badge variant="outline" className="text-xs capitalize">{habit.cadence}</Badge>
+        {categoryLabel && <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>{categoryLabel}</span>}
+        {habit.reminderTime && (
+          <span className="text-xs text-muted-foreground">
+            <span aria-hidden>⏰</span>{" "}
+            <span className="sr-only">Reminder at</span>
+            {habit.reminderTime}
+          </span>
+        )}
+      </div>
+    </>
   );
 }

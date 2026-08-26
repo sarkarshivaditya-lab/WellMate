@@ -25,7 +25,7 @@ export default function PhysicalConfidenceCard() {
     cutoff.setDate(cutoff.getDate() - 7);
     const cutoffIso = localDateIso(cutoff);
     return allMeals.filter((m) => m.dateIso >= cutoffIso);
-  }, [allMeals, today]);
+  }, [allMeals]);
 
   const exercises7 = useMemo(() => {
     const cutoff = new Date();
@@ -44,7 +44,6 @@ export default function PhysicalConfidenceCard() {
     [sleep7, today],
   );
 
-  // No data logged yet — show intentional empty state, never a ghost card
   const hasAnyData =
     meals7.length > 0 || exercises7.length > 0 || sleep7.length > 0;
 

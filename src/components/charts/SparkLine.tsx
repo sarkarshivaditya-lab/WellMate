@@ -8,17 +8,16 @@
 
 import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { moduleColors } from "@/design/tokens";
 import type { WellnessModule } from "@/design/tokens";
 
 // Map wellness modules to Tailwind stroke colors via currentColor
 const MODULE_STROKE: Partial<Record<WellnessModule, string>> = {
-  mood:     "text-emerald-500",
-  sleep:    "text-indigo-400",
+  mood: "text-emerald-500",
+  sleep: "text-indigo-400",
   exercise: "text-blue-400",
-  habit:    "text-rose-400",
-  meal:     "text-amber-400",
-  journal:  "text-violet-400",
+  habit: "text-rose-400",
+  meal: "text-amber-400",
+  journal: "text-violet-400",
 };
 
 type Props = {
@@ -46,21 +45,11 @@ export function SparkLine({
 }: Props) {
   const colorClass = module ? (MODULE_STROKE[module] ?? "text-primary") : "text-primary";
 
-  if (data.length < 2) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-xl bg-muted/30",
-          className,
-        )}
-        style={{ width, height }}
-      >
-        <p className="text-xs text-muted-foreground">{emptyMessage}</p>
-      </div>
-    );
-  }
-
   const { points, linePath, areaPath } = useMemo(() => {
+    if (data.length < 2) {
+      return { points: [], linePath: "", areaPath: "" };
+    }
+
     const padding = { x: 8, y: 8 };
     const chartW = width - padding.x * 2;
     const chartH = height - padding.y * 2;
@@ -87,6 +76,20 @@ export function SparkLine({
     return { points: pts, linePath: line, areaPath: area };
   }, [data, width, height]);
 
+  if (data.length < 2) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-xl bg-muted/30",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        <p className="text-xs text-muted-foreground">{emptyMessage}</p>
+      </div>
+    );
+  }
+
   return (
     <svg
       width={width}
@@ -95,7 +98,6 @@ export function SparkLine({
       className={cn("overflow-visible", colorClass, className)}
       aria-hidden
     >
-      {/* Area fill */}
       {showArea && (
         <path
           d={areaPath}
@@ -105,7 +107,6 @@ export function SparkLine({
         />
       )}
 
-      {/* Trend line */}
       <path
         d={linePath}
         stroke="currentColor"
@@ -116,7 +117,6 @@ export function SparkLine({
         className="transition-all duration-500 ease-out"
       />
 
-      {/* Data points */}
       {showDots && points.map((p, i) => (
         <circle
           key={i}

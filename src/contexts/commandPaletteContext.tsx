@@ -1,16 +1,5 @@
-// src/contexts/commandPaletteContext.tsx
-// Global open/close state for the WellMate command palette.
-// Thin context — no heavy state, no middleware.
-
-import React, { createContext, useContext, useState, useCallback } from "react";
-
-type CommandPaletteContextValue = {
-  open: boolean;
-  openPalette: () => void;
-  closePalette: () => void;
-};
-
-const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
+import React, { useState, useCallback } from "react";
+import { CommandPaletteContext } from "@/contexts/commandPaletteContextValue";
 
 export function CommandPaletteProvider({
   children,
@@ -26,10 +15,4 @@ export function CommandPaletteProvider({
       {children}
     </CommandPaletteContext.Provider>
   );
-}
-
-export function useCommandPalette(): CommandPaletteContextValue {
-  const ctx = useContext(CommandPaletteContext);
-  if (!ctx) throw new Error("useCommandPalette must be within CommandPaletteProvider");
-  return ctx;
 }

@@ -1,27 +1,16 @@
-/* ======================================================
-   ONBOARDING PAYLOAD — LOCAL FIRST
-   ====================================================== */
+/* ONBOARDING PAYLOAD — LOCAL FIRST */
 
-/**
- * This represents onboarding data captured
- * BEFORE authentication is established.
- *
- * It is:
- * - written by Onboarding.tsx
- * - consumed by AuthSyncBoundary
- * - promoted to Convex user profile exactly once
- */
+export type EmergencyContactPayload = {
+  id: string;
+  name: string;
+  phone: string;
+};
 
 export type OnboardingPayload = {
-  // identity
   dob: string;
   sex: "male" | "female" | "other" | "";
-
-  // body
   heightCm: number;
   weightKg: number;
-
-  // activity
   activityLevel:
     | "sedentary"
     | "light"
@@ -29,56 +18,83 @@ export type OnboardingPayload = {
     | "active"
     | "veryActive"
     | null;
-
   dailySteps: string;
-
-  // goals
   weightGoal: string;
   muscleGoal: string;
-
-  // female health (optional)
   cycleLength?: number;
   lastPeriod?: string;
-
-  // other health (optional)
   additionalHealthNotes?: string;
-
-  // metadata
+  bloodType?: string;
+  allergies?: string[];
+  emergencyContacts?: EmergencyContactPayload[];
   createdAt: number;
 };
 
-/* ======================================================
-   STORAGE HELPERS
-   ====================================================== */
-
 const STORAGE_KEY = "onboarding_profile";
 
-export function readOnboardingPayload():
-  | OnboardingPayload
-  | null {
+function isEmergencyContact(value: unknown): value is EmergencyContactPayload {
+  if (!value || typeof value !== "object") return false;
+  const contact = value as Record<string, unknown>;
+  return (
+    typeof contact.id === "string" &&
+    typeof contact.name === "string" &&
+    typeof contact.phone === "string"
+  );
+}
+
+export function readOnboardingPayload(): OnboardingPayload | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as OnboardingPayload;
+    const value = JSON.parse(raw) as Partial<OnboardingPayload>;
+    if (
+      typeof value.dob !== "string" ||
+      typeof value.sex !== "string" ||
+      typeof value.heightCm !== "number" ||
+      !Number.isFinite(value.heightCm) ||
+      typeof value.weightKg !== "number" ||
+      !Number.isFinite(value.weightKg)
+    ) {
+      return null;
+    }
+
+    const contacts = Array.isArray(value.emergencyContacts)
+      ? value.emergencyContacts.filter(isEmergencyContact)
+      : undefined;
+    const allergies = Array.isArray(value.allergies)
+      ? value.allergies.filter((item): item is string => typeof item === "string")
+      : undefined;
+
+    return {
+      dob: value.dob,
+      sex: value.sex as OnboardingPayload["sex"],
+      heightCm: value.heightCm,
+      weightKg: value.weightKg,
+      activityLevel: value.activityLevel ?? null,
+      dailySteps: value.dailySteps ?? "",
+      weightGoal: value.weightGoal ?? "",
+      muscleGoal: value.muscleGoal ?? "",
+      cycleLength: typeof value.cycleLength === "number" ? value.cycleLength : undefined,
+      lastPeriod: typeof value.lastPeriod === "string" ? value.lastPeriod : undefined,
+      additionalHealthNotes:
+        typeof value.additionalHealthNotes === "string" ? value.additionalHealthNotes : undefined,
+      bloodType: typeof value.bloodType === "string" ? value.bloodType : undefined,
+      allergies,
+      emergencyContacts: contacts,
+      createdAt: typeof value.createdAt === "number" ? value.createdAt : Date.now(),
+    };
   } catch {
     return null;
   }
 }
 
-export function clearOnboardingPayload() {
+export function clearOnboardingPayload(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    // ignore
+    // ignore storage errors
   }
 }
-
-/* ======================================================
-   ONBOARDING DRAFT — IN-PROGRESS FORM STATE
-   Persists the user's work-in-progress across reloads,
-   auth redirects, and app-backgrounding so no data is
-   lost before finish() is called.
-   ====================================================== */
 
 export type OnboardingDraft = {
   step: number;
@@ -97,6 +113,9 @@ export type OnboardingDraft = {
   lastPeriod: string;
   additionalHealthChoice: string;
   additionalHealthNotes: string;
+  bloodType: string;
+  allergies: string;
+  emergencyContacts: EmergencyContactPayload[];
 };
 
 const DRAFT_KEY = "onboarding_draft";
@@ -123,6 +142,6 @@ export function clearOnboardingDraft(): void {
   try {
     localStorage.removeItem(DRAFT_KEY);
   } catch {
-    // ignore
+    // ignore storage errors
   }
 }
