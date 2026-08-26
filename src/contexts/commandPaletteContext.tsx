@@ -1,12 +1,5 @@
-import React, { createContext, useState, useCallback } from "react";
-
-export type CommandPaletteContextValue = {
-  open: boolean;
-  openPalette: () => void;
-  closePalette: () => void;
-};
-
-export const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
+import React, { useState, useCallback } from "react";
+import { CommandPaletteContext } from "@/contexts/commandPaletteContextValue";
 
 export function CommandPaletteProvider({
   children,
