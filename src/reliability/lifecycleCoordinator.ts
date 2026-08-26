@@ -24,6 +24,7 @@
    - App suspended for hours → resume correctly
    - OS timer drift after suspension → detect and re-anchor
    - Low memory → flush pending writes immediately
+   - Connectivity changes → dispatch synchronously
 ====================================================== */
 
 import { subscribeToConnectivity, type ConnectivityState } from "./connectivity";
@@ -55,6 +56,12 @@ export type LifecycleEvent =
 
 type LifecycleListener = (event: LifecycleEvent) => void;
 
+type MemoryPressureWindow = Window & {
+  addEventListener(type: "memorypressure", listener: EventListenerOrEventListenerObject): void;
+  removeEventListener(type: "memorypressure", listener: EventListenerOrEventListenerObject): void;
+  memory?: unknown;
+};
+
 /* --------------------------------------------------
    CONFIG
    -------------------------------------------------- */
@@ -70,123 +77,69 @@ const REHYDRATION_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours
    -------------------------------------------------- */
 
 let focusState: AppFocusState = "foreground";
-let backgroundedAt: number | null = null;
+let lastBackgroundAt: number | null = null;
 let isDisposed = false;
-
+let cleanupFns: Array<() => void> = [];
 const listeners = new Set<LifecycleListener>();
-const cleanupFns: Array<() => void> = [];
 
-/* --------------------------------------------------
-   SUBSCRIPTION
-   -------------------------------------------------- */
-
-export function subscribeTo(listener: LifecycleListener): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function dispatch(event: LifecycleEvent) {
-  listeners.forEach((l) => { try { l(event); } catch { /* never crash */ } });
-}
-
-/* --------------------------------------------------
-   GETTERS
-   -------------------------------------------------- */
-
-export function getAppFocusState(): AppFocusState {
-  return focusState;
-}
-
-/* --------------------------------------------------
-   AUTH BRIDGE
-   Called by React auth layer when auth state changes.
-   -------------------------------------------------- */
-
-export function notifyAuthChange(authenticated: boolean) {
-  dispatch({ type: "auth_change", authenticated });
-
-  if (authenticated) {
-    recordDiagnosticEvent("auth_acquired");
-    // Signal that sync should run
-    dispatch({ type: "sync_requested" });
-  } else {
-    recordDiagnosticEvent("auth_lost");
-  }
-}
-
-/* --------------------------------------------------
-   MANUAL SYNC REQUEST
-   -------------------------------------------------- */
-
-export function requestSync() {
-  dispatch({ type: "sync_requested" });
-}
-
-/* --------------------------------------------------
-   VISIBILITY HANDLER
-   -------------------------------------------------- */
-
-function handleVisibilityChange() {
-  if (document.hidden) {
-    focusState = "background";
-    backgroundedAt = Date.now();
-    recordDiagnosticEvent("app_backgrounded");
-    dispatch({ type: "background" });
-  } else {
-    const now = Date.now();
-    const backgroundDuration = backgroundedAt ? now - backgroundedAt : 0;
-    focusState = "foreground";
-    backgroundedAt = null;
-
-    recordDiagnosticEvent("app_foregrounded", { backgroundDurationMs: backgroundDuration });
-
-    if (backgroundDuration > REHYDRATION_THRESHOLD_MS) {
-      // Been away long enough that data may be stale — re-trigger hydration
-      markHydrationStale(backgroundDuration);
-      startHydration();
-      dispatch({ type: "stale_resume", backgroundDurationMs: backgroundDuration });
-    } else if (backgroundDuration > STALE_RESUME_THRESHOLD_MS) {
-      // Moderate staleness — signal stale but don't full re-hydrate
-      if (isHydrationReady()) {
-        markHydrationStale(backgroundDuration);
-      }
-      dispatch({ type: "stale_resume", backgroundDurationMs: backgroundDuration });
+function dispatch(event: LifecycleEvent): void {
+  for (const listener of listeners) {
+    try {
+      listener(event);
+    } catch (error) {
+      console.error("Lifecycle listener failed:", error instanceof Error ? error.message : "unknown error");
     }
-
-    dispatch({ type: "foreground" });
-
-    // Always request sync on foreground resume
-    dispatch({ type: "sync_requested" });
   }
 }
 
-/* --------------------------------------------------
-   FOCUS/BLUR
-   -------------------------------------------------- */
+function handleVisibilityChange(): void {
+  if (document.visibilityState === "hidden") {
+    focusState = "background";
+    lastBackgroundAt = Date.now();
+    dispatch({ type: "background" });
+    return;
+  }
 
-function handleFocus() {
+  const now = Date.now();
+  const backgroundDurationMs = lastBackgroundAt ? now - lastBackgroundAt : 0;
+  focusState = "foreground";
+  lastBackgroundAt = null;
+  dispatch({ type: "foreground" });
+
+  if (backgroundDurationMs >= STALE_RESUME_THRESHOLD_MS) {
+    dispatch({ type: "stale_resume", backgroundDurationMs });
+  }
+  if (backgroundDurationMs >= REHYDRATION_THRESHOLD_MS) {
+    markHydrationStale();
+    startHydration();
+  }
+}
+
+function handleFocus(): void {
+  focusState = "foreground";
   dispatch({ type: "focus" });
 }
 
-function handleBlur() {
+function handleBlur(): void {
+  focusState = "background";
   dispatch({ type: "blur" });
 }
 
-/* --------------------------------------------------
-   BEFORE UNLOAD — flush pending writes
-   -------------------------------------------------- */
-
-function handleBeforeUnload() {
+function handleBeforeUnload(): void {
   dispatch({ type: "before_unload" });
 }
 
-/* --------------------------------------------------
-   MEMORY PRESSURE
-   -------------------------------------------------- */
-
-function handleMemoryPressure() {
-  recordDiagnosticEvent("memory_pressure");
+function handleMemoryPressure(): void {
   dispatch({ type: "memory_pressure" });
+}
+
+export function getFocusState(): AppFocusState {
+  return focusState;
+}
+
+export function subscribe(listener: LifecycleListener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 /* --------------------------------------------------
@@ -196,6 +149,8 @@ function handleMemoryPressure() {
 export function init(): void {
   if (isDisposed) return;
   if (typeof window === "undefined") return;
+
+  const memoryPressureWindow = window as MemoryPressureWindow;
 
   // Visibility API
   document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -216,14 +171,10 @@ export function init(): void {
   );
 
   // Memory pressure (supported in some browsers)
-  const perfMemory = (performance as unknown as { memory?: { onmemorypressure?: unknown } });
-  if (perfMemory?.memory) {
-    // @ts-ignore — non-standard API
-    window.addEventListener("memorypressure", handleMemoryPressure);
-    cleanupFns.push(
-      () =>
-        // @ts-ignore
-        window.removeEventListener("memorypressure", handleMemoryPressure),
+  if (memoryPressureWindow.memory !== undefined) {
+    memoryPressureWindow.addEventListener("memorypressure", handleMemoryPressure);
+    cleanupFns.push(() =>
+      memoryPressureWindow.removeEventListener("memorypressure", handleMemoryPressure),
     );
   }
 
@@ -243,8 +194,9 @@ export function init(): void {
 }
 
 export function dispose(): void {
-  isDisposed = true;
-  cleanupFns.forEach((fn) => { try { fn(); } catch { /* ignore */ } });
-  cleanupFns.length = 0;
+  for (const cleanup of cleanupFns.splice(0)) {
+    cleanup();
+  }
   listeners.clear();
+  isDisposed = true;
 }
