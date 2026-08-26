@@ -31,15 +31,12 @@ jobs:
 
       - name: Run ESLint
         run: pnpm lint
-        continue-on-error: false
 
-      - name: Run emergency tests
-        run: pnpm exec vitest run src/emergency/accidentStateMachine.test.ts
-        continue-on-error: false
+      - name: Run test suite
+        run: pnpm exec vitest run
 
       - name: Run TypeScript type checking
         run: pnpm exec tsc --noEmit
-        continue-on-error: false
 
       - name: Build frontend
         run: pnpm build
@@ -48,7 +45,7 @@ jobs:
 
       - name: Show build summary
         run: |
-          echo "✅ Lint passed"
-          echo "✅ Emergency tests passed"
-          echo "✅ Type checking passed"
-          echo "✅ Build succeeded"
+          echo "Lint passed"
+          echo "Test suite passed"
+          echo "Type checking passed"
+          echo "Build succeeded"
