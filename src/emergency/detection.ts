@@ -86,6 +86,14 @@ export function beginTracking(mode: TrackingMode): EmergencyState {
   return mode === "manual" || mode === "automatic" ? "tracking" : "idle";
 }
 
+export function stopTracking(): EmergencyState {
+  return "idle";
+}
+
+export function cancelEmergency(): EmergencyState {
+  return "cancelled";
+}
+
 export function beginConfirmation(startedAtMs: number): DetectionContext {
   return {
     recent: [],
