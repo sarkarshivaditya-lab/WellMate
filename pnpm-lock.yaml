@@ -1977,12 +1977,6 @@ packages:
     peerDependencies:
       vite: ^4 || ^5 || ^6 || ^7 || ^8
 
-  '@wllama/wllama@3.1.1':
-    resolution: {integrity: sha512-AP+eURq1szJLvjHCAOF7ckKf6dTrfSDos1TliM3aqJ7v7oKAP+2qkKEZJIXIvyJ4RYxqHdK9OPhxUoH0hvDxBg==}
-
-  '@xenova/transformers@2.17.2':
-    resolution: {integrity: sha512-lZmHqzrVIkSvZdKZEx7IYY51TK0WDrC8eR0c5IMnBsO8di8are1zzw8BlLhyO2TklZKLN5UffNGs1IJwT6oOqQ==}
-
   '@xml-tools/parser@1.0.11':
     resolution: {integrity: sha512-aKqQ077XnR+oQtHJlrAflaZaL7qZsulWc/i/ZEooar5JiWj1eLt0+Wg28cpa+XLney107wXqneC+oG1IZvxkTA==}
 
@@ -6070,22 +6064,6 @@ snapshots:
       vite: 7.3.3(@types/node@24.12.3)(jiti@1.21.7)(yaml@2.9.0)
     transitivePeerDependencies:
       - '@swc/helpers'
-
-  '@wllama/wllama@3.1.1':
-    dependencies:
-      '@huggingface/jinja': 0.5.9
-
-  '@xenova/transformers@2.17.2':
-    dependencies:
-      '@huggingface/jinja': 0.2.2
-      onnxruntime-web: 1.14.0
-      sharp: 0.32.6
-    optionalDependencies:
-      onnxruntime-node: 1.14.0
-    transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
 
   '@xml-tools/parser@1.0.11':
     dependencies:
