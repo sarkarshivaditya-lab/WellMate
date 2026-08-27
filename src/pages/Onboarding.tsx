@@ -716,61 +716,6 @@ export default function Onboarding() {
         )}
 
 
-          <div className="space-y-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Based on your body and activity level
-            </p>
-
-            {/* Metric rows */}
-            <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
-              <Summary label="Age" value={`${age} years`} />
-              <Summary
-                label="Height"
-                value={
-                  heightUnit === "cm"
-                    ? `${height} cm`
-                    : `${heightFt} ft ${heightIn} in (${height} cm)`
-                }
-              />
-              <Summary label="Weight" value={`${weight} kg`} />
-              <Summary label="Activity" value={activityLevel ?? "—"} />
-              <Summary label="Daily steps" value={dailySteps} />
-              <Summary label="Goal" value={weightGoal} />
-              <Summary label="Muscle" value={muscleGoal} />
-
-              {sex === "female" && cycleLength && (
-                <Summary label="Cycle length" value={`${cycleLength} days`} />
-              )}
-              {sex === "female" && lastPeriod && (
-                <Summary label="Last period" value={lastPeriod} />
-              )}
-              {sex !== "female" && additionalHealthChoice === "yes" && (
-                <Summary
-                  label="Additional health info"
-                  value={additionalHealthNotes}
-                />
-              )}
-            </div>
-
-            {/* Calorie callout */}
-            <div className="rounded-2xl bg-primary/[0.07] border border-primary/20 px-5 py-4">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-2">
-                Estimated maintenance calories
-              </p>
-              <p className="text-3xl font-semibold text-foreground leading-none">
-                {maintenanceCalories}
-                <span className="text-base font-normal text-muted-foreground ml-1.5">
-                  kcal / day
-                </span>
-              </p>
-              <p className="text-sm text-muted-foreground mt-1.5">
-                Goal target: ~{goalCalories} kcal / day
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ================= NAV ================= */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <button
             type="button"
