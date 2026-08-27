@@ -12,7 +12,7 @@ import {
   getStoredReflection,
   isReflectionStale,
 } from "@/ai/reflection/reflectionEngine";
-import { evaluatePresence, suppressPresenceFor } from "@/ai/presence/presenceRules";
+import { evaluatePresence, suppressPresenceFor } from "@/services/aiPresence";
 
 type CardState =
   | "checking"    // evaluating presence
