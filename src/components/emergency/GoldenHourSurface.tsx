@@ -187,7 +187,7 @@ function GoldenHourSurface() {
   }
 
   async function escalate(reason: "explicit" | "timeout") {
-    if (delivery === "PENDING" || delivery === "SUCCESS") return;
+    if (!beginEscalation()) return;
     setDelivery("PENDING");
     const event = buildEmergencyEvent(
       {
@@ -205,11 +205,12 @@ function GoldenHourSurface() {
     // Until then, surface PENDING rather than fabricate a success state.
     setState("escalated");
     setTracking("READY");
-    setDelivery("PENDING");
+    setDelivery(getDeliveryStatus(false));
+    completeEscalation();
   }
 
   function cancelConfirmation() {
-    contextRef.current = beginConfirmation(Date.now());
+    contextRef.current = { ...beginConfirmation(Date.now()), state: "tracking" };
     setState("cancelled");
     setCountdown(0);
     window.setTimeout(() => setState("tracking"), 0);
@@ -262,7 +263,7 @@ function GoldenHourSurface() {
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <MapPin className={cn("h-3.5 w-3.5", locationReady && "text-primary")} aria-hidden />
-          {locationReady ? "Location ready" : "Location unavailable or permission not granted"}
+          {getLocationReadinessMessage(locationRef.current ?? undefined)}
           <span className="ml-auto">
             Power shortcut: {getPowerShortcutStatus()}
           </span>
