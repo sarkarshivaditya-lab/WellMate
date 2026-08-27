@@ -21,6 +21,11 @@ export type LocalProfile = {
   cycleLength?: number;
   lastPeriod?: string;
   additionalHealthNotes?: string;
+  bloodType: string;
+  allergies: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  trackingMode: "automatic" | "manual";
   createdAt: number;
 };
 
