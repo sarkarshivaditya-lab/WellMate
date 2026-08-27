@@ -14,10 +14,9 @@ interface HabitCardProps {
   onToggle: () => void;
   onArchive?: () => void;
   onClick?: () => void;
-  // Visual enhancements — all optional, backward-compatible
   categoryLabel?: string;
-  categoryColor?: string;   // Tailwind text-color class
-  weekDots?: boolean[];     // 7 booleans: index 0 = 6 days ago, index 6 = today
+  categoryColor?: string;
+  weekDots?: boolean[];
 }
 
 export default function HabitCard({
@@ -37,7 +36,6 @@ export default function HabitCard({
     <Card className="hover:bg-accent/30 transition-premium">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
-          {/* Content area — keyboard-accessible button when onClick is provided */}
           {onClick ? (
             <button
               type="button"
@@ -54,18 +52,12 @@ export default function HabitCard({
                 )}
               </div>
               {habit.description && (
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {habit.description}
-                </p>
+                <p className="text-sm text-muted-foreground line-clamp-1">{habit.description}</p>
               )}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {habit.cadence}
-                </Badge>
+                <Badge variant="outline" className="text-xs capitalize">{habit.cadence}</Badge>
                 {categoryLabel && (
-                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>
-                    {categoryLabel}
-                  </span>
+                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>{categoryLabel}</span>
                 )}
                 {habit.reminderTime && (
                   <span className="text-xs text-muted-foreground">
@@ -86,19 +78,11 @@ export default function HabitCard({
                   </Badge>
                 )}
               </div>
-              {habit.description && (
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {habit.description}
-                </p>
-              )}
+              {habit.description && <p className="text-sm text-muted-foreground line-clamp-1">{habit.description}</p>}
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="outline" className="text-xs capitalize">
-                  {habit.cadence}
-                </Badge>
+                <Badge variant="outline" className="text-xs capitalize">{habit.cadence}</Badge>
                 {categoryLabel && (
-                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>
-                    {categoryLabel}
-                  </span>
+                  <span className={cn("text-[10px] font-medium", categoryColor ?? "text-muted-foreground")}>{categoryLabel}</span>
                 )}
                 {habit.reminderTime && (
                   <span className="text-xs text-muted-foreground">
@@ -114,69 +98,58 @@ export default function HabitCard({
           {weekDots && weekDots.length === 7 && (
             <div className="flex items-center gap-[5px] flex-shrink-0" aria-hidden>
               {weekDots.map((done, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "inline-block h-[6px] w-[6px] rounded-full transition-colors",
-                    done
-                      ? "bg-primary/60"
-                      : i === 6
-                        ? "ring-1 ring-primary/30 bg-transparent"
-                        : "bg-muted-foreground/15",
-                  )}
-                />
+                <span key={i} className={cn(
+                  "inline-block h-[6px] w-[6px] rounded-full transition-colors",
+                  done ? "bg-primary/60" : i === 6 ? "ring-1 ring-primary/30 bg-transparent" : "bg-muted-foreground/15",
+                )} />
               ))}
             </div>
           )}
 
           <div className="flex items-center gap-1 flex-shrink-0">
-            {onArchive && (
-              confirming ? (
-                <>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-9 px-3 text-xs"
-                    aria-label={`Confirm removing ${habit.title}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      haptics.destructive();
-                      onArchive();
-                      setConfirming(false);
-                    }}
-                  >
-                    Remove
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-9 w-9"
-                    aria-label="Cancel remove"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      haptics.dismiss();
-                      setConfirming(false);
-                    }}
-                  >
-                    <X className="h-4 w-4" aria-hidden />
-                  </Button>
-                </>
-              ) : (
+            {onArchive && (confirming ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-9 px-3 text-xs"
+                  aria-label={`Confirm removing ${habit.title}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    haptics.destructive();
+                    onArchive();
+                    setConfirming(false);
+                  }}
+                >Remove</Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                  aria-label={`Remove ${habit.title}`}
+                  className="h-9 w-9"
+                  aria-label="Cancel remove"
                   onClick={(e) => {
                     e.stopPropagation();
-                    haptics.caution();
-                    setConfirming(true);
+                    haptics.dismiss();
+                    setConfirming(false);
                   }}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
+                  <X className="h-4 w-4" aria-hidden />
                 </Button>
-              )
-            )}
+              </>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                aria-label={`Remove ${habit.title}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  haptics.caution();
+                  setConfirming(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </Button>
+            ))}
 
             <Button
               size="sm"
@@ -186,15 +159,15 @@ export default function HabitCard({
               onClick={(e) => {
                 e.stopPropagation();
                 setConfirming(false);
-                isCompletedToday ? haptics.light() : haptics.complete();
+                if (isCompletedToday) {
+                  haptics.light();
+                } else {
+                  haptics.complete();
+                }
                 onToggle();
               }}
             >
-              {isCompletedToday ? (
-                <CheckCircle2 className="h-5 w-5" aria-hidden />
-              ) : (
-                <Circle className="h-5 w-5" aria-hidden />
-              )}
+              {isCompletedToday ? <CheckCircle2 className="h-5 w-5" aria-hidden /> : <Circle className="h-5 w-5" aria-hidden />}
             </Button>
           </div>
         </div>
