@@ -9,7 +9,7 @@ import { useWellnessMemory } from "./useWellnessMemory";
 import { useRecommendations } from "./useRecommendations";
 import { buildWellnessContext } from "@/intelligence/wellnessScore";
 import { buildAIContextPayload } from "@/services/aiContextBridge";
-import { buildContextCards } from "@/services/aiContextCards";
+import { buildContextCards } from "@/intelligence/contextCards";
 import {
   generateScoreFollowUps,
   generateMemoryFollowUps,
