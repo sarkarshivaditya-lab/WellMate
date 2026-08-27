@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
-import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
+import { subscribeToWellMateOpen } from "@/services/wellMateEvents";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
 import { getCachedRecommendations } from "@/recommendations/recommendationEngine";
