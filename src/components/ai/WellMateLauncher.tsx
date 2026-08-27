@@ -6,12 +6,6 @@ import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
-import { LAUNCH_STATE } from "@/ai/launchState";
-import { resolveAssistantReadiness } from "@/ai/assistantReadiness";
-import { getModelLoadState, subscribeToModelLoad } from "@/ai/providers/local/modelLoader";
-import { getRuntimeState, subscribeToRuntimeState } from "@/ai/runtime/runtimeState";
-import { getPersistedInstallState } from "@/ai/models/modelLifecycle";
-import { assistantRequest } from "@/ai/assistant/unifiedAssistantOrchestrator";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
 import { getCachedRecommendations } from "@/recommendations/recommendationEngine";
@@ -64,35 +58,6 @@ function WellMateLauncher() {
   const [showSafetyNotice, setShowSafetyNotice] = React.useState(false);
   const [starterPrompts, setStarterPrompts] = React.useState<FollowUpPrompt[]>([]);
   const hasSentMessage = React.useRef(false);
-
-  type ModelStatus = "ready" | "downloading" | "activating" | "failed" | "unavailable";
-
-  function deriveModelStatus(): ModelStatus {
-    const rt = getRuntimeState();
-    const dl = getModelLoadState();
-    if (rt.modelLoad === "ready") return "ready";
-    if (rt.modelLoad === "loading") return "activating";
-    // Terminal failure states must resolve to "failed" — never "activating".
-    // These are set when autoModelLifecycle enters degraded state or OOM is detected.
-    if (
-      rt.modelLoad === "failed_oom" ||
-      rt.modelLoad === "failed_degraded" ||
-      rt.modelLoad === "failed"
-    ) return "failed";
-    if (dl.phase === "downloading" || dl.phase === "verifying") return "downloading";
-    // Model stored on device but WASM not yet loaded — still activating.
-    // Only show this when there is no terminal failure (checked above).
-    if (getPersistedInstallState() === "installed") return "activating";
-    return "unavailable";
-  }
-
-  const [modelStatus, setModelStatus] = React.useState<ModelStatus>(deriveModelStatus);
-
-  React.useEffect(() => {
-    const unsubRt = subscribeToRuntimeState(() => setModelStatus(deriveModelStatus()));
-    const unsubLoad = subscribeToModelLoad(() => setModelStatus(deriveModelStatus()));
-    return () => { unsubRt(); unsubLoad(); };
-  }, []);
 
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -218,58 +183,14 @@ function WellMateLauncher() {
 
     setMessages((m) => [...m, userMessage]);
 
-    // Resolve AI capability BEFORE any requests — prevents generic catch-block
-    // errors from surfacing when the assistant simply isn't configured yet.
-    const readiness = resolveAssistantReadiness();
-    if (!readiness.canProceed) {
-      setMessages((m) => [
-        ...m,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: readiness.guidanceMessage ?? "WellMate AI is currently unavailable.",
-        },
-      ]);
-      return;
+    if (detectCrisis(text)) {
+      setShowSafetyNotice(true);
     }
 
     setThinking(true);
     setClarify(null);
 
-    if (detectCrisis(text)) {
-      setShowSafetyNotice(true);
-    }
-
     try {
-      // Offline-first: use local AI when the model is in memory and ready
-      if (readiness.state === "local_ready") {
-        let streamed = "";
-        const response = await assistantRequest(text, {
-          surface: "ai_chat",
-          maxTokens: 256,
-          temperature: 0.7,
-          skipProactiveInjection: false,
-          onToken: (token) => { streamed += token; },
-        });
-        const responseText = streamed || response.responseText;
-        if (response.safetyVerdict !== "blocked" && responseText.trim()) {
-          setMessages((m) => [
-            ...m,
-            { id: crypto.randomUUID(), role: "assistant", text: responseText.trim() },
-          ]);
-          setThinking(false);
-          return;
-        }
-        // Local responded but was safety-blocked or empty — do not fall through
-        // to cloud unless cloud is explicitly available.
-        if (!LAUNCH_STATE.cloudAssistantAvailable) {
-          setThinking(false);
-          return;
-        }
-      }
-
-      // Cloud fallback — only reached when readiness.state === "cloud_only",
-      // or local was safety-blocked and cloudAssistantAvailable is true.
       const res = await wellmateChat({ message: text });
 
       if (res.domain === "clarify") {
@@ -304,12 +225,9 @@ function WellMateLauncher() {
         const advice = safeString(res.payload, "advice_text");
         const nutrition = safeNutrition(res.payload);
         const confidence = safeString(res.payload, "confidence");
-
         const lines: string[] = [];
         if (advice) lines.push(advice);
-        if (nutrition?.calories != null) {
-          lines.push(`Calories: ${nutrition.calories} kcal`);
-        }
+        if (nutrition?.calories != null) lines.push(`Calories: ${nutrition.calories} kcal`);
         if (
           nutrition?.protein != null &&
           nutrition?.carbs != null &&
@@ -320,13 +238,12 @@ function WellMateLauncher() {
           );
         }
         if (confidence) lines.push(`Confidence: ${confidence}`);
-
         setMessages((m) => [
           ...m,
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            text: lines.join("\n"),
+            text: lines.join("\n") || "I can help you work through that.",
           },
         ]);
       }
@@ -336,7 +253,7 @@ function WellMateLauncher() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          text: "Something went wrong. Please try again.",
+          text: "WellMate AI is unavailable right now. Check your connection and try again.",
         },
       ]);
     } finally {
