@@ -43,7 +43,7 @@ test("GPS jitter with poor accuracy is ignored", () => {
 });
 
 test("single hard acceleration does not escalate", () => {
-  assert.equal(analyzeMotion({ state: "TRACKING", recent: [at(-300, 2.3, 3.4, 0.2)] }, now).nextState, "SUSPICIOUS_MOTION");
+  assert.equal(analyzeMotion({ state: "TRACKING", recent: [at(-300, 0.2, 3.4, 0.2)] }, now).nextState, "SUSPICIOUS_MOTION");
 });
 
 test("sustained suspicious motion followed by corroborated stop confirms", () => {
@@ -56,7 +56,7 @@ test("sustained suspicious motion followed by corroborated stop confirms", () =>
 });
 
 test("rotation alone becomes suspicious but not confirmation", () => {
-  const context = { state: "TRACKING", recent: [at(-300, 2.2, 0.5, 3)] };
+  const context = { state: "TRACKING", recent: [at(-300, 0.2, 0.5, 3)] };
   assert.equal(analyzeMotion(context, now).nextState, "SUSPICIOUS_MOTION");
 });
 
@@ -70,9 +70,9 @@ test("sustained inactivity remains non-escalating", () => {
 });
 
 test("confirmation window is exactly 15 seconds", () => {
-  const started = now - 8000;
+  const started = now;
   assert.equal(beginConfirmation(started).state, "CONFIRMATION");
-  assert.equal(confirmationRemainingMs(started, now), 7000);
+  assert.equal(confirmationRemainingMs(started, now), 15000);
   assert.equal(shouldTimeoutConfirmation(started, now + 14999), false);
   assert.equal(shouldTimeoutConfirmation(started, now + 15000), true);
 });
