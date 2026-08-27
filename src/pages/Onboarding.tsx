@@ -137,6 +137,19 @@ export default function Onboarding() {
     () => readOnboardingDraft()?.additionalHealthNotes ?? "",
   );
 
+  /* ---------- emergency profile ---------- */
+  const [bloodType, setBloodType] = useState(() => readOnboardingDraft()?.bloodType ?? "");
+  const [allergies, setAllergies] = useState(() => readOnboardingDraft()?.allergies ?? "");
+  const [emergencyContactName, setEmergencyContactName] = useState(
+    () => readOnboardingDraft()?.emergencyContactName ?? "",
+  );
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(
+    () => readOnboardingDraft()?.emergencyContactPhone ?? "",
+  );
+  const [trackingMode, setTrackingMode] = useState<"automatic" | "manual">(
+    () => (readOnboardingDraft()?.trackingMode === "manual" ? "manual" : "automatic"),
+  );
+
   const [attemptedNext, setAttemptedNext] = useState(false);
 
   /* ---------- persist draft on every field change ---------- */
@@ -158,6 +171,11 @@ export default function Onboarding() {
       lastPeriod,
       additionalHealthChoice,
       additionalHealthNotes,
+      bloodType,
+      allergies,
+      emergencyContactName,
+      emergencyContactPhone,
+      trackingMode,
     });
   }, [
     step,
@@ -176,6 +194,11 @@ export default function Onboarding() {
     lastPeriod,
     additionalHealthChoice,
     additionalHealthNotes,
+    bloodType,
+    allergies,
+    emergencyContactName,
+    emergencyContactPhone,
+    trackingMode,
   ]);
 
   function buildOnboardingProfile() {
@@ -199,6 +222,12 @@ export default function Onboarding() {
         sex !== "female" && additionalHealthChoice === "yes"
           ? additionalHealthNotes || null
           : null,
+
+      bloodType,
+      allergies,
+      emergencyContactName,
+      emergencyContactPhone,
+      trackingMode,
 
       // metadata
       completedAt: Date.now(),
@@ -227,6 +256,14 @@ export default function Onboarding() {
     }
     if (step === 3) return Boolean(activityLevel);
     if (step === 5) return Boolean(weightGoal);
+    if (step === 8) {
+      return Boolean(
+        bloodType &&
+        emergencyContactName.trim() &&
+        emergencyContactPhone.trim() &&
+        trackingMode,
+      );
+    }
     return true;
   }
 
@@ -336,7 +373,7 @@ export default function Onboarding() {
               {step === 5 && "Your weight goal"}
               {step === 6 && "Your muscle focus"}
               {step === 7 && "Additional health details"}
-              {step === 8 && "Your health snapshot"}
+              {step === 8 && "Golden Hour readiness"}
             </h1>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {step === 1 && "A few questions — everything you share stays on your device."}
@@ -346,7 +383,7 @@ export default function Onboarding() {
               {step === 5 && "Shifts your calorie target to match your direction."}
               {step === 6 && "This helps prioritize strength vs balance."}
               {step === 7 && "Only if applicable to you."}
-              {step === 8 && "A summary of what you've shared."}
+              {step === 8 && "Set up the emergency profile WellMate can use when seconds matter."}
             </p>
           </div>
         </div>
@@ -575,8 +612,110 @@ export default function Onboarding() {
           />
         )}
 
-        {/* STEP 8 — SUMMARY */}
+        {/* STEP 8 — GOLDEN HOUR */}
         {step === 8 && (
+          <div className="space-y-5">
+            <div className="rounded-2xl glass-brand p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Golden Hour
+              </p>
+              <p className="text-sm text-foreground">
+                Every second between impact and action matters.
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This information stays in your local onboarding profile and is used only
+                when the emergency experience needs it.
+              </p>
+            </div>
+
+            <Select
+              label="Blood type"
+              value={bloodType}
+              onChange={setBloodType}
+              options={[
+                { value: "", label: "Select" },
+                { value: "A+", label: "A+" },
+                { value: "A-", label: "A-" },
+                { value: "B+", label: "B+" },
+                { value: "B-", label: "B-" },
+                { value: "AB+", label: "AB+" },
+                { value: "AB-", label: "AB-" },
+                { value: "O+", label: "O+" },
+                { value: "O-", label: "O-" },
+                { value: "unknown", label: "Unknown" },
+              ]}
+            />
+
+            <Field
+              label="Allergies"
+              type="text"
+              value={allergies}
+              onChange={setAllergies}
+            />
+
+            <Field
+              label="Emergency contact name"
+              type="text"
+              value={emergencyContactName}
+              onChange={setEmergencyContactName}
+            />
+
+            <Field
+              label="Emergency contact phone"
+              type="tel"
+              value={emergencyContactPhone}
+              onChange={setEmergencyContactPhone}
+            />
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Tracking mode
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={trackingMode === "automatic"}
+                  onClick={() => setTrackingMode("automatic")}
+                  className={cn(
+                    "rounded-xl p-3 text-left border min-h-[76px] transition-premium",
+                    trackingMode === "automatic"
+                      ? "glass-brand border-primary/30"
+                      : "glass-subtle border-border/50",
+                  )}
+                >
+                  <p className="text-sm font-semibold">Automatic</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Detect suspicious motion and abrupt stops conservatively.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={trackingMode === "manual"}
+                  onClick={() => setTrackingMode("manual")}
+                  className={cn(
+                    "rounded-xl p-3 text-left border min-h-[76px] transition-premium",
+                    trackingMode === "manual"
+                      ? "glass-brand border-primary/30"
+                      : "glass-subtle border-border/50",
+                  )}
+                >
+                  <p className="text-sm font-semibold">Manual</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Start tracking explicitly when you need it.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {attemptedNext && (!bloodType || !emergencyContactName.trim() || !emergencyContactPhone.trim()) && (
+              <p className="text-xs text-destructive">
+                Blood type and an emergency contact are required for Golden Hour readiness.
+              </p>
+            )}
+          </div>
+        )}
+
+
           <div className="space-y-4">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Based on your body and activity level
