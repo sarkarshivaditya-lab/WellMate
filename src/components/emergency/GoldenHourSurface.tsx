@@ -14,10 +14,13 @@ import {
   type TrackingMode,
 } from "@/emergency/detection";
 import {
+  beginEscalation,
   buildEmergencyEvent,
+  completeEscalation,
+  getDeliveryStatus,
+  getLocationReadinessMessage,
   getPowerShortcutStatus,
   readCurrentLocation,
-  type DeliveryStatus,
 } from "@/emergency/emergencyService";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +40,7 @@ function GoldenHourSurface() {
   const [lastEvent, setLastEvent] = useState<string | null>(null);
   const motionSamplesRef = useRef<MotionSample[]>([]);
   const trackingTimerRef = useRef<number | null>(null);
+  const lastGpsRef = useRef<{ timestampMs: number; latitude: number; longitude: number; accuracyM?: number } | null>(null);
   const contextRef = useRef(beginConfirmation(0));
   const locationRef = useRef<Awaited<ReturnType<typeof readCurrentLocation>>>(null);
 
@@ -64,14 +68,14 @@ function GoldenHourSurface() {
   }, []);
 
   useEffect(() => {
-    if (state !== "confirmation" || !contextRef.current.confirmationStartedAtMs) return;
+    if (state !== "CONFIRMATION" || !contextRef.current.confirmationStartedAtMs) return;
     const startedAt = contextRef.current.confirmationStartedAtMs;
     const timer = window.setInterval(() => {
       const remaining = confirmationRemainingMs(startedAt, Date.now());
       setCountdown(Math.ceil(remaining / 1000));
       if (shouldTimeoutConfirmation(startedAt, Date.now())) {
         window.clearInterval(timer);
-        setState("escalating");
+        setState("ESCALATING");
         void escalate("timeout");
       }
     }, 250);
@@ -79,7 +83,7 @@ function GoldenHourSurface() {
   }, [state]);
 
   useEffect(() => {
-    if (trackingMode !== "automatic" || state !== "tracking") {
+    if (trackingMode !== "automatic" || !["TRACKING","MOVING","SUSPICIOUS_MOTION"].includes(state)) {
       if (trackingTimerRef.current !== null) {
         window.clearInterval(trackingTimerRef.current);
         trackingTimerRef.current = null;
@@ -90,12 +94,23 @@ function GoldenHourSurface() {
     let motionAvailable = false;
     const sampleLocation = async () => {
       const location = await readCurrentLocation();
+      const timestampMs = Date.now();
+      const previous = lastGpsRef.current;
+      const current = location
+        ? { timestampMs, latitude: location.latitude, longitude: location.longitude, accuracyM: location.accuracy }
+        : null;
+      let speedMps: number | undefined;
+      if (previous && current) {
+        const { speedFromGps } = await import("@/emergency/detection");
+        speedMps = speedFromGps(previous, current) ?? undefined;
+      }
+      lastGpsRef.current = current;
       locationRef.current = location;
       setLocationReady(Boolean(location));
       const sample: MotionSample = {
-        timestampMs: Date.now(),
+        timestampMs,
         locationAccuracyM: location?.accuracy,
-        speedMps: undefined,
+        speedMps,
       };
       motionSamplesRef.current = [...motionSamplesRef.current.slice(-15), sample];
     };
@@ -159,16 +174,23 @@ function GoldenHourSurface() {
     };
   }, [trackingMode, state]);
 
-  async function startTracking() {
+  function startTracking() {
     if (trackingMode !== "manual") return;
     setTracking("TRACKING ACTIVE");
-    setState("tracking");
+    setState("TRACKING");
     setDelivery("IDLE");
-    contextRef.current = { ...beginConfirmation(Date.now()), state: "tracking" };
+    contextRef.current = { ...beginConfirmation(Date.now()), state: "TRACKING" };
+  }
+
+  function stopTracking() {
+    setTracking("READY");
+    setState("IDLE");
+    setDelivery("IDLE");
+    contextRef.current = beginConfirmation(Date.now());
   }
 
   function handleSample(sample: MotionSample) {
-    if (state !== "tracking") return;
+    if (!["TRACKING", "MOVING", "SUSPICIOUS_MOTION"].includes(state)) return;
     const context = contextRef.current;
     context.nowMs = sample.timestampMs;
     context.recent.push(sample);
@@ -179,10 +201,10 @@ function GoldenHourSurface() {
         state: "confirmation",
         confirmationStartedAtMs: sample.timestampMs,
       };
-      setState("confirmation");
+      setState("CONFIRMATION");
       setCountdown(15);
     } else if (decision.type === "suspicious_motion") {
-      setState("suspicious_motion");
+      setState("SUSPICIOUS_MOTION");
     }
   }
 
@@ -203,7 +225,7 @@ function GoldenHourSurface() {
     setLastEvent(JSON.stringify({ reason, eventState: event.state }));
     // No autonomous SMS/call is claimed here. A real dispatcher must report delivery.
     // Until then, surface PENDING rather than fabricate a success state.
-    setState("escalated");
+    setState("ESCALATED");
     setTracking("READY");
     setDelivery(getDeliveryStatus(false));
     completeEscalation();
@@ -211,9 +233,9 @@ function GoldenHourSurface() {
 
   function cancelConfirmation() {
     contextRef.current = { ...beginConfirmation(Date.now()), state: "tracking" };
-    setState("cancelled");
+    setState("CANCELLED");
     setCountdown(0);
-    window.setTimeout(() => setState("tracking"), 0);
+    window.setTimeout(() => setState("TRACKING"), 0);
   }
 
   if (!profile) {
@@ -269,10 +291,16 @@ function GoldenHourSurface() {
           </span>
         </div>
 
-        {trackingMode === "manual" && tracking !== "TRACKING ACTIVE" && state !== "confirmation" && (
+        {trackingMode === "manual" && tracking !== "TRACKING ACTIVE" && state !== "CONFIRMATION" && (
           <Button onClick={startTracking} className="w-full min-h-12">
             <Radio className="h-4 w-4" aria-hidden />
             Start tracking
+          </Button>
+        )}
+
+        {trackingMode === "manual" && tracking === "TRACKING ACTIVE" && (
+          <Button onClick={stopTracking} variant="outline" className="w-full min-h-12">
+            Stop tracking
           </Button>
         )}
 
@@ -282,13 +310,13 @@ function GoldenHourSurface() {
           </div>
         )}
 
-        {state === "suspicious_motion" && (
+        {state === "SUSPICIOUS_MOTION" && (
           <div className="glass-subtle rounded-xl p-3 text-xs text-amber-700 border-amber-300/40">
             Unusual motion detected. Waiting for corroborating movement signals.
           </div>
         )}
 
-        {state === "confirmation" && (
+        {state === "CONFIRMATION" && (
           <div className="rounded-2xl border-2 border-destructive/30 bg-background p-4 space-y-4" role="alert" aria-live="assertive">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden />
@@ -318,7 +346,7 @@ function GoldenHourSurface() {
           </div>
         )}
 
-        {state === "escalated" && (
+        {state === "ESCALATED" && (
           <div className="rounded-2xl border border-border bg-background p-4 space-y-2">
             <p className="text-sm font-semibold">Emergency event prepared</p>
             <p className="text-xs text-muted-foreground">
