@@ -50,7 +50,7 @@ export default function Chat() {
         </div>
 
         {/* ── Philosophy ── */}
-        <Card className="border-border/25 bg-muted/15">
+        <Card className="glass-subtle">
           <CardContent className="py-5 px-5">
             <p className="text-[13px] text-foreground/50 leading-relaxed">
               WellMate is designed from the ground up to combine longitudinal
