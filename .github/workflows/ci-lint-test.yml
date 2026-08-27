@@ -10,7 +10,7 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,13 +37,18 @@ jobs:
         run: pnpm exec tsc --noEmit
         continue-on-error: false
 
+      - name: Run deterministic emergency tests
+        run: pnpm test
+        continue-on-error: false
+
       - name: Build frontend
         run: pnpm build
         env:
           NODE_ENV: production
-      
+
       - name: Show build summary
         run: |
           echo "✅ Lint passed"
           echo "✅ Type checking passed"
+          echo "✅ Emergency tests passed"
           echo "✅ Build succeeded"
