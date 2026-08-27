@@ -10,7 +10,7 @@ import {
   composeBehavioralEvolutionSummary,
   compose30dTrendRecap,
 } from "@/intelligence/memory/summaryComposer";
-import type { AIContextPayload, AIContextSection } from "./types";
+import type { AIContextPayload, AIContextSection } from "./aiContracts";
 import type { MemoryDomain } from "@/intelligence/memory/types";
 
 const TOKEN_BUDGET = 1200; // ~4800 chars — fits comfortably in a system prompt
