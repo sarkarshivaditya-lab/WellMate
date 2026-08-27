@@ -4,11 +4,6 @@
 
 @layer base {
   :root {
-    /* ===============================
-       SURFACE SYSTEM — MYSTIC GREEN
-       Warm green-gray base. Near-white tinted cards.
-       Clear layering: background → card → elevated.
-       =============================== */
     --background: 165 10% 96%;
     --foreground: 170 20% 12%;
 
@@ -18,149 +13,87 @@
     --popover: 0 0% 100%;
     --popover-foreground: 170 20% 12%;
 
-    /* ===============================
-       BORDERS & INPUTS
-       Teal-tinted — visible separation without hard lines.
-       =============================== */
     --border: 166 16% 87%;
-    --input:  166 16% 87%;
+    --input: 166 16% 87%;
 
-    /* ===============================
-       SEMANTIC PALETTE — MYSTIC GREEN
-       Anchor: #9FC2BA = HSL(166, 22%, 69%).
-       Primary derived to deep end for WCAG AA on white (≥ 4.5:1).
-       Tonal ramp: 35% (active) → 48% (hover) → 69% (base) → 88% (tint) → 93% (surface).
-       =============================== */
-    --primary:            166 38% 35%;
-    --primary-foreground: 0   0%  100%;
+    --primary: 166 38% 35%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary:            166 20% 91%;
+    --secondary: 166 20% 91%;
     --secondary-foreground: 166 38% 22%;
 
-    --muted:            166 12% 93%;
+    --muted: 166 12% 93%;
     --muted-foreground: 166 10% 40%;
 
-    --accent:            166 25% 90%;
+    --accent: 166 25% 90%;
     --accent-foreground: 166 38% 25%;
 
-    --destructive:            0  84% 60%;
-    --destructive-foreground: 0   0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
     --ring: 166 38% 35%;
 
-    /* ===============================
-       ALIAS TOKENS
-       =============================== */
-    --action-primary:    var(--primary);
+    --action-primary: var(--primary);
     --action-primary-fg: var(--primary-foreground);
-    --action-pressed:    var(--primary);
+    --action-pressed: var(--primary);
 
-    --control-fill:   var(--background);
+    --control-fill: var(--background);
     --control-border: var(--border);
 
-    --text-primary:   var(--foreground);
+    --text-primary: var(--foreground);
     --text-secondary: var(--muted-foreground);
-    --text-meta:      var(--muted-foreground);
-    --text-label:     var(--muted-foreground);
-    --text-disabled:  var(--muted);
+    --text-meta: var(--muted-foreground);
+    --text-label: var(--muted-foreground);
+    --text-disabled: var(--muted);
 
-    /* Surface aliases (resolve previously undefined vars) */
-    --surface-bg:        var(--background);
-    --surface-elev-1:    var(--card);
+    --surface-bg: var(--background);
+    --surface-elev-1: var(--card);
     --surface-separator: var(--border);
-    --surface-vignette:  var(--header-gradient-start);
+    --surface-vignette: var(--header-gradient-start);
 
-    /* ===============================
-       MOTION TOKENS — CSS custom properties
-       Mirrors src/motion/tokens.ts for CSS consumers.
-       =============================== */
-    --wm-duration-instant:  0ms;
-    --wm-duration-quick:    100ms;
+    --wm-duration-instant: 0ms;
+    --wm-duration-quick: 100ms;
     --wm-duration-standard: 200ms;
-    --wm-duration-calm:     300ms;
-    --wm-duration-ambient:  500ms;
-    --wm-duration-breathe:  1600ms;
-    --wm-duration-blink:    1000ms;
+    --wm-duration-calm: 300ms;
+    --wm-duration-ambient: 500ms;
+    --wm-duration-breathe: 1600ms;
+    --wm-duration-blink: 1000ms;
 
     --wm-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
     --wm-ease-smooth: ease-out;
     --wm-ease-gentle: ease-in-out;
     --wm-ease-linear: linear;
 
-    /* ===============================
-       PAGE HEADER GRADIENT
-       Perceptible teal warmth at top, fades to background.
-       6-stop lightness gap (90% → 96%) — clearly visible.
-       =============================== */
     --header-gradient-start: 166 32% 90%;
-    --header-gradient-end:   165 10% 96%;
+    --header-gradient-end: 165 10% 96%;
 
-    /* Legacy palette tokens — preserved for reference */
-    --header-gradient-cream: 39  82% 95%;
+    --header-gradient-cream: 39 82% 95%;
     --header-gradient-amber: 41 100% 47%;
-    --header-gradient-sky:  187  54% 65%;
-    --header-gradient-teal: 167  32% 50%;
-    --header-gradient-navy: 208  52% 23%;
+    --header-gradient-sky: 187 54% 65%;
+    --header-gradient-teal: 167 32% 50%;
+    --header-gradient-navy: 208 52% 23%;
 
-    /* ===============================
-       CARD SHADOWS — TEAL-TINTED DEPTH
-       rgba(20,60,50) ≈ deep teal-green shadow base.
-       1.5× stronger than previous — cards lift visibly off background.
-       =============================== */
+    --glass-tint-neutral: 166 18% 98%;
+    --glass-tint-brand: 166 32% 93%;
+    --glass-tint-brand-strong: 166 38% 88%;
+    --glass-border-rest: 166 18% 78%;
+    --glass-border-active: 166 38% 35%;
+    --glass-border-focus: 166 38% 35%;
+    --glass-highlight: 0 0% 100%;
+    --glass-shadow-subtle: 20 60 50 / 0.08;
+    --glass-shadow-standard: 20 60 50 / 0.12;
+    --glass-shadow-elevated: 20 60 50 / 0.18;
+
     --card-shadow-rest:
-      0 1px 2px  rgba(20, 60, 50, 0.05),
+      0 1px 2px rgba(20, 60, 50, 0.05),
       0 4px 12px rgba(20, 60, 50, 0.09);
-
     --card-shadow-hover:
-      0 4px  16px rgba(20, 60, 50, 0.10),
+      0 4px 16px rgba(20, 60, 50, 0.10),
       0 12px 36px rgba(20, 60, 50, 0.11);
-
     --card-shadow-pressed:
       0 2px 8px rgba(20, 60, 50, 0.13),
       0 1px 3px rgba(20, 60, 50, 0.11);
   }
-
-  /*
-  =====================================================
-  DARK MODE — TEMPORARILY DISABLED
-  Reason: force light theme during redesign
-  Updated to Mystic Green family — ready for re-enable.
-  =====================================================
-
-  .dark {
-    --background: 168 15% 8%;
-    --foreground: 165 15% 92%;
-
-    --card: 168 14% 12%;
-    --card-foreground: 165 15% 92%;
-
-    --popover: 168 14% 12%;
-    --popover-foreground: 165 15% 92%;
-
-    --border: 166 12% 20%;
-    --input:  166 14% 16%;
-
-    --primary:            166 38% 58%;
-    --primary-foreground: 168 30% 8%;
-
-    --secondary:            166 14% 18%;
-    --secondary-foreground: 165 15% 80%;
-
-    --muted:            166 12% 18%;
-    --muted-foreground: 166 10% 55%;
-
-    --accent:            166 20% 20%;
-    --accent-foreground: 165 15% 92%;
-
-    --destructive:            0  84% 60%;
-    --destructive-foreground: 165 15% 92%;
-
-    --ring: 166 38% 58%;
-
-    --header-gradient-start: 166 22% 13%;
-    --header-gradient-end:   168 15% 8%;
-  }
-  */
 
   body {
     background-color: hsl(var(--background));
@@ -170,126 +103,153 @@
   }
 }
 
+@layer components {
+  .glass-primary,
+  .glass-secondary,
+  .glass-elevated,
+  .glass-subtle {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .glass-primary {
+    background: hsl(var(--glass-tint-neutral) / 0.80);
+    border: 1px solid hsl(var(--glass-highlight) / 0.55);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-standard)), 0 12px 32px hsl(var(--glass-shadow-standard));
+    backdrop-filter: blur(18px) saturate(115%);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+  }
+
+  .glass-secondary {
+    background: hsl(var(--glass-tint-neutral) / 0.70);
+    border: 1px solid hsl(var(--glass-highlight) / 0.45);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle)), 0 8px 24px hsl(var(--glass-shadow-subtle));
+    backdrop-filter: blur(12px) saturate(110%);
+    -webkit-backdrop-filter: blur(12px) saturate(110%);
+  }
+
+  .glass-elevated {
+    background: hsl(var(--glass-tint-neutral) / 0.88);
+    border: 1px solid hsl(var(--glass-highlight) / 0.60);
+    box-shadow: 0 2px 6px hsl(var(--glass-shadow-standard)), 0 18px 46px hsl(var(--glass-shadow-elevated));
+    backdrop-filter: blur(20px) saturate(115%);
+    -webkit-backdrop-filter: blur(20px) saturate(115%);
+  }
+
+  .glass-subtle {
+    background: hsl(var(--glass-tint-neutral) / 0.58);
+    border: 1px solid hsl(var(--glass-highlight) / 0.40);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle));
+    backdrop-filter: blur(8px) saturate(105%);
+    -webkit-backdrop-filter: blur(8px) saturate(105%);
+  }
+
+  .glass-primary::before,
+  .glass-secondary::before,
+  .glass-elevated::before,
+  .glass-subtle::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--glass-highlight) / 0.18) 0%,
+      transparent 30%
+    );
+    z-index: -1;
+  }
+
+  .glass-brand {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--glass-tint-brand-strong) / 0.90),
+      hsl(var(--glass-tint-brand) / 0.80)
+    );
+    border-color: hsl(var(--glass-border-active) / 0.24);
+  }
+
+  .glass-fallback {
+    background: hsl(var(--card));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .glass-focus:focus-visible {
+    outline: 2px solid hsl(var(--glass-border-focus));
+    outline-offset: 2px;
+  }
+}
+
 @layer utilities {
-  /* ===============================
-     PREMIUM MOTION — 200ms spring easing
-     iOS-caliber: fast start, soft land.
-     =============================== */
   .transition-premium {
     transition-property: opacity, transform, width, box-shadow, background-color, color, border-color;
     transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* ===============================
-     CARD SHADOW UTILITIES
-     (Bypass Tailwind — use CSS custom properties)
-     =============================== */
-  .card-shadow-rest {
-    box-shadow: var(--card-shadow-rest);
-  }
+  .card-shadow-rest { box-shadow: var(--card-shadow-rest); }
+  .card-shadow-hover { box-shadow: var(--card-shadow-hover); }
+  .card-shadow-pressed { box-shadow: var(--card-shadow-pressed); }
+  .card-glow { box-shadow: var(--card-shadow-hover); }
 
-  .card-shadow-hover {
-    box-shadow: var(--card-shadow-hover);
-  }
-
-  .card-shadow-pressed {
-    box-shadow: var(--card-shadow-pressed);
-  }
-
-  /* Alias: soft teal elevation ring — used in interactive selected states */
-  .card-glow {
-    box-shadow: var(--card-shadow-hover);
-  }
-
-  /* ===============================
-     ONBOARDING COMPLETION ANIMATIONS
-     Wellness-caliber: soft spring entrance + gentle float loops.
-     =============================== */
   @keyframes wm-scale-in {
-    0%   { opacity: 0; transform: scale(0.6); }
-    65%  { transform: scale(1.07); }
+    0% { opacity: 0; transform: scale(0.6); }
+    65% { transform: scale(1.07); }
     100% { opacity: 1; transform: scale(1); }
   }
   @keyframes wm-fade-up {
-    0%   { opacity: 0; transform: translateY(20px); }
+    0% { opacity: 0; transform: translateY(20px); }
     100% { opacity: 1; transform: translateY(0); }
   }
   @keyframes wm-float {
-    0%, 100% { transform: translateY(0px)   rotate(0deg); }
-    50%       { transform: translateY(-11px) rotate(5deg); }
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-11px) rotate(5deg); }
   }
   @keyframes wm-float-alt {
-    0%, 100% { transform: translateY(0px)   rotate(0deg); }
-    50%       { transform: translateY(-8px)  rotate(-5deg); }
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(-5deg); }
   }
   @keyframes wm-pulse-glow {
     0%, 100% { opacity: 0.35; transform: scale(1); }
-    50%       { opacity: 0.6;  transform: scale(1.07); }
+    50% { opacity: 0.6; transform: scale(1.07); }
   }
 
-  .animate-wm-icon-in  { animation: wm-scale-in  0.65s cubic-bezier(0.16,1,0.3,1) both; }
-  .animate-wm-fade-1   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.25s both; }
-  .animate-wm-fade-2   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.4s  both; }
-  .animate-wm-fade-3   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.55s both; }
-  .animate-wm-fade-4   { animation: wm-fade-up   0.5s  cubic-bezier(0.16,1,0.3,1) 0.7s  both; }
-  .animate-wm-float    { animation: wm-float      6s    ease-in-out infinite; }
-  .animate-wm-float-alt{ animation: wm-float-alt  7.5s  ease-in-out infinite 0.8s; }
-  .animate-wm-glow     { animation: wm-pulse-glow 3.5s  ease-in-out infinite; }
+  .animate-wm-icon-in { animation: wm-scale-in 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-wm-fade-1 { animation: wm-fade-up 0.5s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+  .animate-wm-fade-2 { animation: wm-fade-up 0.5s cubic-bezier(0.16,1,0.3,1) 0.4s both; }
+  .animate-wm-fade-3 { animation: wm-fade-up 0.5s cubic-bezier(0.16,1,0.3,1) 0.55s both; }
+  .animate-wm-fade-4 { animation: wm-fade-up 0.5s cubic-bezier(0.16,1,0.3,1) 0.7s both; }
+  .animate-wm-float { animation: wm-float 6s ease-in-out infinite; }
+  .animate-wm-float-alt { animation: wm-float-alt 7.5s ease-in-out infinite 0.8s; }
+  .animate-wm-glow { animation: wm-pulse-glow 3.5s ease-in-out infinite; }
 
-  /* ===============================
-     TAB PANEL ENTRANCE
-     Soft fade + 5px rise — feels intentional, not flashy.
-     Fires whenever a tab panel mounts.
-     =============================== */
   @keyframes wm-tab-in {
-    0%   { opacity: 0; transform: translateY(5px); }
+    0% { opacity: 0; transform: translateY(5px); }
     100% { opacity: 1; transform: translateY(0); }
   }
 
-  .animate-wm-tab-in {
-    animation: wm-tab-in 0.18s cubic-bezier(0.16,1,0.3,1) both;
-  }
+  .animate-wm-tab-in { animation: wm-tab-in 0.18s cubic-bezier(0.16,1,0.3,1) both; }
 
-  /* ===============================
-     ROUTE ENTRANCE
-     Pure fade — no Y movement for full-page transitions.
-     Keeps perceived navigation instant while smoothing hard cuts.
-     =============================== */
   @keyframes wm-route-in {
-    0%   { opacity: 0; }
+    0% { opacity: 0; }
     100% { opacity: 1; }
   }
 
-  .animate-wm-route-in {
-    animation: wm-route-in 0.22s ease-out both;
-  }
+  .animate-wm-route-in { animation: wm-route-in 0.22s ease-out both; }
 
-  /* ===============================
-     SKELETON SHIMMER
-     Gradient sweep instead of flat pulse — reads as loading, not broken.
-     =============================== */
   @keyframes wm-shimmer {
-    0%   { background-position: 200% 0; }
+    0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
 
   .skeleton-shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 25%,
-      hsl(var(--muted-foreground) / 0.07) 50%,
-      hsl(var(--muted)) 75%
-    );
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.07) 50%, hsl(var(--muted)) 75%);
     background-size: 200% 100%;
     animation: wm-shimmer 1.6s ease-in-out infinite;
   }
 
-  /* ===============================
-     SKIP-TO-CONTENT — KEYBOARD ACCESSIBILITY
-     Visually hidden until focused; reveals at top-left on Tab.
-     Lets keyboard/screen-reader users bypass navigation.
-     =============================== */
   .skip-to-content {
     position: fixed;
     top: -100%;
@@ -311,38 +271,19 @@
     outline-offset: 2px;
   }
 
-  /* ===============================
-     ACCESSIBLE FOCUS RING
-     High-visibility focus ring for keyboard navigation.
-     Applied via .focus-ring utility on custom interactive elements.
-     =============================== */
   .focus-ring:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
-  /* ===============================
-     LOTUS FAB — CALM RESTING BREATH
-     Opacity-only pulse: 1 → 0.75 → 1 over 3.5 s.
-     Applied to the icon inside the FAB, not the button itself,
-     so it doesn't interfere with hover/active scale transforms.
-     =============================== */
   @keyframes wm-lotus-breathe {
     0%, 100% { opacity: 1; }
-    50%       { opacity: 0.75; }
-  }
-  .animate-lotus-breathe {
-    animation: wm-lotus-breathe 3.5s ease-in-out infinite;
+    50% { opacity: 0.75; }
   }
 
-  /* ===============================
-     REDUCED MOTION SUPPORT
-     Respects prefers-reduced-motion: reduce system setting.
-     Disables all decorative animation; preserves state continuity.
-     CSS-level companion to src/hooks/useReducedMotion.ts.
-     =============================== */
+  .animate-lotus-breathe { animation: wm-lotus-breathe 3.5s ease-in-out infinite; }
+
   @media (prefers-reduced-motion: reduce) {
-    /* Entrance animations — reveal instantly, no movement */
     .animate-wm-icon-in,
     .animate-wm-fade-1,
     .animate-wm-fade-2,
@@ -355,7 +296,6 @@
       transform: none;
     }
 
-    /* Ambient loops — stop entirely, hold resting state */
     .animate-wm-float,
     .animate-wm-float-alt,
     .animate-wm-glow,
@@ -363,16 +303,50 @@
       animation: none;
     }
 
-    /* Skeleton — static muted swatch, no sweep */
     .skeleton-shimmer {
       animation: none;
       background: hsl(var(--muted));
       opacity: 0.75;
     }
 
-    /* Core transition — collapse to near-instant (preserves state feedback) */
     .transition-premium {
       transition-duration: var(--wm-duration-quick);
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    .glass-primary,
+    .glass-secondary,
+    .glass-elevated,
+    .glass-subtle {
+      background: hsl(var(--card));
+      border-color: hsl(var(--foreground) / 0.28);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-primary,
+    .glass-secondary,
+    .glass-elevated,
+    .glass-subtle {
+      background: hsl(var(--card));
+      border-color: hsl(var(--border));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  .glass-primary,
+  .glass-secondary,
+  .glass-elevated,
+  .glass-subtle {
+    @supports not ((backdrop-filter: blur(1px))) {
+      background: hsl(var(--card));
+      border-color: hsl(var(--border));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
   }
 }
