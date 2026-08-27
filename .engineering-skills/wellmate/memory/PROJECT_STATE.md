@@ -126,3 +126,26 @@ This task is documentation-only. No application source files or package dependen
 ## Memory maintenance rule
 
 Update this file whenever durable architecture, platform constraints, root causes, dependency relationships, emergency-state behavior, AI-removal findings or rollback information materially changes. Source code and `CLAUDE.md` remain authoritative if any discrepancy appears.
+## Liquid Glass implementation status
+
+The Liquid Glass visual rebuild is now implemented at the shared frontend layer and partially propagated through page-level surfaces on `chore/liquid-glass-foundation`. The shared implementation uses named CSS material classes in `src/index.css`, with solid/high-contrast/reduced-transparency fallbacks and no new runtime dependency.
+
+Implemented shared surfaces: AppShell top search/profile, BottomNav, Button variants, Input, Card baseline, Dialog, Sheet. Page-level refinements were applied to Overview, Mental Overview, Habits, Sleep, Chat and Roadmap, with content-heavy cards intentionally remaining solid.
+
+Emergency protection remains explicit: no emergency state-machine or escalation logic was rewritten. Emergency-critical UI should remain solid/high-contrast and should be refined through the documented visual regression process rather than decorative glass.
+
+The repository currently exposes no dedicated emergency page/component for a speculative redesign; existing emergency behavior remains embedded in the existing product/runtime architecture and is therefore intentionally untouched.
+
+Validation performed on the GitHub-only branch:
+- complete branch diff inspection: only WellMate engineering docs/memory, shared UI primitives, global CSS, shell/navigation and selected page styling changed;
+- no package manifest or lockfile changes;
+- no environment/secrets/nested .git files added;
+- protected application and engineering baseline commits remain unchanged;
+- backdrop-blur usage reviewed and remains concentrated in functional/selected surfaces;
+- PR #2 opened to activate repository CI because the CI workflow only triggers on main/develop pushes or pull requests;
+- current PR status reports no check runs yet;
+- browser screenshot/render validation and local lint/type/test/build execution are unavailable in the current GitHub-only environment and are not claimed as passed.
+
+## Rollback
+
+The current frontend changes are isolated on `chore/liquid-glass-foundation`. The known protected application baseline is `5575511c4372896318a2dc1185475f00ed231465` and engineering baseline is `d595c16ceb2c0d09ac836e914c616a1508fca3a3`. Existing backup branches remain untouched.
