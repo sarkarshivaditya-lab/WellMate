@@ -81,7 +81,7 @@ function TodayActivitySummary() {
 
   if (!exercises || exercises.length === 0) {
     return (
-      <Card>
+      <Card className="glass-secondary">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">Today’s Activity</CardTitle>
         </CardHeader>
@@ -105,7 +105,7 @@ function TodayActivitySummary() {
   );
 
   return (
-    <Card>
+    <Card className="glass-secondary">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">Today’s Activity</CardTitle>
       </CardHeader>
@@ -240,7 +240,7 @@ function WelcomeCard() {
   if (!isFirstWeek || dismissed) return null;
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent">
+    <Card className="glass-secondary border-primary/25">
       <CardContent className="pt-4 pb-4">
         <div className="flex items-start gap-3">
           <div className="flex-1 space-y-1">
