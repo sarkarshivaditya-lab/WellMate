@@ -221,13 +221,17 @@ function GoldenHourSurface() {
       },
       "ESCALATING",
       locationRef.current ?? undefined,
+      reason,
     );
     setLastEvent(JSON.stringify({ reason, eventState: event.state }));
-    // No autonomous SMS/call is claimed here. A real dispatcher must report delivery.
-    // Until then, surface PENDING rather than fabricate a success state.
+    try {
+      const result = await createEmergencyDispatcher().dispatch(event);
+      setDelivery(result.overall);
+    } catch {
+      setDelivery("FAILED");
+    }
     setState("ESCALATED");
     setTracking("READY");
-    setDelivery(getDeliveryStatus(false));
     completeEscalation();
   }
 
@@ -353,7 +357,7 @@ function GoldenHourSurface() {
               Delivery: <span className="font-semibold">{delivery}</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              WellMate does not claim autonomous calling or SMS without platform delivery confirmation.
+              System-mediated call/SMS actions are only considered successful after the dispatcher reports success.
             </p>
           </div>
         )}
