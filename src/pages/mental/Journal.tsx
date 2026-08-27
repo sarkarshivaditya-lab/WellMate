@@ -1,6 +1,5 @@
 import React from "react";
 import AiMentalCoach from "./AiMentalCoach";
-import { JournalReflectionCard } from "@/components/ai/JournalReflectionCard";
 
 export default function Journal() {
   return (
@@ -46,7 +45,6 @@ export default function Journal() {
          Journal Pattern — AI reflection on recurring themes
          Renders only when enough journal data exists.
          ====================================================== */}
-      <JournalReflectionCard />
     </div>
   );
 }
