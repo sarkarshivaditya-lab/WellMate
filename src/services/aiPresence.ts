@@ -8,7 +8,6 @@
 
 import { getAllLocalMoods } from "@/data/local/moodsStore";
 import { getAllLocalJournalEntries } from "@/data/local/journalStore";
-import { getLongitudinalSummary } from "../memory/longitudinalSummary";
 
 const SUPPRESSION_KEY = "ai_presence_suppressed_until";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
