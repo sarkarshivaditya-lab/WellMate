@@ -67,21 +67,25 @@ export function speedFromGps(previous: GpsPoint, current: GpsPoint): number | nu
 }
 
 function recentSamples(samples: MotionSample[], nowMs: number): MotionSample[] {
-  return samples.filter((sample) => nowMs - sample.timestampMs <= MOTION_WINDOW_MS);
+  return samples.filter(
+    (sample) => nowMs - sample.timestampMs >= 0 && nowMs - sample.timestampMs <= MOTION_WINDOW_MS,
+  );
 }
 
-export function analyzeMotion(context: DetectionContext): DetectionDecision {
-  const samples = recentSamples(context.recent, Date.now());
+export function analyzeMotion(context: DetectionContext, nowMs = Date.now()): DetectionDecision {
+  const samples = recentSamples(context.recent, nowMs);
   if (context.state === "IDLE" || context.state === "CANCELLED") {
-    return { type: "none", nextState: "IDLE" };
+    return { type: "none", nextState: context.state };
   }
   if (samples.length === 0) {
     return { type: "none", nextState: context.state };
   }
 
   const usable = samples.filter(
-    (sample) => (sample.locationAccuracyM ?? 0) <= MIN_LOCATION_ACCURACY_M || sample.locationAccuracyM === undefined,
+    (sample) =>
+      sample.locationAccuracyM === undefined || sample.locationAccuracyM <= MIN_LOCATION_ACCURACY_M,
   );
+  if (usable.length === 0) return { type: "none", nextState: context.state };
 
   const meaningfulMovement = usable.some((sample) => (sample.speedMps ?? 0) >= MIN_MOVING_SPEED_MPS);
   if (meaningfulMovement && context.state === "TRACKING") {
@@ -93,14 +97,17 @@ export function analyzeMotion(context: DetectionContext): DetectionDecision {
       (sample.accelerationG ?? 0) >= MIN_SUSPICIOUS_ACCEL_G ||
       (sample.rotationMagnitude ?? 0) >= MIN_SUSPICIOUS_ROTATION,
   );
-
   const movingBeforeStop = usable.some((sample) => (sample.speedMps ?? 0) >= MIN_MOVING_SPEED_MPS);
   const stoppedAfterMovement = usable.some((sample) => (sample.speedMps ?? Infinity) <= STOP_SPEED_MPS);
-  const corroboratedImpact = usable.filter(
-    (sample) =>
-      (sample.accelerationG ?? 0) >= 1.2 ||
-      (sample.rotationMagnitude ?? 0) >= 1,
-  ).length >= 2;
+  const corroboratedImpact =
+    usable.filter(
+      (sample) =>
+        (sample.accelerationG ?? 0) >= 1.2 ||
+        (sample.rotationMagnitude ?? 0) >= 1,
+    ).length >= 2;
+  const suspiciousLongEnough = context.suspiciousSinceMs === undefined
+    ? suspicious && samples.length >= 2
+    : nowMs - context.suspiciousSinceMs >= SUSPICIOUS_WINDOW_MS;
 
   if (suspicious && context.state !== "SUSPICIOUS_MOTION") {
     return { type: "suspicious_motion", nextState: "SUSPICIOUS_MOTION" };
@@ -109,6 +116,7 @@ export function analyzeMotion(context: DetectionContext): DetectionDecision {
   if (
     context.state === "SUSPICIOUS_MOTION" &&
     suspicious &&
+    suspiciousLongEnough &&
     movingBeforeStop &&
     stoppedAfterMovement &&
     corroboratedImpact
