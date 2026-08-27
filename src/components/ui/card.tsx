@@ -6,24 +6,12 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        /* Surface */
         "bg-card text-card-foreground rounded-2xl",
-
-        /* Separation — hairline ring, no hard border */
         "ring-1 ring-black/[0.05]",
-
-        /* Elevation at rest */
         "card-shadow-rest",
-
-        /* Motion */
-        "transition-premium will-change-transform",
-
-        /* Hover */
+        "transition-premium",
         "hover:-translate-y-0.5 hover:card-shadow-hover",
-
-        /* Pressed */
         "active:translate-y-0 active:card-shadow-pressed",
-
         className,
       )}
       {...props}
