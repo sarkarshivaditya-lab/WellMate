@@ -541,7 +541,7 @@ export default function Habits() {
             <HabitMomentumCard habitScore={habitScore} habitStats={habitStats} />
 
             {consistencyProfile.overloadRisk && (
-              <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-border/50 glass-subtle px-4 py-3 text-sm text-muted-foreground">
                 <p className="font-medium text-foreground/80 mb-0.5">Many habits active</p>
                 <p>
                   Focusing on one or two habits at a time often builds more lasting consistency
