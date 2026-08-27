@@ -43,6 +43,13 @@ export type OnboardingPayload = {
   // other health (optional)
   additionalHealthNotes?: string;
 
+  // emergency profile (local-first)
+  bloodType: string;
+  allergies: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  trackingMode: "automatic" | "manual";
+
   // metadata
   createdAt: number;
 };
@@ -97,6 +104,11 @@ export type OnboardingDraft = {
   lastPeriod: string;
   additionalHealthChoice: string;
   additionalHealthNotes: string;
+  bloodType: string;
+  allergies: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  trackingMode: "automatic" | "manual";
 };
 
 const DRAFT_KEY = "onboarding_draft";
