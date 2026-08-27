@@ -93,7 +93,7 @@ export default function Profile() {
       {/* =========================
           ACCOUNT
          ========================= */}
-      <Card>
+      <Card className="glass-secondary">
         <CardHeader>
           <CardTitle>Account</CardTitle>
         </CardHeader>
@@ -175,7 +175,7 @@ export default function Profile() {
           SYNC STATUS
          ========================= */}
       {isAuthenticated && !isLoading && (
-        <Card>
+        <Card className="glass-secondary">
           <CardHeader>
             <CardTitle>Sync Status</CardTitle>
           </CardHeader>
@@ -223,7 +223,7 @@ export default function Profile() {
         onClick={() => navigate("/roadmap")}
         className="w-full text-left"
       >
-        <Card className="border-primary/20 hover:border-primary/40 hover:bg-primary/[0.02] transition-premium">
+        <Card className="glass-secondary border-primary/25 hover:border-primary/40 hover:bg-primary/[0.04] transition-premium">
           <CardContent className="pt-4 pb-4 flex items-center justify-between gap-3">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ export default function Profile() {
       {/* =========================
           HEALTH & SAFETY
          ========================= */}
-      <Card className="border-amber-200/50">
+      <Card className="glass-subtle border-amber-200/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-amber-600" />
