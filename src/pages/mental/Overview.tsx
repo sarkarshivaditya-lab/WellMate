@@ -85,13 +85,17 @@ function saveDraft(d: JournalDraft) {
     } else {
       localStorage.removeItem(JOURNAL_DRAFT_KEY);
     }
-  } catch {}
+  } catch {
+    return null;
+  }
 }
 
 function clearDraft() {
   try {
     localStorage.removeItem(JOURNAL_DRAFT_KEY);
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in restricted browsing contexts
+  }
 }
 
 /* ======================================================
