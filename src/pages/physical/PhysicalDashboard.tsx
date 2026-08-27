@@ -12,6 +12,7 @@ import PhysicalInsightsCard from "./PhysicalInsightsCard";
 import PhysicalGoalAdvisor from "./PhysicalGoalAdvisor";
 import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 import { SleepTabContent } from "../Sleep";
+import GoldenHourSurface from "@/components/emergency/GoldenHourSurface";
 
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
@@ -680,6 +681,7 @@ export default function PhysicalDashboard() {
     >
       {tab === "overview" && (
         <div key="overview" className="space-y-6 animate-wm-tab-in">
+          <GoldenHourSurface />
           <WelcomeCard />
           <PhysicalConfidenceCard />
           <TodayActivitySummary />
