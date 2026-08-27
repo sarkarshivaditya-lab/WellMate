@@ -6,7 +6,7 @@
 import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
 import type { WellnessContext } from "@/intelligence/wellnessScore";
 import type { WellnessMemoryContext, MemoryDomain } from "@/intelligence/memory/types";
-import type { FollowUpPrompt } from "./types";
+import type { FollowUpPrompt } from "./aiContracts";
 
 function pid(prefix: string, suffix: string): string {
   return `${prefix}_${suffix}`;
