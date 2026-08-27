@@ -33,7 +33,7 @@ function GoldenHourSurface() {
   const [tracking, setTracking] = useState<TrackingStatus>(
     profile ? "READY" : "READY",
   );
-  const [state, setState] = useState<EmergencyState>("idle");
+  const [state, setState] = useState<EmergencyState>("IDLE");
   const [countdown, setCountdown] = useState(0);
   const [locationReady, setLocationReady] = useState(false);
   const [delivery, setDelivery] = useState<EscalationStatus>("IDLE");
@@ -41,7 +41,7 @@ function GoldenHourSurface() {
   const motionSamplesRef = useRef<MotionSample[]>([]);
   const trackingTimerRef = useRef<number | null>(null);
   const lastGpsRef = useRef<{ timestampMs: number; latitude: number; longitude: number; accuracyM?: number } | null>(null);
-  const contextRef = useRef(beginConfirmation(0));
+  const contextRef = useRef<ReturnType<typeof beginConfirmation>>({ state: "IDLE", recent: [] });
   const locationRef = useRef<Awaited<ReturnType<typeof readCurrentLocation>>>(null);
 
   const readiness = useMemo(() => {
@@ -179,14 +179,14 @@ function GoldenHourSurface() {
     setTracking("TRACKING ACTIVE");
     setState("TRACKING");
     setDelivery("IDLE");
-    contextRef.current = { ...beginConfirmation(Date.now()), state: "TRACKING" };
+    contextRef.current = { state: "TRACKING", recent: [] };
   }
 
   function stopTracking() {
     setTracking("READY");
     setState("IDLE");
     setDelivery("IDLE");
-    contextRef.current = beginConfirmation(Date.now());
+    contextRef.current = { state: "IDLE", recent: [] };
   }
 
   function handleSample(sample: MotionSample) {
@@ -198,7 +198,7 @@ function GoldenHourSurface() {
     if (decision.type === "abrupt_stop") {
       contextRef.current = {
         ...context,
-        state: "confirmation",
+        state: "CONFIRMATION",
         confirmationStartedAtMs: sample.timestampMs,
       };
       setState("CONFIRMATION");
