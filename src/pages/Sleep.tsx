@@ -57,7 +57,7 @@ function WearableIntegrationNotice() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-3.5">
+    <div className="rounded-2xl border glass-subtle px-4 py-3.5">
       {/* Header row */}
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex-shrink-0 rounded-lg bg-primary/8 p-1.5">
