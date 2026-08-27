@@ -13,11 +13,6 @@ import { haptics } from "@/motion/haptics";
 import { emitAnalyticsEvent } from "@/analytics/eventBus";
 import { cn } from "@/lib/utils";
 
-// ── Top search bar ────────────────────────────────────────────────────────────
-// Sits at the very top of the AppShell flex column, outside the scrollable
-// main container — so it stays visible regardless of scroll position without
-// needing fixed positioning. pt-[env(safe-area-inset-top)] handles notches.
-
 function TopSearchBar() {
   const { openPalette } = useCommandPalette();
   const navigate = useNavigate();
@@ -37,49 +32,41 @@ function TopSearchBar() {
     <div
       className={cn(
         "relative z-20 w-full shrink-0",
-        "bg-secondary/70 backdrop-blur-md",
-        "border-b border-border/50",
+        "glass-secondary border-0 border-b rounded-none",
         "pt-[env(safe-area-inset-top)]",
       )}
     >
-      <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2.5">
-        {/* Search pill — flex-1 so it fills available space */}
+      <div className="w-full sm:max-w-4xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2.5">
         <button
           type="button"
           onClick={handleOpen}
           aria-label="Search"
           className={cn(
-            "flex-1 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl",
-            "bg-background hover:bg-card",
-            "border border-border/70 hover:border-border",
-            "shadow-sm",
-            "text-muted-foreground",
-            "transition-premium active:scale-[0.99]",
+            "flex-1 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl min-h-10",
+            "glass-subtle text-muted-foreground",
+            "hover:text-foreground transition-premium active:scale-[0.99]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
           )}
         >
           <Search className="h-4 w-4 flex-shrink-0" />
           <span className="text-[13px] flex-1 text-left">Search</span>
           <kbd
             aria-hidden
-            className="hidden sm:inline-flex items-center text-[10px] text-muted-foreground/60 border border-border/50 rounded px-1.5 py-0.5 font-medium"
+            className="hidden sm:inline-flex items-center text-[10px] text-muted-foreground/70 border border-border/50 rounded px-1.5 py-0.5 font-medium"
           >
             ⌘K
           </kbd>
         </button>
 
-        {/* Profile access — circular, lightweight, system-level */}
         <button
           type="button"
           onClick={handleProfile}
           aria-label="Profile"
           className={cn(
-            "flex-shrink-0 flex items-center justify-center",
-            "h-9 w-9 rounded-full",
-            "bg-background hover:bg-card",
-            "border border-border/70 hover:border-border",
-            "shadow-sm",
-            "text-muted-foreground hover:text-foreground/80",
+            "flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full",
+            "glass-subtle text-muted-foreground hover:text-foreground",
             "transition-premium active:scale-[0.94]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
           )}
         >
           <User className="h-4 w-4" />
@@ -88,8 +75,6 @@ function TopSearchBar() {
     </div>
   );
 }
-
-// ── Keyboard shortcut handler ─────────────────────────────────────────────────
 
 function KeyboardShortcut() {
   const { openPalette, open } = useCommandPalette();
@@ -109,9 +94,6 @@ function KeyboardShortcut() {
   return null;
 }
 
-// ── Shell inner (requires palette context) ───────────────────────
-// ──────────────
-
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [showDisclaimer, setShowDisclaimer] = React.useState(
@@ -120,19 +102,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Skip-to-content — keyboard accessibility */}
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>
 
-      {/* Global search bar — above all page content, never scrolls */}
       <TopSearchBar />
 
-      {/* Connectivity + sync status strips */}
       <OfflineBanner />
       <SyncPulse />
 
-      {/* Main scrollable content */}
       <main
         id="main-content"
         aria-label="Main content"
@@ -143,19 +121,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Persistent bottom navigation */}
       <BottomNav />
-
-      {/* Persistent WellMate launcher — bottom-right, above nav */}
       <WellMateLauncher />
-
-      {/* Command palette — rendered in portal, lives here so all children can open it */}
       <WellmateCommandPalette />
-
-      {/* Keyboard shortcut listener */}
       <KeyboardShortcut />
 
-      {/* First-launch disclaimer — non-dismissable until acknowledged */}
       {showDisclaimer && (
         <DisclaimerModal onAck={() => setShowDisclaimer(false)} />
       )}
@@ -163,13 +133,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── AppShell root (provides palette context) ──────────────────────────────────
-
-export default function AppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <CommandPaletteProvider>
       <AppShellInner>{children}</AppShellInner>
