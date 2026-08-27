@@ -137,7 +137,7 @@ function RelationCard({ relation }: { relation: WellnessRelation }) {
     <div
       className={cn(
         "px-4 py-3.5 rounded-2xl",
-        "bg-card/60 border border-border/30",
+        "glass-subtle border border-border/30",
         "flex items-start gap-3",
       )}
     >
@@ -190,7 +190,7 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
     <div
       className={cn(
         "px-4 py-3.5 rounded-2xl",
-        "bg-card/60 border border-border/30",
+        "glass-subtle border border-border/30",
       )}
     >
       <div className="flex items-start gap-3">
