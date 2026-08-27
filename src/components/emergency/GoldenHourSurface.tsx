@@ -16,6 +16,7 @@ import {
 import {
   beginEscalation,
   buildEmergencyEvent,
+  createEmergencyDispatcher,
   completeEscalation,
   getDeliveryStatus,
   getLocationReadinessMessage,
