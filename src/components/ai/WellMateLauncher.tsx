@@ -14,7 +14,7 @@ import {
   generateScoreFollowUps,
   generateMemoryFollowUps,
   generateRecommendationFollowUps,
-} from "@/ai/conversationalPrimitives";
+} from "@/services/conversationalPrimitives";
 
 type FollowUpPrompt = { id: string; text: string; domain: string; category: string; grounding?: string };
 
