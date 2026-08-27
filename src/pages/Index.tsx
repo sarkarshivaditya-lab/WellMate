@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { openWellMate } from "@/services/wellMateEvents";
-import { generateRecommendationFollowUps } from "@/ai/conversationalPrimitives";
+import { generateRecommendationFollowUps } from "@/services/conversationalPrimitives";
 import PageLayout from "@/components/layout/PageLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/ui/section-header";
