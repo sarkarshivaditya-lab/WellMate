@@ -91,7 +91,7 @@ function PageLayout({
   const hasHeader = title || subtitle || headerRight || showBadge || (tabs && tabs.length > 0);
 
   return (
-    <div className="min-h-screen w-full bg-background relative">
+    <div className="min-h-screen w-full wm-ambient-bg relative">
       {/* Subtle indigo-to-background gradient — depth, not decoration */}
       <div
         aria-hidden
@@ -108,10 +108,9 @@ function PageLayout({
         {hasHeader && (
           <header
             className={cn(
-              "mb-8 rounded-2xl",
-              "bg-card/90 backdrop-blur-sm",
-              "border border-border/40",
-              "shadow-[0_1px_3px_rgba(20,60,50,0.05),_0_4px_16px_rgba(20,60,50,0.08)]",
+              "mb-8 rounded-2xl glass-secondary",
+              "border-white/45",
+              "shadow-[0_2px_10px_rgba(20,60,50,0.06),_0_14px_34px_rgba(20,60,50,0.08)]",
               "px-5 sm:px-6 pt-5 pb-4",
               "space-y-4",
             )}
@@ -216,7 +215,7 @@ function PageLayout({
                             <div className="mt-4 flex flex-col gap-2">
                               <button
                                 onClick={() => { requestManualRetry(); setPanelOpen(false); }}
-                                className="rounded-xl border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-premium"
+                                className="rounded-xl glass-subtle px-3 py-2 text-sm font-medium hover:bg-white/30 transition-premium"
                               >
                                 Retry now
                               </button>
@@ -248,7 +247,7 @@ function PageLayout({
               <div
                 role="tablist"
                 aria-label="Page sections"
-                className="flex gap-1 bg-muted rounded-full p-2 w-full"
+                className="flex gap-1 glass-subtle rounded-full p-1.5 w-full"
               >
                 {tabs.map((tab) => {
                   const isActive = tab.value === activeTab;
@@ -312,7 +311,7 @@ function PageLayout({
               {deadletter.map((task) => (
                 <div
                   key={task.id}
-                  className="rounded-xl border border-border p-3 text-sm transition-premium hover:bg-muted/30"
+                  className="rounded-xl glass-subtle p-3 text-sm transition-premium hover:bg-white/25"
                 >
                   <div className="font-medium">
                     {task.entity} · {task.action}
@@ -324,7 +323,7 @@ function PageLayout({
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => restoreDeadletterTask(task.id)}
-                      className="flex-1 rounded-xl border border-border px-2 py-1 hover:bg-muted transition-premium"
+                      className="flex-1 rounded-xl glass-subtle px-2 py-1 hover:bg-white/25 transition-premium"
                     >
                       Restore
                     </button>
