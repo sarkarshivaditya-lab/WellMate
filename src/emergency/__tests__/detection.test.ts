@@ -5,6 +5,11 @@ import {
   confirmationRemainingMs,
   shouldTimeoutConfirmation,
 } from "../detection";
+import {
+  beginEscalation,
+  completeEscalation,
+  getDeliveryStatus,
+} from "../emergencyService";
 
 describe("Golden Hour detection", () => {
   it("enters tracking for both modes", () => {
@@ -66,5 +71,23 @@ describe("Golden Hour detection", () => {
       ],
     });
     expect(decision.type).toBe("none");
+  });
+});
+
+
+describe("Golden Hour escalation safety", () => {
+  it("blocks duplicate escalation while an escalation is in flight", () => {
+    expect(beginEscalation()).toBe(true);
+    expect(beginEscalation()).toBe(false);
+    completeEscalation();
+    expect(beginEscalation()).toBe(true);
+    completeEscalation();
+  });
+
+  it("does not claim delivery without a dispatcher", () => {
+    expect(getDeliveryStatus(false)).toBe("PENDING");
+    expect(getDeliveryStatus(true, true)).toBe("SUCCESS");
+    expect(getDeliveryStatus(true, false)).toBe("FAILED");
+    expect(getDeliveryStatus(true)).toBe("PENDING");
   });
 });
