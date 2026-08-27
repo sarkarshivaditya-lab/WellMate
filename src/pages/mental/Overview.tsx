@@ -270,7 +270,7 @@ export default function Overview() {
           <WelcomeCard />
 
           {/* Today's Mood */}
-          <Card>
+          <Card className="glass-secondary">
             <CardHeader>
               <CardTitle>Today's Mood</CardTitle>
             </CardHeader>
@@ -322,7 +322,7 @@ export default function Overview() {
 
           {/* 7-Day Mood Trend */}
           {moodData.length > 0 && (
-            <Card>
+            <Card className="glass-secondary">
               <CardHeader>
                 <CardTitle>Mood over the past week</CardTitle>
               </CardHeader>
@@ -375,7 +375,7 @@ export default function Overview() {
                     <button
                       key={entry.localId}
                       onClick={() => { setTab("journal"); openEditEntry(entry); }}
-                      className="w-full text-left rounded-xl glass-subtle p-3 hover:bg-muted/70 transition-premium"
+                      className="w-full text-left rounded-xl glass-subtle p-3 hover:bg-white/25 transition-premium"
                     >
                       {entry.title && (
                         <p className="text-xs font-semibold mb-0.5 text-foreground/90">{entry.title}</p>
