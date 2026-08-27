@@ -15,7 +15,8 @@ import {
   generateMemoryFollowUps,
   generateRecommendationFollowUps,
 } from "@/ai/conversationalPrimitives";
-import type { FollowUpPrompt } from "@/ai/types";
+
+type FollowUpPrompt = { id: string; text: string; domain: string; category: string; grounding?: string };
 
 type Message = {
   id: string;
@@ -322,35 +323,8 @@ function WellMateLauncher() {
           </div>
 
           {/* Model status notice */}
-          {modelStatus !== "ready" && (
-            <div className="px-4 py-2 text-[11px] bg-muted/30 border-b border-border/30 leading-snug">
-              {modelStatus === "downloading" && (
-                <span className="text-muted-foreground">Downloading offline AI…</span>
-              )}
-              {modelStatus === "activating" && (
-                <span className="text-muted-foreground">Loading offline AI into memory…</span>
-              )}
-              {modelStatus === "failed" && (
-                <span className="text-destructive/70">
-                  {getRuntimeState().lastError ?? "Offline AI could not load. Restart the app to retry."}
-                </span>
-              )}
-              {modelStatus === "unavailable" && (
-                <span className="text-primary/80">
-                  Download Offline AI from the Overview page for offline use.
-                </span>
-              )}
-            </div>
-          )}
-
           {/* Launch readiness notice — shown until cloud AI infrastructure is enabled.
               To remove: set LAUNCH_STATE.mentalCoachingAvailable = true in src/ai/launchState.ts */}
-          {!LAUNCH_STATE.mentalCoachingAvailable && (
-            <div className="px-4 py-2 text-[11px] text-muted-foreground bg-muted/30 border-b border-border/30 leading-snug">
-              Advanced mental wellbeing support is being prepared for launch.
-            </div>
-          )}
-
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3 text-sm">
             {messages.map((m) => (
