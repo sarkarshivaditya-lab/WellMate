@@ -65,7 +65,7 @@ export default function Chat() {
           <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
             Early access & consultation
           </p>
-          <Card className="border-border/40">
+          <Card className="glass-secondary border-white/40">
             <CardContent className="py-5 px-5 space-y-4">
               <div className="space-y-0.5">
                 <p className="text-[15px] font-semibold text-foreground tracking-tight">
@@ -84,7 +84,7 @@ export default function Chat() {
                 className={cn(
                   "inline-flex items-center gap-2.5",
                   "px-4 py-2.5 rounded-xl",
-                  "bg-muted/40 hover:bg-muted/70",
+                  "glass-subtle hover:bg-white/25",
                   "border border-border/35 hover:border-border/60",
                   "transition-premium active:scale-[0.97]",
                 )}
