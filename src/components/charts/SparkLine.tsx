@@ -46,20 +46,6 @@ export function SparkLine({
 }: Props) {
   const colorClass = module ? (MODULE_STROKE[module] ?? "text-primary") : "text-primary";
 
-  if (data.length < 2) {
-    return (
-      <div
-        className={cn(
-          "flex items-center justify-center rounded-xl bg-muted/30",
-          className,
-        )}
-        style={{ width, height }}
-      >
-        <p className="text-xs text-muted-foreground">{emptyMessage}</p>
-      </div>
-    );
-  }
-
   const { points, linePath, areaPath } = useMemo(() => {
     const padding = { x: 8, y: 8 };
     const chartW = width - padding.x * 2;
@@ -86,6 +72,21 @@ export function SparkLine({
 
     return { points: pts, linePath: line, areaPath: area };
   }, [data, width, height]);
+
+  if (data.length < 2) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-xl bg-muted/30",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        <p className="text-xs text-muted-foreground">{emptyMessage}</p>
+      </div>
+    );
+  }
+
 
   return (
     <svg
