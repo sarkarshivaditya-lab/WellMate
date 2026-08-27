@@ -28,7 +28,7 @@ For habits, journal, meals, timelines, search results and other potentially long
 
 ## Compositing and animation
 
-Prefer transform/opacity for animation.
+Prefer transform/opacity for animation. These are generally the most compositor-friendly properties for the interaction feedback WellMate already uses.
 
 Be cautious with:
 
@@ -38,7 +38,7 @@ Be cautious with:
 - animated background gradients;
 - large fixed translucent surfaces over scrolling content.
 
-Do not add `will-change` broadly; use it only after measurement.
+Treat GPU/compositing cost as a measured concern, not something `will-change` can automatically solve. Do not add `will-change` broadly; use it only after measurement.
 
 ## Media and backgrounds
 
