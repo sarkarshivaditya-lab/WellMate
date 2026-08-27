@@ -371,7 +371,7 @@ export default function Overview() {
                     <button
                       key={entry.localId}
                       onClick={() => { setTab("journal"); openEditEntry(entry); }}
-                      className="w-full text-left rounded-xl bg-muted/40 p-3 hover:bg-muted/70 transition-premium"
+                      className="w-full text-left rounded-xl glass-subtle p-3 hover:bg-muted/70 transition-premium"
                     >
                       {entry.title && (
                         <p className="text-xs font-semibold mb-0.5 text-foreground/90">{entry.title}</p>
@@ -489,7 +489,7 @@ export default function Overview() {
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {/* Draft restored indicator */}
             {draftRestored && (
-              <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg glass-subtle px-3 py-2">
                 <p className="text-[11px] text-muted-foreground">Draft restored</p>
                 <button
                   type="button"
