@@ -14,7 +14,7 @@ import { SignalPill } from "@/components/ui/signal-pill";
 import { TrendBadge } from "@/components/ui/trend-badge";
 import { ScoreRing } from "./ScoreRing";
 import type { WellnessScore } from "@/intelligence/types";
-import { openWellMate } from "@/ai/wellMateEvents";
+import { openWellMate } from "@/services/wellMateEvents";
 import { generateDomainInvocation } from "@/ai/conversationalPrimitives";
 import type { MemoryDomain } from "@/intelligence/memory/types";
 
