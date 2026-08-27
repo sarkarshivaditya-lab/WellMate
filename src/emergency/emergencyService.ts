@@ -24,6 +24,10 @@ export function getPowerShortcutStatus(): PowerShortcutStatus {
   return "FALLBACK";
 }
 
+export function getLocationReadinessMessage(location: EmergencyEvent["location"]): string {
+  return location ? "Location ready" : "Location unavailable — escalation can still be prepared";
+}
+
 export async function readCurrentLocation(): Promise<{
   latitude: number;
   longitude: number;
