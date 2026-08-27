@@ -138,7 +138,7 @@ export default function Roadmap() {
     <div className="min-h-screen bg-background pb-[calc(3.5rem+env(safe-area-inset-bottom)+2rem)]">
 
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-border/30">
+      <div className="sticky top-0 z-20 glass-secondary border-0 border-b rounded-none">
         <div className="flex items-center gap-3 px-4 py-3 max-w-2xl mx-auto">
           <Button
             variant="ghost"
