@@ -10,7 +10,7 @@ import type {
   MemoryDomain,
 } from "@/intelligence/memory/types";
 import type { WellnessContext } from "@/intelligence/wellnessScore";
-import type { ContextCard, ContextCardType, Citation } from "./types";
+import type { ContextCard, ContextCardType, Citation } from "./aiContracts";
 import {
   buildBehavioralCitations,
   buildCorrelationCitations,
