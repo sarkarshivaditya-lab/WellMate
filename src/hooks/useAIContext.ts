@@ -8,13 +8,13 @@ import { useLocalProfile } from "./useLocalProfile";
 import { useWellnessMemory } from "./useWellnessMemory";
 import { useRecommendations } from "./useRecommendations";
 import { buildWellnessContext } from "@/intelligence/wellnessScore";
-import { buildAIContextPayload } from "@/ai/contextBridge";
-import { buildContextCards } from "@/ai/contextCards";
+import { buildAIContextPayload } from "@/services/aiContextBridge";
+import { buildContextCards } from "@/services/aiContextCards";
 import {
   generateScoreFollowUps,
   generateMemoryFollowUps,
-} from "@/ai/conversationalPrimitives";
-import type { AIContextPayload, ContextCard, FollowUpPrompt } from "@/ai/types";
+} from "@/services/conversationalPrimitives";
+import type { AIContextPayload, ContextCard, FollowUpPrompt } from "@/services/aiContracts";
 
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
