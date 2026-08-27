@@ -273,7 +273,7 @@ export function SleepTabContent() {
           recoveryReadiness={recoveryReadiness}
         />
 
-        <Card>
+        <Card className="glass-secondary">
           <CardHeader>
             <CardTitle>7-Day Average</CardTitle>
           </CardHeader>
@@ -322,7 +322,7 @@ export function SleepTabContent() {
                 return (
                   <div
                     key={s.localId}
-                    className="flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3 transition-premium hover:bg-muted/70"
+                    className="flex items-center justify-between rounded-xl glass-subtle px-4 py-3 transition-premium hover:bg-white/25"
                   >
                     <div>
                       <div className="text-sm font-medium">{date}</div>
