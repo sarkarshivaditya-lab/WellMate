@@ -340,8 +340,8 @@ export default function Onboarding() {
      ====================================================== */
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-b from-[hsl(var(--header-gradient-start))] to-background">
-      <div className="bg-card rounded-3xl border border-border card-shadow-hover p-8 sm:p-10 max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 wm-ambient-bg">
+      <div className="glass-primary rounded-3xl p-8 sm:p-10 max-w-md w-full space-y-8">
 
         {/* ================= HEADER ================= */}
         <div className="space-y-6">
@@ -431,7 +431,7 @@ export default function Onboarding() {
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Height unit
               </p>
-              <div className="inline-flex bg-muted rounded-xl p-1 gap-1">
+              <div className="inline-flex glass-subtle rounded-xl p-1 gap-1">
                 {(["cm", "ftin"] as const).map((unit) => (
                   <button
                     key={unit}
@@ -892,7 +892,7 @@ function ChoiceGroup({ label, value, onChange, options }: ChoiceGroupProps) {
 
 function Summary({ label, value }: SummaryProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-card">
+    <div className="flex items-center justify-between px-4 py-3 glass-subtle">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium text-foreground text-right capitalize max-w-[60%]">
         {value}
