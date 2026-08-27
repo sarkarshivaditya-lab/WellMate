@@ -8,7 +8,7 @@
 import React from "react";
 import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { openWellMate } from "@/ai/wellMateEvents";
+import { openWellMate } from "@/services/wellMateEvents";
 import {
   getLongitudinalSummary,
   generateLongitudinalSummary,
