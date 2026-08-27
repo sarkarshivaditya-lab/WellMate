@@ -215,15 +215,22 @@ export function init(): void {
     window.removeEventListener("beforeunload", handleBeforeUnload),
   );
 
-  // Memory pressure (supported in some browsers)
-  const perfMemory = (performance as unknown as { memory?: { onmemorypressure?: unknown } });
-  if (perfMemory?.memory) {
-    // @ts-ignore — non-standard API
-    window.addEventListener("memorypressure", handleMemoryPressure);
-    cleanupFns.push(
-      () =>
-        // @ts-ignore
-        window.removeEventListener("memorypressure", handleMemoryPressure),
+  // Memory pressure is a non-standard browser event; use an explicit typed bridge
+  // rather than suppressing TypeScript diagnostics.
+  const memoryWindow = window as Window & {
+    addEventListener(
+      type: "memorypressure",
+      listener: EventListenerOrEventListenerObject,
+    ): void;
+    removeEventListener(
+      type: "memorypressure",
+      listener: EventListenerOrEventListenerObject,
+    ): void;
+  };
+  if ("memory" in performance) {
+    memoryWindow.addEventListener("memorypressure", handleMemoryPressure);
+    cleanupFns.push(() =>
+      memoryWindow.removeEventListener("memorypressure", handleMemoryPressure),
     );
   }
 
