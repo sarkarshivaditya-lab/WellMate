@@ -37,7 +37,6 @@ import { useRecommendations } from "@/hooks/useRecommendations";
 import { useAdaptiveProfile } from "@/hooks/useAdaptiveProfile";
 import { WeeklyInsightCard } from "@/components/ai/WeeklyInsightCard";
 import { DailyReflectionCard } from "@/components/ai/DailyReflectionCard";
-import { ModelDownloadCard } from "@/components/ai/ModelDownloadCard";
 import type { Recommendation, RecommendationCategory } from "@/recommendations/types";
 import type { ModuleId } from "@/personalization/types";
 
@@ -291,9 +290,6 @@ export default function Overview() {
       <div className="space-y-8">
         {/* Composite wellness score */}
         <WellnessScoreCard composite={intelligence.composite} />
-
-        {/* Offline Intelligence — invisible once installed */}
-        <ModelDownloadCard />
 
         {/* Behavioral shifts from longitudinal memory — only renders when significant */}
         <RecentChangesCard deltas={memory?.behavioralDeltas ?? []} />
