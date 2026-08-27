@@ -87,23 +87,71 @@ function GoldenHourSurface() {
       return;
     }
 
-    const sample = async () => {
+    let motionAvailable = false;
+    const sampleLocation = async () => {
       const location = await readCurrentLocation();
-      const speedMps = location ? (location.accuracy !== undefined && location.accuracy < 30 ? 1.8 : undefined) : undefined;
-      const motion: MotionSample = {
-        timestampMs: Date.now(),
-        speedMps,
-        locationAccuracyM: location?.accuracy,
-      };
-      motionSamplesRef.current = [...motionSamplesRef.current.slice(-15), motion];
-      handleSample(motion);
       locationRef.current = location;
       setLocationReady(Boolean(location));
+      const sample: MotionSample = {
+        timestampMs: Date.now(),
+        locationAccuracyM: location?.accuracy,
+        speedMps: undefined,
+      };
+      motionSamplesRef.current = [...motionSamplesRef.current.slice(-15), sample];
     };
 
-    void sample();
-    trackingTimerRef.current = window.setInterval(() => void sample(), 20_000);
+    const onMotion = (event: DeviceMotionEvent) => {
+      motionAvailable = true;
+      const acceleration = event.accelerationIncludingGravity;
+      const rotation = event.rotationRate;
+      const accelerationG =
+        acceleration
+          ? Math.sqrt(
+              (acceleration.x ?? 0) ** 2 +
+                (acceleration.y ?? 0) ** 2 +
+                (acceleration.z ?? 0) ** 2,
+            ) / 9.80665
+          : undefined;
+      const rotationMagnitude = rotation
+        ? Math.sqrt(
+            (rotation.alpha ?? 0) ** 2 +
+              (rotation.beta ?? 0) ** 2 +
+              (rotation.gamma ?? 0) ** 2,
+          ) / 50
+        : undefined;
+      const sample: MotionSample = {
+        timestampMs: Date.now(),
+        speedMps: motionSamplesRef.current.at(-1)?.speedMps,
+        accelerationG,
+        rotationMagnitude,
+        locationAccuracyM: locationRef.current?.accuracy,
+      };
+      motionSamplesRef.current = [...motionSamplesRef.current.slice(-15), sample];
+      handleSample(sample);
+    };
+
+    const startMotion = async () => {
+      const DeviceMotion = DeviceMotionEvent as typeof DeviceMotionEvent & {
+        requestPermission?: () => Promise<"granted" | "denied">;
+      };
+      if (typeof DeviceMotion.requestPermission === "function") {
+        try {
+          const permission = await DeviceMotion.requestPermission();
+          if (permission !== "granted") return;
+        } catch {
+          return;
+        }
+      }
+      window.addEventListener("devicemotion", onMotion);
+      motionAvailable = true;
+    };
+
+    void sampleLocation();
+    void startMotion();
+    trackingTimerRef.current = window.setInterval(() => void sampleLocation(), 20_000);
+
     return () => {
+      window.removeEventListener("devicemotion", onMotion);
       if (trackingTimerRef.current !== null) {
         window.clearInterval(trackingTimerRef.current);
         trackingTimerRef.current = null;
