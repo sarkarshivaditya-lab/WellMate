@@ -101,7 +101,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen wm-ambient-bg flex flex-col">
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>
