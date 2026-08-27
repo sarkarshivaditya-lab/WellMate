@@ -6,7 +6,7 @@
 import React from "react";
 import { X, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { openWellMate } from "@/ai/wellMateEvents";
+import { openWellMate } from "@/services/wellMateEvents";
 import {
   generateDailyReflection,
   getStoredReflection,
