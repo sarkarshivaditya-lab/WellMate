@@ -450,7 +450,7 @@ export async function runStorageDiagnostic(): Promise<void> {
       const dir = await opfsDir();
       let totalBytes = 0;
       let fileCount = 0;
-      for await (const entry of dir.values()) {
+      for await (const entry of dir as unknown as AsyncIterable<FileSystemHandle>) {
         if (entry.kind !== "file") continue;
         fileCount++;
         try {
