@@ -105,6 +105,23 @@ Every meaningful change must be validated with targeted tests plus TypeScript/bu
 ## Current transformation direction
 
 WellMate is being repositioned around the Golden Hour emergency-response workflow: detect possible accidents conservatively, provide an approximately 15-second confirmation window, then escalate with current location and the minimum necessary medical/emergency-contact context. Existing wellness surfaces should remain intact unless they conflict with this emergency center of gravity.
+## Liquid Glass design-engineering foundation
+
+A WellMate-specific Liquid Glass skill system now lives under `.engineering-skills/wellmate/liquid-glass/`, covering implementation principles, design tokens, actual component mapping, accessibility, performance, responsive behavior, and research. The visual rebuild also has a repeatable validation skill at `.engineering-skills/wellmate/visual-regression/SKILL.md`.
+
+The direction is intentionally selective: Liquid Glass is primarily a functional-layer treatment for navigation, persistent tools, floating actions and selected transient controls. Dense content surfaces, lists, charts, sensitive profile information and emergency-critical controls remain solid or near-opaque by default.
+
+The existing frontend foundation must be extended rather than duplicated: `src/design/tokens.ts`, `src/index.css`, `src/motion/`, `src/components/ui/`, and `src/components/layout/AppShell.tsx`, `PageLayout.tsx`, and `BottomNav.tsx`.
+
+Durable accessibility constraints: Golden Hour emergency interactions must remain instantly readable and usable under stress; transparency cannot be the sole semantic signal; focus-visible must remain obvious; touch targets must stay 44px-class; reduced motion/high contrast must preserve state clarity; explicit opaque fallbacks are required.
+
+Durable performance constraints: backdrop blur is a limited rendering budget; no per-row blur in long lists; avoid nested filters and continuous filter/shadow animation; concentrate glass in a small number of functional containers; use progressive enhancement; do not add a runtime Liquid Glass package until an actual need is proven.
+
+Responsive requirements remain mobile-first, including 360px/390px/430px phone widths, landscape mobile, tablet portrait/landscape and common desktop widths. Preserve existing safe-area behavior.
+
+Research conclusion: Apple's current guidance supports using Liquid Glass primarily for functional layers and standard materials for content. Third-party React/React Native projects are implementation references only. WellMate-specific implementation must preserve its green identity and existing architecture.
+
+This task is documentation-only. No application source files or package dependencies were changed.
 
 ## Memory maintenance rule
 
