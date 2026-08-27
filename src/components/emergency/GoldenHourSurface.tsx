@@ -192,8 +192,7 @@ function GoldenHourSurface() {
   function handleSample(sample: MotionSample) {
     if (!["TRACKING", "MOVING", "SUSPICIOUS_MOTION"].includes(state)) return;
     const context = contextRef.current;
-    context.nowMs = sample.timestampMs;
-    context.recent.push(sample);
+    context.recent = [...context.recent.slice(-15), sample];
     const decision = analyzeMotion(context);
     if (decision.type === "abrupt_stop") {
       contextRef.current = {
@@ -236,7 +235,7 @@ function GoldenHourSurface() {
   }
 
   function cancelConfirmation() {
-    contextRef.current = { ...beginConfirmation(Date.now()), state: "tracking" };
+    contextRef.current = { state: "TRACKING", recent: [] };
     setState("CANCELLED");
     setCountdown(0);
     window.setTimeout(() => setState("TRACKING"), 0);
@@ -308,7 +307,7 @@ function GoldenHourSurface() {
           </Button>
         )}
 
-        {trackingMode === "automatic" && state === "idle" && (
+        {trackingMode === "automatic" && state === "IDLE" && (
           <div className="glass-subtle rounded-xl p-3 text-xs text-muted-foreground">
             Automatic mode is ready to combine low-frequency location context with higher-frequency motion signals when meaningful movement is detected.
           </div>
