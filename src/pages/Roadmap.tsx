@@ -135,7 +135,7 @@ export default function Roadmap() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background pb-[calc(3.5rem+env(safe-area-inset-bottom)+2rem)]">
+    <div className="min-h-screen wm-ambient-bg pb-[calc(3.5rem+env(safe-area-inset-bottom)+2rem)]">
 
       {/* Sticky header */}
       <div className="sticky top-0 z-20 glass-secondary border-0 border-b rounded-none">
@@ -161,7 +161,7 @@ export default function Roadmap() {
       <div className="px-4 py-6 space-y-6 max-w-2xl mx-auto">
 
         {/* ── From the builder ── */}
-        <Card className="border-l-[3px] border-l-primary border-primary/20 bg-primary/[0.035]">
+        <Card className="glass-secondary border-l-[3px] border-l-primary border-primary/20">
           <CardContent className="px-4 pt-4 pb-5 space-y-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-primary/60">
               From the builder
@@ -270,7 +270,7 @@ export default function Roadmap() {
         {/* ── The bigger picture ── */}
         <SectionDivider label="The bigger picture" />
 
-        <Card className="bg-primary/[0.035] border-primary/15">
+        <Card className="glass-secondary border-primary/15">
           <CardContent className="px-4 pt-4 pb-5 space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary/70" />
@@ -297,7 +297,7 @@ export default function Roadmap() {
           onClick={() => navigate("/profile")}
           className={cn(
             "w-full flex items-center justify-between rounded-xl px-4 py-3.5",
-            "border border-border/50 bg-muted/30 hover:bg-muted/60",
+            "glass-subtle hover:bg-white/25",
             "transition-premium text-left",
           )}
         >
