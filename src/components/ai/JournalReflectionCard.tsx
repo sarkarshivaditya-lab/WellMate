@@ -6,7 +6,7 @@ import React from "react";
 import { BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { openWellMate } from "@/ai/wellMateEvents";
+import { openWellMate } from "@/services/wellMateEvents";
 import {
   generateJournalReflection,
   getStoredReflection,
