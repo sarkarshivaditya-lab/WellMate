@@ -15,7 +15,7 @@ import { TrendBadge } from "@/components/ui/trend-badge";
 import { ScoreRing } from "./ScoreRing";
 import type { WellnessScore } from "@/intelligence/types";
 import { openWellMate } from "@/services/wellMateEvents";
-import { generateDomainInvocation } from "@/ai/conversationalPrimitives";
+import { generateDomainInvocation } from "@/services/conversationalPrimitives";
 import type { MemoryDomain } from "@/intelligence/memory/types";
 
 // Domain label → memory domain key for conversation invocation
