@@ -231,7 +231,7 @@ function TodayMomentumCard({
   });
 
   return (
-    <div className="rounded-2xl border border-border/20 bg-muted/15 px-4 py-4">
+    <div className="rounded-2xl glass-secondary px-4 py-4">
       <div className="flex items-start justify-between gap-3 mb-3.5">
         <div>
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
@@ -292,9 +292,9 @@ function SuggestedHabits({
             key={s.title}
             type="button"
             onClick={() => onAdd(s.title, s.description, s.cadence)}
-            className="w-full flex items-start gap-3 rounded-2xl border border-border/15 bg-muted/10 px-4 py-3.5 text-left hover:bg-muted/20 active:bg-muted/25 transition-colors touch-manipulation"
+            className="w-full flex items-start gap-3 rounded-2xl glass-subtle px-4 py-3.5 text-left hover:bg-white/25 active:bg-white/30 transition-colors touch-manipulation"
           >
-            <div className="mt-0.5 flex-shrink-0 rounded-lg bg-muted/25 p-1.5">
+            <div className="mt-0.5 flex-shrink-0 rounded-lg bg-primary/8 p-1.5">
               <Icon className={cn("h-3.5 w-3.5", config.textColor)} />
             </div>
             <div className="flex-1 min-w-0">
