@@ -116,12 +116,6 @@ importers:
       '@usehercules/auth':
         specifier: ^1.0.32
         version: 1.0.44(convex@1.38.0(@auth0/auth0-react@2.16.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react@19.2.6))(react@19.2.6)
-      '@wllama/wllama':
-        specifier: ^3.1.1
-        version: 3.1.1
-      '@xenova/transformers':
-        specifier: ^2.17.2
-        version: 2.17.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
