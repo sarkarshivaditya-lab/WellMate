@@ -128,24 +128,28 @@ This task is documentation-only. No application source files or package dependen
 Update this file whenever durable architecture, platform constraints, root causes, dependency relationships, emergency-state behavior, AI-removal findings or rollback information materially changes. Source code and `CLAUDE.md` remain authoritative if any discrepancy appears.
 ## Liquid Glass implementation status
 
-The Liquid Glass visual rebuild is now implemented at the shared frontend layer and partially propagated through page-level surfaces on `chore/liquid-glass-foundation`. The shared implementation uses named CSS material classes in `src/index.css`, with solid/high-contrast/reduced-transparency fallbacks and no new runtime dependency.
+The documented Liquid Glass frontend rebuild is implemented on `chore/liquid-glass-foundation` using the existing WellMate CSS/token/component architecture. Functional layers use named material classes; dense content remains stable/opaque; emergency-critical content remains solid/high-contrast.
 
-Implemented shared surfaces: AppShell top search/profile, BottomNav, Button variants, Input, Card baseline, Dialog, Sheet. Page-level refinements were applied to Overview, Mental Overview, Habits, Sleep, Chat and Roadmap, with content-heavy cards intentionally remaining solid.
+Shared surfaces implemented: AppShell search/profile, BottomNav, Button variants, Input, Card baseline, Dialog, Sheet. Selective page-level treatment is applied to Overview, Mental Overview, Habits, Sleep, Chat and Roadmap. Long lists, charts, sensitive profile data and emergency-critical actions are not broadly blurred.
 
-Emergency protection remains explicit: no emergency state-machine or escalation logic was rewritten. Emergency-critical UI should remain solid/high-contrast and should be refined through the documented visual regression process rather than decorative glass.
+Accessibility constraints are encoded in the shared material layer: `prefers-reduced-motion`, `prefers-contrast: more`, and progressive opaque fallbacks for transparency/browser support. Focus-visible and 44px-class interactive targets remain part of the component contracts.
 
-The repository currently exposes no dedicated emergency page/component for a speculative redesign; existing emergency behavior remains embedded in the existing product/runtime architecture and is therefore intentionally untouched.
+Performance constraints are encoded in the shared material layer and implementation: bounded blur radii, no per-row glass, no continuous blur animation, and functional-layer concentration. No new runtime dependency was added for Liquid Glass.
 
-Validation performed on the GitHub-only branch:
-- complete branch diff inspection: only WellMate engineering docs/memory, shared UI primitives, global CSS, shell/navigation and selected page styling changed;
-- no package manifest or lockfile changes;
-- no environment/secrets/nested .git files added;
-- protected application and engineering baseline commits remain unchanged;
-- backdrop-blur usage reviewed and remains concentrated in functional/selected surfaces;
-- PR #2 opened to activate repository CI because the CI workflow only triggers on main/develop pushes or pull requests;
-- current PR status reports no check runs yet;
-- browser screenshot/render validation and local lint/type/test/build execution are unavailable in the current GitHub-only environment and are not claimed as passed.
+Validation recovery completed: repository CI initially exposed seven lint errors and one OPFS typing build failure. The lint errors were repaired without disabling lint rules, then CI exposed the real toolchain mismatch: Vite 7 requires Node 20.19+/22.12+ while CI pinned Node 18. The workflow was updated to Node 22. A subsequent full CI run passed dependency installation, ESLint, TypeScript, and production build.
+
+Build-compatibility fixes made during validation were limited to:
+- typed Capacitor runtime detection in `src/ai/providers/local/llamaBridge.ts`;
+- stable chart hook ordering in `src/components/charts/SparkLine.tsx`;
+- empty-expression/catch cleanup in affected existing components;
+- typed non-standard `memorypressure` event registration in `src/reliability/lifecycleCoordinator.ts`;
+- compatible OPFS directory iteration typing in `src/ai/providers/local/modelStorage.ts`;
+- CI Node runtime alignment to Node 22 in `.github/workflows/ci-lint-test.yml`.
+
+CI run `33091534730` completed successfully on the final branch commit. The repository does not contain an automated browser/e2e test harness, so screenshot/render validation remains an environment/tooling gap rather than a passed automated check. Source-level visual, responsive, accessibility and performance review was performed against the documented Liquid Glass rules.
+
+PR #2 is open, mergeable, and points at the final branch head. Protected baselines remain untouched.
 
 ## Rollback
 
-The current frontend changes are isolated on `chore/liquid-glass-foundation`. The known protected application baseline is `5575511c4372896318a2dc1185475f00ed231465` and engineering baseline is `d595c16ceb2c0d09ac836e914c616a1508fca3a3`. Existing backup branches remain untouched.
+The current frontend changes are isolated on `chore/liquid-glass-foundation`. The protected application baseline is `5575511c4372896318a2dc1185475f00ed231465`; engineering baseline is `d595c16ceb2c0d09ac836e914c616a1508fca3a3`.
