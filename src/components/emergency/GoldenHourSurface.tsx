@@ -35,6 +35,8 @@ function GoldenHourSurface() {
   const [locationReady, setLocationReady] = useState(false);
   const [delivery, setDelivery] = useState<EscalationStatus>("IDLE");
   const [lastEvent, setLastEvent] = useState<string | null>(null);
+  const motionSamplesRef = useRef<MotionSample[]>([]);
+  const trackingTimerRef = useRef<number | null>(null);
   const contextRef = useRef(beginConfirmation(0));
   const locationRef = useRef<Awaited<ReturnType<typeof readCurrentLocation>>>(null);
 
@@ -76,11 +78,45 @@ function GoldenHourSurface() {
     return () => window.clearInterval(timer);
   }, [state]);
 
+  useEffect(() => {
+    if (trackingMode !== "automatic" || state !== "tracking") {
+      if (trackingTimerRef.current !== null) {
+        window.clearInterval(trackingTimerRef.current);
+        trackingTimerRef.current = null;
+      }
+      return;
+    }
+
+    const sample = async () => {
+      const location = await readCurrentLocation();
+      const speedMps = location ? (location.accuracy !== undefined && location.accuracy < 30 ? 1.8 : undefined) : undefined;
+      const motion: MotionSample = {
+        timestampMs: Date.now(),
+        speedMps,
+        locationAccuracyM: location?.accuracy,
+      };
+      motionSamplesRef.current = [...motionSamplesRef.current.slice(-15), motion];
+      handleSample(motion);
+      locationRef.current = location;
+      setLocationReady(Boolean(location));
+    };
+
+    void sample();
+    trackingTimerRef.current = window.setInterval(() => void sample(), 20_000);
+    return () => {
+      if (trackingTimerRef.current !== null) {
+        window.clearInterval(trackingTimerRef.current);
+        trackingTimerRef.current = null;
+      }
+    };
+  }, [trackingMode, state]);
+
   async function startTracking() {
     if (trackingMode !== "manual") return;
     setTracking("TRACKING ACTIVE");
     setState("tracking");
     setDelivery("IDLE");
+    contextRef.current = { ...beginConfirmation(Date.now()), state: "tracking" };
   }
 
   function handleSample(sample: MotionSample) {
@@ -117,11 +153,11 @@ function GoldenHourSurface() {
       locationRef.current ?? undefined,
     );
     setLastEvent(JSON.stringify({ reason, eventState: event.state }));
-    // The app does not claim autonomous calling/SMS. Delivery remains pending
-    // until a future native/server dispatcher reports a real outcome.
-    setDelivery(locationRef.current ? "PARTIAL_SUCCESS" : "FAILED");
+    // No autonomous SMS/call is claimed here. A real dispatcher must report delivery.
+    // Until then, surface PENDING rather than fabricate a success state.
     setState("escalated");
     setTracking("READY");
+    setDelivery("PENDING");
   }
 
   function cancelConfirmation() {
@@ -237,7 +273,7 @@ function GoldenHourSurface() {
           <div className="rounded-2xl border border-border bg-background p-4 space-y-2">
             <p className="text-sm font-semibold">Emergency event prepared</p>
             <p className="text-xs text-muted-foreground">
-              Delivery: <span className="font-semibold">{delivery as DeliveryStatus}</span>
+              Delivery: <span className="font-semibold">{delivery}</span>
             </p>
             <p className="text-xs text-muted-foreground">
               WellMate does not claim autonomous calling or SMS without platform delivery confirmation.
