@@ -61,3 +61,22 @@ export function buildEmergencyEvent(
     occurredAtMs: Date.now(),
   };
 }
+
+let escalationInFlight = false;
+
+export function beginEscalation(): boolean {
+  if (escalationInFlight) return false;
+  escalationInFlight = true;
+  return true;
+}
+
+export function completeEscalation(): void {
+  escalationInFlight = false;
+}
+
+export function getDeliveryStatus(hasDispatcher: boolean, dispatcherSucceeded?: boolean): DeliveryStatus {
+  if (!hasDispatcher) return "PENDING";
+  if (dispatcherSucceeded === true) return "SUCCESS";
+  if (dispatcherSucceeded === false) return "FAILED";
+  return "PENDING";
+}
