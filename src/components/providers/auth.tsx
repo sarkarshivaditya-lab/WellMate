@@ -23,54 +23,12 @@ function resolveRedirectUri(): string {
   return typeof window !== "undefined" ? window.location.origin + "/callback" : "";
 }
 
-function AuthProviderWithNavigation({ children }: { children: React.ReactNode }) {
+function Auth0ProviderWithNavigate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const navigate = useNavigate();
-  const domain = (import.meta.env.VITE_AUTH0_DOMAIN as string | undefined)?.trim();
-  const clientId = (import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined)?.trim();
-
-  if (!domain || !clientId) {
-    return (
-      <Auth0Provider
-        domain="placeholder.auth0.com"
-        clientId="placeholder"
-        authorizationParams={{ redirect_uri: typeof window !== "undefined" ? window.location.origin : "" }}
-        cacheLocation="localstorage"
-      >
-        {children}
-      </Auth0Provider>
-    );
-  }
-
-  return (
-    <Auth0Provider
-      domain={domain}
-      clientId={clientId}
-      authorizationParams={{
-        redirect_uri: resolveRedirectUri(),
-        ...(import.meta.env.VITE_AUTH0_AUDIENCE
-          ? { audience: import.meta.env.VITE_AUTH0_AUDIENCE as string }
-          : {}),
-        scope: "openid profile email",
-      }}
-      cacheLocation="localstorage"
-      useRefreshTokens
-      onRedirectCallback={(appState) => {
-        if (isCapacitorNative) return;
-
-        const returnTo =
-          typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")
-            ? appState.returnTo
-            : "/";
-
-        navigate(returnTo, { replace: true });
-      }}
-    >
-      {children}
-    </Auth0Provider>
-  );
-}
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
   const domain = (import.meta.env.VITE_AUTH0_DOMAIN as string | undefined)?.trim();
   const clientId = (import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined)?.trim();
   const audience = (import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined)?.trim();
@@ -105,15 +63,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       useRefreshTokens
       onRedirectCallback={(appState) => {
         const returnTo =
-          typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")
+          typeof appState?.returnTo === "string" &&
+          appState.returnTo.startsWith("/")
             ? appState.returnTo
             : "/";
 
-        window.history.replaceState({}, document.title, returnTo);
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        navigate(returnTo, { replace: true });
       }}
     >
       {children}
     </Auth0Provider>
   );
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return <Auth0ProviderWithNavigate>{children}</Auth0ProviderWithNavigate>;
 }
