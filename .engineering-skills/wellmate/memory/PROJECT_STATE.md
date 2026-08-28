@@ -141,3 +141,14 @@ The current branch head after the latest accepted changes is being validated thr
 
 ## Final-state maintenance rule
 Update this file whenever durable architecture, emergency-state behavior, AI-removal findings, dependency relationships, rollback information or validation results materially change. Never mark a capability as browser/native validated unless the corresponding runtime validation actually occurred.
+
+
+## Latest Liquid Glass + Golden Hour polish checkpoint
+
+The current branch now has a stronger, visibly translucent Liquid Glass treatment across shared interactive controls, page headers/tabs, floating navigation and functional surfaces. Interactive outline/secondary/ghost buttons use a high-opacity glass material (~0.90 surface alpha) rather than opaque card fills; destructive/emergency actions remain solid.
+
+Profile now includes a persistent Golden Hour tracking-mode selector (Automatic/Manual) backed by the canonical `onboarding_profile` store. Physical Health now leads with an emergency-readiness/SOS entry and Golden Hour surface.
+
+The Golden Hour emergency surface remains deterministic and platform-honest: temporal movement/suspicious-motion/abrupt-stop detection, 15-second confirmation, duplicate escalation guard, local emergency profile context, web tel:/sms: fallbacks modeled as PENDING rather than delivery success, and honest power-button capability reporting.
+
+Latest GitHub Actions validation run `33143630210` passed all available repository gates: dependency installation, ESLint, TypeScript, deterministic emergency tests, and production build. No browser renderer is available through the engineering connector, so rendered screenshot validation is not claimed. Local developer validation was separately confirmed by the user via `pnpm dev`.
