@@ -14,7 +14,7 @@
     "generate-icons": "capacitor-assets generate --android --iconBackgroundColor '#FFFFFF' --iconBackgroundColorDark '#111E1C'"
   },
   "dependencies": {
-    "@auth0/auth0-react": "^2.0.0",
+    "@auth0/auth0-react": "^2.24.1",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.2",
     "@capacitor/browser": "^7.0.5",
@@ -33,7 +33,7 @@
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-hover-card": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-menubar": "^1.1.16",
+    "@radix-ui/react-menubar": "^1.2.14",
     "@radix-ui/react-navigation-menu": "^1.2.14",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.8",
