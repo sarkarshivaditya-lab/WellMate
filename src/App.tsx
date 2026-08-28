@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Browser } from "@capacitor/browser";
@@ -33,25 +33,7 @@ import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
 
-function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
-  const [timedOut, setTimedOut] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!onTimeout) return;
-    const timer = window.setTimeout(() => setTimedOut(true), 8000);
-    return () => window.clearTimeout(timer);
-  }, [onTimeout]);
-
-  if (timedOut) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
-        <p className="text-sm text-muted-foreground max-w-xs">Taking longer than expected. Please sign in to continue.</p>
-        <button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={onTimeout}>Sign in</button>
-      </div>
-    );
-  }
-
+function AppLoadingScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
       <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
@@ -63,56 +45,68 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   );
 }
 
+function SignInScreen({ onSignIn, error }: { onSignIn: () => void; error?: string }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+      <p className="text-sm font-medium text-foreground">Sign in to continue</p>
+      {error ? <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{error}</p> : null}
+      <button
+        className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
+        onClick={onSignIn}
+      >
+        {error ? "Try sign in again" : "Sign in"}
+      </button>
+    </div>
+  );
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, error: authError, loginWithRedirect } = useAuth0();
+  const location = useLocation();
+  const loginInFlight = React.useRef(false);
 
   const handleLogin = React.useCallback(async () => {
+    if (loginInFlight.current) return;
+    loginInFlight.current = true;
+
     try {
       await loginWithRedirect(
         isCapacitorNative
           ? {
+              appState: { returnTo: `${location.pathname}${location.search}${location.hash}` },
               authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI },
               openUrl: (url: string) => Browser.open({ url, windowName: "_self" }),
             }
-          : undefined,
+          : {
+              appState: { returnTo: `${location.pathname}${location.search}${location.hash}` },
+            },
       );
     } catch (error) {
       console.error("[WellMate Auth] loginWithRedirect failed:", error);
+      loginInFlight.current = false;
     }
-  }, [loginWithRedirect]);
-
-  if (authError) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
-        <p className="text-sm font-medium text-foreground">Sign-in could not be completed.</p>
-        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{authError.message}</p>
-        <button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={() => void handleLogin()}>Try sign in again</button>
-      </div>
-    );
-  }
+  }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
   if (isLoading) return <AppLoadingScreen />;
-  if (!isAuthenticated) return <AppLoadingScreen onTimeout={() => void handleLogin()} />;
-  return <>{children}</>;
+  if (isAuthenticated) return <>{children}</>;
+
+  return <SignInScreen onSignIn={() => void handleLogin()} error={authError?.message} />;
 }
 
 function OnboardingRoute() {
-  React.useMemo(() => {
+  React.useEffect(() => {
     if (localStorage.getItem("onboarded") !== "true") return;
 
     const rawProfile = localStorage.getItem("onboarding_profile");
-    let hasCompletedProfile = false;
-    if (rawProfile) {
-      try {
-        const profile = JSON.parse(rawProfile) as { completedAt?: unknown };
-        hasCompletedProfile = typeof profile.completedAt === "number";
-      } catch {
-        hasCompletedProfile = false;
-      }
+    try {
+      const profile = rawProfile ? (JSON.parse(rawProfile) as { completedAt?: unknown }) : null;
+      if (typeof profile?.completedAt === "number") return;
+    } catch {
+      // Treat malformed onboarding state as incomplete.
     }
 
-    if (!hasCompletedProfile) localStorage.removeItem("onboarded");
+    localStorage.removeItem("onboarded");
   }, []);
 
   return <Onboarding />;
