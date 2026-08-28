@@ -18,41 +18,11 @@ function containsAny(message: string, terms: string[]): boolean {
 
 function detectEmergency(message: string): boolean {
   return containsAny(message, [
-    "i had an accident",
-    "i've had an accident",
-    "i have had an accident",
-    "there was an accident",
-    "road accident",
-    "car accident",
-    "bike accident",
-    "motorcycle accident",
-    "i crashed",
-    "we crashed",
-    "car crash",
-    "bike crash",
-    "motorcycle crash",
-    "collision",
-    "i was hit",
-    "got hit by a car",
+    "accident", "crash", "collision", "seriously injured", "severely injured",
+    "badly hurt", "seriously hurt", "i am bleeding", "i'm bleeding", "bleeding heavily",
+    "unconscious", "not breathing", "can't breathe", "cannot breathe", "choking",
+    "severe injury", "trapped in", "trapped inside", "fell badly", "got hit by a car",
     "got hit by a bike",
-    "i am injured",
-    "i'm injured",
-    "seriously injured",
-    "severely injured",
-    "i am bleeding",
-    "i'm bleeding",
-    "bleeding heavily",
-    "unconscious",
-    "not breathing",
-    "can't breathe",
-    "cannot breathe",
-    "choking",
-    "severe injury",
-    "badly hurt",
-    "seriously hurt",
-    "i fell badly",
-    "trapped in",
-    "trapped inside",
   ]);
 }
 
@@ -61,26 +31,28 @@ function classifyIntent(message: string): "mental" | "physical" | "general" | "s
   if (detectCrisis(message)) return "safety";
 
   const mental = containsAny(message, [
-    "stress", "stressed", "anxiety", "anxious", "panic", "depressed",
-    "depression", "sad", "overwhelmed", "burnout", "lonely", "hopeless",
-    "emotionally", "mental health", "feel down", "feeling low", "motivation",
-    "unmotivated", "frustrated", "angry", "upset", "worried", "worry",
-    "can't cope", "cannot cope", "just want to talk", "long day", "tired",
-    "fatigue", "exhausted", "low energy", "can't sleep", "cannot sleep",
+    "stress", "stressed", "anxiety", "anxious", "panic", "depressed", "depression",
+    "sad", "overwhelmed", "burnout", "lonely", "hopeless", "emotionally", "mental health",
+    "feel down", "feeling low", "motivation", "unmotivated", "frustrated", "angry", "upset",
+    "worried", "worry", "can't cope", "cannot cope", "just want to talk", "long day",
+    "tired", "fatigue", "exhausted", "low energy", "can't sleep", "cannot sleep",
   ]);
 
   const physical = containsAny(message, [
-    "workout", "exercise", "gym", "diet", "calorie", "protein",
-    "lose weight", "gain muscle", "fat loss", "training", "meal",
-    "nutrition", "hydration", "water", "steps", "walking", "running",
-    "strength", "cardio", "recipe", "breakfast", "lunch", "dinner",
-    "sore", "recovery", "rest day", "sets", "reps", "lift", "lifting",
+    "health", "healthy", "symptom", "symptoms", "pain", "headache", "dizzy", "dizziness",
+    "weak", "weakness", "nausea", "sick", "cold", "fever", "cough", "digestion", "stomach",
+    "sleep", "sleeping", "workout", "exercise", "gym", "diet", "calorie", "protein",
+    "lose weight", "gain weight", "gain muscle", "fat loss", "training", "meal", "food",
+    "nutrition", "hydration", "water", "steps", "walking", "running", "strength", "cardio",
+    "recipe", "breakfast", "lunch", "dinner", "sore", "recovery", "rest day", "sets", "reps",
+    "lift", "lifting", "muscle", "body fat", "blood pressure", "cholesterol", "vitamin",
+    "supplement", "fiber", "carbs", "carbohydrate", "fat", "creatine", "pre workout", "post workout",
   ]);
 
   if (mental && !physical) return "mental";
   if (physical && !mental) return "physical";
   if (mental && physical) return "general";
-  return "general";
+  return "physical";
 }
 
 export const chat = action({
@@ -109,19 +81,9 @@ export const chat = action({
       };
     }
 
-    if (intent === "physical") {
-      return {
-        domain: "physical",
-        payload: await ctx.runAction(api.aiCoach.chat, { message }),
-      };
-    }
-
     return {
-      domain: "clarify",
-      payload: {
-        question: "I can help with wellbeing, sleep, fitness, nutrition, or just talking things through. What would be most useful right now?",
-        options: ["Mental wellbeing", "Fitness & nutrition"],
-      },
+      domain: "physical",
+      payload: await ctx.runAction(api.aiCoach.chat, { message }),
     };
   },
 });
