@@ -9,6 +9,7 @@ export type EmergencyProfile = {
   allergies: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  localAmbulanceNumber: string;
   trackingMode: TrackingMode;
 };
 
@@ -40,6 +41,7 @@ function buildSmsBody(event: EmergencyEvent): string {
     `Blood type: ${event.profile.bloodType || "unknown"}`,
     `Allergies: ${event.profile.allergies || "none recorded"}`,
     `Location: ${location}`,
+    `Local ambulance: ${event.profile.localAmbulanceNumber || "not configured"}`,
   ].join(" ");
 }
 
