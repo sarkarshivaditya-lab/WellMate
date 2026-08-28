@@ -5,16 +5,13 @@ import { Browser } from "@capacitor/browser";
 import { isCapacitorNative, CAPACITOR_CALLBACK_URI } from "./providers/auth";
 
 /**
- * Bridges Auth0 Universal Login callbacks back into the Capacitor WebView.
+ * Handles the single Auth0 redirect callback emitted by Capacitor.
  *
- * The callback can arrive in two ways:
- *  - appUrlOpen when the app is already running/backgrounded
- *  - getLaunchUrl when Android cold-starts the app from the callback URI
- *
- * The readiness callback is intentionally held until a cold-start callback has
- * been processed. This prevents RequireAuth from immediately starting a new
- * Auth0 login and overwriting the transaction before the returning callback
- * can be consumed.
+ * Auth0's Ionic/Capacitor React quickstart uses the appUrlOpen event as the
+ * native callback boundary. We intentionally do not also consume getLaunchUrl
+ * here: on Android a cold-start callback can be observable through both paths,
+ * and Auth0's transaction is single-use. Calling handleRedirectCallback twice
+ * produces an invalid/missing transaction and leaves the app unauthenticated.
  */
 export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void }) {
   const { handleRedirectCallback } = useAuth0();
@@ -26,8 +23,8 @@ export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void
     }
 
     let disposed = false;
-    let handlingUrl = "";
     let readySignalled = false;
+    const handledCallbacks = new Set<string>();
 
     const signalReady = () => {
       if (disposed || readySignalled) return;
@@ -36,13 +33,21 @@ export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void
     };
 
     const isAuthCallback = (url: string) => {
-      return url.startsWith(CAPACITOR_CALLBACK_URI) &&
-        (url.includes("code=") || url.includes("error="));
+      try {
+        const parsed = new URL(url);
+        const callback = new URL(CAPACITOR_CALLBACK_URI);
+        return parsed.protocol === callback.protocol &&
+          parsed.host === callback.host &&
+          parsed.pathname === callback.pathname &&
+          (parsed.searchParams.has("code") || parsed.searchParams.has("error"));
+      } catch {
+        return false;
+      }
     };
 
     const handleCallbackUrl = async (url: string) => {
-      if (disposed || !isAuthCallback(url) || handlingUrl === url) return;
-      handlingUrl = url;
+      if (disposed || !isAuthCallback(url) || handledCallbacks.has(url)) return;
+      handledCallbacks.add(url);
 
       try {
         await handleRedirectCallback(url);
@@ -52,7 +57,7 @@ export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void
         try {
           await Browser.close();
         } catch {
-          // Browser may already be closed when Android cold-started the app.
+          // Browser may already be closed when Android delivered the callback.
         }
         signalReady();
       }
@@ -65,13 +70,8 @@ export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void
         void handleCallbackUrl(url);
       });
 
-      const launch = await CapApp.getLaunchUrl();
-      if (launch?.url && isAuthCallback(launch.url)) {
-        // Do not release the auth gate until the callback has been consumed.
-        await handleCallbackUrl(launch.url);
-        return;
-      }
-
+      // Match Auth0's official Capacitor flow: the appUrlOpen event is the
+      // callback boundary. There is no second callback consumption path.
       signalReady();
     };
 
