@@ -16,32 +16,38 @@ function buildEmergencyMessage(event: EmergencyEvent): string {
     `Time: ${new Date(event.triggeredAt).toLocaleString()}`,
   ];
 
-  if (event.location) {
-    lines.push(`Location: https://maps.google.com/?q=${event.location.latitude},${event.location.longitude}`);
-  }
+  const location = event.location
+    ? `https://maps.google.com/?q=${event.location.latitude},${event.location.longitude}`
+    : null;
+
+  lines.push(`Location: ${location ?? "Location unavailable"}`);
 
   if (event.profile.bloodType) lines.push(`Blood type: ${event.profile.bloodType}`);
-  if (event.profile.allergies && event.profile.allergies.length > 0) {
+  if (event.profile.allergies?.length) {
     lines.push(`Allergies: ${event.profile.allergies.join(", ")}`);
   }
 
-  return lines.join("\n");
+  return lines.join("\\n");
+}
+
+export function buildEmergencySmsUri(contact: EmergencyContact, event: EmergencyEvent): string {
+  return `sms:${contact.phone}?body=${encodeURIComponent(buildEmergencyMessage(event))}`;
 }
 
 export class BrowserCommunicationAdapter implements EmergencyEscalationAdapter {
-  public async notifyContact(contact: EmergencyContact, event: EmergencyEvent): Promise<EmergencyDeliveryOutcome> {
-    const message = encodeURIComponent(buildEmergencyMessage(event));
-    const uri = `sms:${contact.phone}?body=${message}`;
-
+  public async notifyContact(
+    contact: EmergencyContact,
+    event: EmergencyEvent,
+  ): Promise<EmergencyDeliveryOutcome> {
     if (typeof window === "undefined") {
       throw new Error("SMS composer is unavailable outside a browser");
     }
 
-    window.location.assign(uri);
+    window.location.assign(buildEmergencySmsUri(contact, event));
     return "PENDING";
   }
 
-  public async requestEmergencyCall(): Promise<"SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE"> {
+  public async requestEmergencyCall(): Promise<EmergencyCommunicationCapability> {
     return "REQUIRES_USER";
   }
 }
@@ -51,10 +57,8 @@ export class CapacitorCommunicationAdapter extends BrowserCommunicationAdapter {
     super();
   }
 
-  public override async requestEmergencyCall(): Promise<"SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE"> {
-    if (!this.emergencyNumber) return "UNAVAILABLE";
-    if (typeof window === "undefined") return "UNAVAILABLE";
-
+  public override async requestEmergencyCall(): Promise<EmergencyCommunicationCapability> {
+    if (!this.emergencyNumber || typeof window === "undefined") return "UNAVAILABLE";
     window.location.assign(`tel:${this.emergencyNumber}`);
     return "REQUIRES_USER";
   }
