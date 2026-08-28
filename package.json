@@ -14,7 +14,7 @@
     "generate-icons": "capacitor-assets generate --android --iconBackgroundColor '#FFFFFF' --iconBackgroundColorDark '#111E1C'"
   },
   "dependencies": {
-    "@auth0/auth0-react": "^2.24.1",
+    "@auth0/auth0-react": "^2.0.0",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "^7.1.2",
     "@capacitor/browser": "^7.0.5",
@@ -60,7 +60,6 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "nanoid": "^5.1.6",
-    "next-themes": "^0.4.6",
     "oidc-client-ts": "^3.4.1",
     "openai": "^6.9.1",
     "react": "^19.2.1",
