@@ -48,6 +48,7 @@ export type OnboardingPayload = {
   allergies: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  localAmbulanceNumber: string;
   trackingMode: "automatic" | "manual";
 
   // metadata
@@ -108,6 +109,7 @@ export type OnboardingDraft = {
   allergies: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  localAmbulanceNumber: string;
   trackingMode: "automatic" | "manual";
 };
 
