@@ -74,22 +74,37 @@ Browser `tel:`/`sms:` actions are system-mediated and are reported as `PENDING`,
 Power-button support remains platform-honest: ordinary web is unsupported; native is represented as a fallback rather than falsely claiming universal interception.
 
 ## Liquid Glass implementation
-The shared Liquid Glass foundation is implemented through existing WellMate CSS/tokens/components rather than a new runtime package.
+The shared Liquid Glass foundation is implemented through the existing WellMate CSS/tokens/components with no new runtime package.
 
-Glass is selective and functional:
-- ambient green-tinted environment/depth
-- AppShell search/profile layers
-- floating BottomNav
-- PageLayout/header/sync surfaces
-- selected inputs/buttons/dialogs/sheets
-- selective overview, mental, habits, sleep, chat and roadmap layers
-- onboarding uses the same material language
+Current visual hierarchy:
+- atmospheric green/neutral environment
+- floating AppShell/PageLayout functional glass
+- floating BottomNav glass dock
+- elevated Dialog/Sheet surfaces
+- restrained glass Inputs
+- selective glass on Physical, Mental, Habits, Sleep, Chat, Roadmap and Profile functional layers
+- onboarding main surfaces use the same material vocabulary
+- dense content, charts and sensitive data remain solid/near-opaque
+- emergency-critical actions remain solid/high contrast
 
-Dense lists, charts, sensitive profile data and emergency-critical controls remain solid/near-opaque. Emergency actions are intentionally not glass-dependent.
+The visual intensification pass strengthened translucency, environmental depth and material separation while retaining the repository's performance rules: bounded backdrop blur, no per-row blur, no continuous blur animation and opaque fallbacks.
 
-Accessibility/performance rules include progressive opaque fallbacks, reduced-motion/reduced-transparency/high-contrast handling, obvious focus-visible states, 44px-class targets, bounded blur, no per-row blur and no continuous blur/shadow animation.
+## Golden Hour verification
+The deterministic emergency model in `src/emergency/detection.ts` remains explicit:
+- IDLE
+- TRACKING
+- MOVING
+- SUSPICIOUS_MOTION
+- CONFIRMATION
+- ESCALATING
+- ESCALATED
+- CANCELLED
 
-Rendered browser/screenshot validation is NOT available in the current tool environment. Source-level visual/accessibility/responsive/performance review can be recorded, but live viewport rendering must not be claimed.
+Verified source behavior includes approximately 20-second stable GPS sampling in automatic mode, GPS-derived speed from consecutive points/timestamps, poor-accuracy filtering, temporary GPS/motion unavailability tolerance, temporal suspicious-motion handling, 15-second confirmation, duplicate escalation protection and truthful browser/native dispatcher semantics.
+
+A detector hardening change now requires the abrupt-stop decision to use the latest sample as stopped plus a prior meaningful movement sample inside the temporal window, rather than merely finding movement and stop somewhere in the buffer.
+
+`Onboarding.tsx` and `useLocalProfile.ts` remained protected/unchanged during this pass; emergency profile ownership remains local-first with blood type, allergies, emergency contact name/phone and automatic/manual tracking mode.
 
 ## Offline AI removal
 The obsolete local/offline AI execution graph has been removed from the current branch, including local providers, model lifecycle/download/storage, inference workers, runtime governors, offline retrieval/cognition support and the old unconfigured emergency Jest test.
@@ -107,11 +122,11 @@ CI runs it before production build. Current deterministic coverage includes norm
 Latest verified CI run for commit `da58c5b56999899b3e699191a0f3d7d051fcf2bd` was run `33100669277` / workflow run #483 and completed successfully for dependency installation, ESLint, TypeScript, deterministic emergency tests and production build.
 
 ## Current validation limits
-- No local repository checkout is exposed; local `git status`, local command execution and local browser tooling must not be claimed.
-- No browser runtime/screenshot harness is exposed, so responsive/rendered validation remains unverified.
-- Native emergency delivery cannot be claimed as successful without an implemented platform-specific native call/SMS plugin.
-- Full interactive Auth0/browser transition testing remains unverified.
-- CI must be rerun after this memory update because the memory file is part of the final commit.
+- No local repository checkout is exposed; local `git status` and local command execution cannot be claimed.
+- No browser runtime/screenshot harness is exposed, so rendered viewport validation remains unverified.
+- Native emergency delivery cannot be claimed as successful without an implemented native call/SMS integration.
+- Interactive Auth0/browser transition testing remains unverified.
+- The repository's current CI workflow is the validation authority.
 
 ## CI workflow
 `.github/workflows/ci-lint-test.yml` runs on PRs to main/develop and now executes:
@@ -120,6 +135,9 @@ Latest verified CI run for commit `da58c5b56999899b3e699191a0f3d7d051fcf2bd` was
 3. TypeScript typecheck
 4. deterministic emergency tests
 5. production build
+
+## Latest pass status
+The current branch head after the latest accepted changes is being validated through GitHub Actions. The most recent completed CI evidence before this pass showed install, ESLint and TypeScript green but the build failed on stale emergency/AI references; those references were repaired. The latest commit's fresh CI result is not yet available, so it must not be recorded as passing.
 
 ## Final-state maintenance rule
 Update this file whenever durable architecture, emergency-state behavior, AI-removal findings, dependency relationships, rollback information or validation results materially change. Never mark a capability as browser/native validated unless the corresponding runtime validation actually occurred.
