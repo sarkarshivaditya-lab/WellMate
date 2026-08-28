@@ -19,15 +19,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Auth0 official Capacitor callback: com.wellmate.app://AUTH0_DOMAIN/capacitor/com.wellmate.app/callback -->
-            <intent-filter android:autoVerify="false">
+            <!-- Capacitor/Auth0 custom-scheme callback. The JS handler validates the full callback URL. -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="com.wellmate.app"
-                    android:host="dev-ltdeeeahwilv10rb.us.auth0.com"
-                    android:pathPrefix="/capacitor/com.wellmate.app/callback" />
+                <data android:scheme="com.wellmate.app" />
             </intent-filter>
         </activity>
 
