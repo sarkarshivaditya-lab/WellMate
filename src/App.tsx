@@ -59,14 +59,12 @@ function RequireAuth({ children, authBridgeReady }: { children: React.ReactNode;
       ? {
           authorizationParams: {
             redirect_uri: CAPACITOR_CALLBACK_URI,
-            appState: { returnTo: "/physical" },
           },
+          appState: { returnTo: "/physical" },
           openUrl: (url: string) => Browser.open({ url }),
         }
       : {
-          authorizationParams: {
-            appState: { returnTo: "/physical" },
-          },
+          appState: { returnTo: "/physical" },
         };
 
     loginWithRedirect(options).catch((error) => {
