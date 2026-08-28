@@ -25,6 +25,7 @@ export type LocalProfile = {
   allergies: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  localAmbulanceNumber: string;
   trackingMode: "automatic" | "manual";
   createdAt: number;
 };
