@@ -1,10 +1,31 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-const sexValidator = v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other")));
-const activityValidator = v.optional(v.union(v.literal("sedentary"), v.literal("light"), v.literal("moderate"), v.literal("active"), v.literal("veryActive")));
-const goalValidator = v.optional(v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")));
-const trackingValidator = v.optional(v.union(v.literal("automatic"), v.literal("manual")));
+const sexValidator = v.optional(
+  v.union(v.literal("male"), v.literal("female"), v.literal("other")),
+);
+
+const activityValidator = v.optional(
+  v.union(
+    v.literal("sedentary"),
+    v.literal("light"),
+    v.literal("moderate"),
+    v.literal("active"),
+    v.literal("veryActive"),
+  ),
+);
+
+const goalValidator = v.optional(
+  v.union(
+    v.literal("lose"),
+    v.literal("maintain"),
+    v.literal("gain"),
+  ),
+);
+
+const trackingValidator = v.optional(
+  v.union(v.literal("automatic"), v.literal("manual")),
+);
 
 const profileArgs = {
   dob: v.optional(v.string()),
@@ -31,12 +52,14 @@ const profileArgs = {
 
 async function getIdentity(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
+
   if (!identity) {
     throw new ConvexError({
       code: "UNAUTHENTICATED",
       message: "User not authenticated",
     });
   }
+
   return identity;
 }
 
@@ -55,7 +78,9 @@ export const updateCurrentUser = mutation({
     const identity = await getIdentity(ctx);
     const user = await getCurrentUserDoc(ctx, identity);
 
-    if (user) return user._id;
+    if (user) {
+      return user._id;
+    }
 
     return await ctx.db.insert("users", {
       name: identity.name,
@@ -70,7 +95,11 @@ export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+
+    if (!identity) {
+      return null;
+    }
+
     return await getCurrentUserDoc(ctx, identity);
   },
 });
@@ -88,6 +117,7 @@ export const completeOnboarding = mutation({
         tokenIdentifier: identity.tokenIdentifier,
         hasCompletedOnboarding: false,
       });
+
       user = await ctx.db.get(userId);
     }
 
@@ -103,10 +133,13 @@ export const completeOnboarding = mutation({
     };
 
     for (const [key, value] of Object.entries(args)) {
-      if (value !== undefined) patch[key] = value;
+      if (value !== undefined) {
+        patch[key] = value;
+      }
     }
 
     await ctx.db.patch(user._id, patch);
+
     return user._id;
   },
 });
@@ -117,12 +150,16 @@ export const updateUserProfile = mutation({
     const identity = await getIdentity(ctx);
     const user = await getCurrentUserDoc(ctx, identity);
 
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     const patch: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(args)) {
-      if (value !== undefined) patch[key] = value;
+      if (value !== undefined) {
+        patch[key] = value;
+      }
     }
 
     if (Object.keys(patch).length > 0) {
