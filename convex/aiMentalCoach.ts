@@ -103,7 +103,7 @@ export const askMentalCoach = action({
       practicesList: buildPracticesList(),
     });
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return createSafetyFallback(
         "AI service is unavailable. Please reach out to local support resources.",
@@ -112,16 +112,16 @@ export const askMentalCoach = action({
     }
 
     try {
-      const openai = new OpenAI({ apiKey });
+      const openai = new OpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" });
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "openrouter/free",
         messages: [
           { role: "system", content: SYSTEM_PROMPT_MENTAL },
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 900,
       });
 
       const content = response.choices[0]?.message?.content;
