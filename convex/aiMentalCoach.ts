@@ -18,7 +18,7 @@ import {
 } from "./_lib/aiMentalHelpers";
 
 const BURST_WINDOW_MS = 60_000;
-const BURST_LIMIT = 3;
+const BURST_LIMIT = 5;
 const DAILY_LIMIT = 20;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODELS = [
@@ -68,10 +68,7 @@ export const askMentalCoach = action({
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.error("WellMate Mental AI: OPENROUTER_API_KEY is not configured");
-      return createSafetyFallback(
-        "AI service is unavailable. Please reach out to local support resources.",
-        true,
-      );
+      return createSafetyFallback("AI service is unavailable. Please reach out to local support resources.", true);
     }
 
     try {
@@ -98,10 +95,7 @@ export const askMentalCoach = action({
       if (!response.ok) {
         const detail = await response.text().catch(() => "");
         console.error("WellMate Mental AI OpenRouter error:", response.status, detail.slice(0, 500));
-        return createSafetyFallback(
-          "The AI service is temporarily unavailable. Please try again shortly.",
-          true,
-        );
+        return createSafetyFallback("The AI service is temporarily unavailable. Please try again shortly.", true);
       }
 
       const data = (await response.json()) as {
@@ -109,7 +103,6 @@ export const askMentalCoach = action({
         model?: string;
       };
       const content = data.choices?.[0]?.message?.content?.trim();
-
       if (!content) {
         console.error("WellMate Mental AI OpenRouter returned no content", data.model ?? "unknown-model");
         return createSafetyFallback("Unable to respond right now.", true);
