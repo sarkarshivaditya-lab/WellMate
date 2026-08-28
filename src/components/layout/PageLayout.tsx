@@ -108,7 +108,7 @@ function PageLayout({
         {hasHeader && (
           <header
             className={cn(
-              "mb-8 rounded-2xl glass-secondary",
+              "mb-8 rounded-2xl glass-primary",
               "border-white/45",
               "shadow-[0_2px_10px_rgba(20,60,50,0.06),_0_14px_34px_rgba(20,60,50,0.08)]",
               "px-5 sm:px-6 pt-5 pb-4",
@@ -185,8 +185,7 @@ function PageLayout({
                           <div
                             ref={panelRef}
                             className={cn(
-                              "absolute right-0 top-full mt-2 w-64 rounded-2xl z-50",
-                              "border border-border bg-card",
+                              "absolute right-0 top-full mt-2 w-64 rounded-2xl z-50 glass-elevated",
                               "shadow-[0_4px_16px_rgba(20,60,50,0.10),_0_1px_4px_rgba(20,60,50,0.06)]",
                               "p-4 text-sm",
                               "animate-in fade-in slide-in-from-top-1 duration-150",
@@ -264,7 +263,7 @@ function PageLayout({
                         "transition-premium",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                         isActive
-                          ? "bg-card text-foreground shadow-[0_1px_3px_rgba(20,60,50,0.12),_0_0_0_1px_rgba(20,60,50,0.05)]"
+                          ? "glass-brand text-foreground shadow-[0_4px_14px_rgba(20,60,50,0.10)]"
                           : "text-muted-foreground hover:text-foreground/80",
                       )}
                     >
