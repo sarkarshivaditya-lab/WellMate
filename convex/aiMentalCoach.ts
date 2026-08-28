@@ -81,7 +81,8 @@ export const askMentalCoach = action({
           "X-Title": "WellMate",
         },
         body: JSON.stringify({
-          models: OPENROUTER_MODELS,
+          model: "openrouter/free",
+          models: OPENROUTER_MODELS.slice(1),
           messages: [
             { role: "system", content: SYSTEM_PROMPT_MENTAL },
             { role: "user", content: userPrompt },
@@ -108,7 +109,14 @@ export const askMentalCoach = action({
         return createSafetyFallback("Unable to respond right now.", true);
       }
 
-      const validated = validateMentalResponse(JSON.parse(content));
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch (parseError) {
+        console.error("WellMate Mental AI invalid JSON:", parseError);
+        return createSafetyFallback("I could not safely format that response. Please try again.", false);
+      }
+      const validated = validateMentalResponse(parsed);
       return {
         ...validated,
         escalation: validated.escalation || crisisFromUser,
