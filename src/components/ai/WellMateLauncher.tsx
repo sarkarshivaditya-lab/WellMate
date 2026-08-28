@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CRISIS_KEYWORDS, EMERGENCY_COPY } from "@/content/disclaimerCopy";
-import { subscribeToWellMateOpen } from "@/services/wellMateEvents";
+import { subscribeToWellMateOpen } from "@/ai/wellMateEvents";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 import { getCachedMemoryContext } from "@/intelligence/memory/memoryStore";
 import { getCachedRecommendations } from "@/recommendations/recommendationEngine";
@@ -14,7 +14,7 @@ import {
   generateScoreFollowUps,
   generateMemoryFollowUps,
   generateRecommendationFollowUps,
-} from "@/services/conversationalPrimitives";
+} from "@/ai/conversationalPrimitives";
 
 type FollowUpPrompt = { id: string; text: string; domain: string; category: string; grounding?: string };
 
