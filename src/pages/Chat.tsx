@@ -1,14 +1,12 @@
-import { Phone } from "lucide-react";
+import { Stethoscope, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import PageLayout from "@/components/layout/PageLayout";
 import { cn } from "@/lib/utils";
 
 export default function Chat() {
   return (
-    <PageLayout title="Support" subtitle="Wellness guidance and care">
-      <div className="space-y-10 pt-2 pb-6">
-
-        {/* ── Launch headline ── */}
+    <PageLayout title="Support" subtitle="Human care is coming to WellMate">
+      <div className="space-y-8 pt-2 pb-6">
         <div className="space-y-4 pt-2">
           <span
             className={cn(
@@ -19,91 +17,71 @@ export default function Chat() {
             Coming Soon
           </span>
           <h1 className="text-[26px] font-semibold tracking-tight text-foreground leading-[1.25]">
-            Human wellness guidance is coming to WellMate.
+            Talk to the right healthcare professional from home.
           </h1>
           <p className="text-[14px] text-muted-foreground/80 leading-relaxed">
-            We are building a platform where verified mental wellness professionals,
-            dietitians, and nutritionists work alongside WellMate's intelligent
-            support systems — giving you care that understands your complete
-            wellness history.
+            In upcoming versions, WellMate will make it possible to connect with
+            doctors and healthcare professionals across specialties from the comfort
+            of your home — with your wellness context ready when you need it.
           </p>
         </div>
 
-        {/* ── What is being built ── */}
-        <div className="space-y-4">
-          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
-            Planned platform
-          </p>
-          <div className="space-y-3">
-            {[
-              "Mental wellness professionals, therapists & counsellors",
-              "Registered dietitians & nutritionists",
-              "Longitudinal care informed by your full wellness history",
-              "Intelligent support available between sessions",
-            ].map((item) => (
-              <div key={item} className="flex items-start gap-3">
-                <div className="mt-[6px] h-1 w-1 rounded-full bg-primary/35 flex-shrink-0" />
-                <p className="text-[13.5px] text-foreground/65 leading-snug">{item}</p>
+        <Card className="glass-brand border-primary/20">
+          <CardContent className="py-6 px-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Stethoscope className="h-5 w-5" />
               </div>
-            ))}
-          </div>
-        </div>
+              <div>
+                <p className="text-[15px] font-semibold text-foreground">
+                  Healthcare access, built into WellMate
+                </p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+                  The goal is simple: when you need human expertise, you should be
+                  able to find and connect with the appropriate professional without
+                  leaving your home.
+                </p>
+              </div>
+            </div>
 
-        {/* ── Philosophy ── */}
-        <Card className="glass-subtle">
-          <CardContent className="py-5 px-5">
-            <p className="text-[13px] text-foreground/50 leading-relaxed">
-              WellMate is designed from the ground up to combine longitudinal
-              wellness understanding with human expertise — so that every
-              consultation begins with context, not a blank page.
-            </p>
+            <div className="grid gap-3">
+              {[
+                "Doctors across multiple specialties",
+                "Mental health and wellbeing professionals",
+                "Dietitians and nutrition specialists",
+                "Care informed by your WellMate wellness history",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <div className="mt-[6px] h-1.5 w-1.5 rounded-full bg-primary/45 flex-shrink-0" />
+                  <p className="text-[13.5px] text-foreground/70 leading-snug">{item}</p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* ── Founder contact ── */}
-        <div className="space-y-4">
-          <p className="text-[11px] font-semibold tracking-[0.09em] uppercase text-muted-foreground/45">
-            Early access & consultation
-          </p>
-          <Card className="glass-secondary border-white/40">
-            <CardContent className="py-5 px-5 space-y-4">
-              <div className="space-y-0.5">
-                <p className="text-[15px] font-semibold text-foreground tracking-tight">
-                  Dr. Anuradha Palta
+        <Card className="glass-subtle">
+          <CardContent className="py-6 px-5">
+            <div className="flex items-start gap-3">
+              <Users className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary/65" />
+              <div>
+                <p className="text-[13.5px] font-semibold text-foreground/85">
+                  This network is being built now.
                 </p>
-                <p className="text-[12.5px] text-muted-foreground/70">
-                  Founder, WellMate
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                  Doctor and specialist consultations are not available in the
+                  current release. This section will become your gateway to human
+                  healthcare support in a future version of WellMate.
                 </p>
               </div>
-              <p className="text-[12.5px] text-muted-foreground/65 leading-relaxed">
-                For wellness consultations, early access enquiries, or platform
-                partnership discussions, you are welcome to reach out directly.
-              </p>
-              <a
-                href="tel:+917061486520"
-                className={cn(
-                  "inline-flex items-center gap-2.5",
-                  "px-4 py-2.5 rounded-xl",
-                  "glass-subtle hover:bg-white/25",
-                  "border border-border/35 hover:border-border/60",
-                  "transition-premium active:scale-[0.97]",
-                )}
-              >
-                <Phone className="h-3.5 w-3.5 text-foreground/40" strokeWidth={2} />
-                <span className="text-[13px] font-medium text-foreground/65">
-                  +91 70614 86520
-                </span>
-              </a>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* ── Closing note ── */}
-        <p className="text-[11px] text-muted-foreground/35 leading-relaxed pb-2">
-          The WellMate Support platform is currently in development. Clinical and
-          wellness professionals interested in joining the network are invited to connect.
+        <p className="text-[11px] text-muted-foreground/45 leading-relaxed pb-2">
+          Until these services launch, WellMate's current features remain focused on
+          wellness guidance, health tracking, and emergency-support capabilities.
         </p>
-
       </div>
     </PageLayout>
   );
