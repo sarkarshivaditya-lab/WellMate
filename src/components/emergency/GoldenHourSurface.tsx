@@ -217,6 +217,7 @@ function GoldenHourSurface() {
         allergies: profile?.allergies ?? "",
         emergencyContactName: profile?.emergencyContactName ?? "",
         emergencyContactPhone: profile?.emergencyContactPhone ?? "",
+        localAmbulanceNumber: profile?.localAmbulanceNumber ?? "",
         trackingMode,
       },
       "ESCALATING",
