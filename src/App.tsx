@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Browser } from "@capacitor/browser";
 
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
