@@ -10,6 +10,7 @@ import {
   shouldTimeoutConfirmation,
   speedFromGps,
 } from "../src/emergency/detection.ts";
+import { BrowserEmergencySensorAdapter } from "../src/emergency/sensorService.ts";
 
 const now = Date.now();
 const at = (offsetMs, speedMps, accelerationG, rotationMagnitude) => ({
@@ -58,6 +59,32 @@ test("sustained suspicious motion followed by corroborated stop confirms", () =>
 test("rotation alone becomes suspicious but not confirmation", () => {
   const context = { state: "TRACKING", recent: [at(-300, 0.2, 0.5, 3)] };
   assert.equal(analyzeMotion(context, now).nextState, "SUSPICIOUS_MOTION");
+});
+
+test("DeviceMotion rotationRate is converted to angular velocity", async () => {
+  let motionHandler;
+  globalThis.window = {
+    DeviceMotionEvent: class DeviceMotionEvent {},
+    addEventListener(type, handler) {
+      if (type === "devicemotion") motionHandler = handler;
+    },
+    removeEventListener() {},
+  };
+
+  const adapter = new BrowserEmergencySensorAdapter();
+  const signals = [];
+  const stop = await adapter.startMotion({ onSignal: (signal) => signals.push(signal) });
+
+  motionHandler({
+    accelerationIncludingGravity: { x: 0, y: 0, z: 9.80665 },
+    rotationRate: { alpha: 120, beta: 160, gamma: 0 },
+  });
+
+  assert.equal(signals.length, 1);
+  assert.ok(Math.abs(signals[0].angularVelocityDps - 200) < 0.001);
+  assert.equal(signals[0].sensorAvailable, true);
+  stop();
+  delete globalThis.window;
 });
 
 test("unavailable motion does not trigger", () => {
