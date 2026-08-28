@@ -183,7 +183,27 @@ function RootEntry() {
   return <Navigate to="/physical" replace />;
 }
 
-/* ======================================================
+
+function AuthCallbackBridge() {
+  const { isLoading, isAuthenticated, error } = useAuth0();
+  const navigate = React.useCallback((target: string) => {
+    window.history.replaceState({}, document.title, target);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+
+  React.useEffect(() => {
+    if (isLoading) return;
+    if (error) {
+      console.error("[Auth] callback error", error);
+      navigate("/?auth_error=1");
+      return;
+    }
+    if (isAuthenticated) navigate("/");
+  }, [isLoading, isAuthenticated, error, navigate]);
+
+  return <AppLoadingScreen />;
+}
+\n/* ======================================================
    APP STARTUP — lifecycle init + interrupted write recovery
    ====================================================== */
 
@@ -277,6 +297,7 @@ export default function App() {
       <React.Suspense fallback={<AppLoadingScreen />}>
       <Routes>
         <Route path="/" element={<RootEntry />} />
+        <Route path="/callback" element={<AuthCallbackBridge />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
