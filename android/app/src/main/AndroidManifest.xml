@@ -19,12 +19,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Capacitor/Auth0 custom-scheme callback. The JS handler validates the full callback URL. -->
+            <!-- Auth0/Capacitor custom-scheme callback. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.wellmate.app" />
+                <data android:scheme="@string/custom_url_scheme" />
             </intent-filter>
         </activity>
 
