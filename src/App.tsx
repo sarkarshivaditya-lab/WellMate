@@ -200,6 +200,9 @@ function useAppStartup() {
       disposeLifecycle();
       disposeAnalytics();
       disposeNotifications();
+      void disposeAIRuntime();
+      unbindProactiveCognition();
+      disposeSelfHealingRuntime();
     };
   }, []);
 }
