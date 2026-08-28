@@ -12,7 +12,7 @@ import PhysicalInsightsCard from "./PhysicalInsightsCard";
 import PhysicalGoalAdvisor from "./PhysicalGoalAdvisor";
 import PhysicalConfidenceCard from "./PhysicalConfidenceCard";
 import { SleepTabContent } from "../Sleep";
-import GoldenHourSurface from "@/components/emergency/GoldenHourSurface";
+import { EmergencyTrackingPanel } from "@/components/emergency/EmergencyTrackingPanel";
 
 import { useExercisesByDate } from "@/hooks/useExercisesByDate";
 import { useAllExercises } from "@/hooks/useAllExercises";
@@ -702,7 +702,7 @@ export default function PhysicalDashboard() {
           </div>
 
           <div id="emergency-sos">
-            <GoldenHourSurface />
+            <EmergencyTrackingPanel />
           </div>
           <WelcomeCard />
           <PhysicalConfidenceCard />
