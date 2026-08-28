@@ -46,40 +46,54 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6"><p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p><div className="flex flex-col items-center gap-2 w-28"><Skeleton className="h-1.5 w-full" /><Skeleton className="h-1.5 w-2/3" /></div></div>;
 }
 
-function RequireAuth({ children, authBridgeReady }: { children: React.ReactNode; authBridgeReady: boolean }) {
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
-  const [timedOut, setTimedOut] = React.useState(false);
-  const loginStartedRef = React.useRef(false);
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, error: authError, loginWithRedirect } = useAuth0();
 
-  React.useEffect(() => {
-    if (!authBridgeReady || isLoading || isAuthenticated || loginStartedRef.current) return;
-    loginStartedRef.current = true;
-
-    const options = isCapacitorNative
-      ? {
-          authorizationParams: {
-            redirect_uri: CAPACITOR_CALLBACK_URI,
-          },
-          appState: { returnTo: "/physical" },
-          openUrl: (url: string) => Browser.open({ url }),
-        }
-      : {
-          appState: { returnTo: "/physical" },
-        };
-
-    loginWithRedirect(options).catch((error) => {
-      loginStartedRef.current = false;
+  const handleLogin = React.useCallback(async () => {
+    try {
+      await loginWithRedirect(
+        isCapacitorNative
+          ? {
+              authorizationParams: {
+                redirect_uri: CAPACITOR_CALLBACK_URI,
+              },
+              openUrl: (url: string) => Browser.open({ url, windowName: "_self" }),
+            }
+          : undefined,
+      );
+    } catch (error) {
       console.error("[WellMate Auth] loginWithRedirect failed:", error);
-    });
-  }, [authBridgeReady, isLoading, isAuthenticated, loginWithRedirect]);
+    }
+  }, [loginWithRedirect]);
 
-  React.useEffect(() => {
-    if (isAuthenticated) loginStartedRef.current = false;
-  }, [isAuthenticated]);
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+        <p className="text-sm font-medium text-foreground">Sign-in could not be completed.</p>
+        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{authError.message}</p>
+        <button
+          className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
+          onClick={() => void handleLogin()}
+        >
+          Try sign in again
+        </button>
+      </div>
+    );
+  }
 
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
-  if (timedOut) return <Navigate to="/onboarding" replace />;
-  if (!authBridgeReady || isLoading || !isAuthenticated) return <AppLoadingScreen onTimeout={handleTimeout} />;
+  if (isLoading) return <AppLoadingScreen />;
+
+  if (!isAuthenticated) {
+    return (
+      <AppLoadingScreen
+        onTimeout={() => {
+          void handleLogin();
+        }}
+      />
+    );
+  }
+
   return <>{children}</>;
 }
 
