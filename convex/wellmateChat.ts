@@ -8,6 +8,7 @@ import { detectCrisis } from "./_lib/aiMentalHelpers";
 type WellMateChatResponse =
   | { domain: "mental"; payload: unknown }
   | { domain: "physical"; payload: unknown }
+  | { domain: "emergency"; payload: { title: string; message: string; emergencyNumber: string } }
   | { domain: "clarify"; payload: { question: string; options?: string[] } };
 
 function containsAny(message: string, terms: string[]): boolean {
@@ -15,7 +16,48 @@ function containsAny(message: string, terms: string[]): boolean {
   return terms.some((term) => m.includes(term));
 }
 
-function classifyIntent(message: string): "mental" | "physical" | "general" | "safety" {
+function detectEmergency(message: string): boolean {
+  return containsAny(message, [
+    "i had an accident",
+    "i've had an accident",
+    "i have had an accident",
+    "there was an accident",
+    "road accident",
+    "car accident",
+    "bike accident",
+    "motorcycle accident",
+    "i crashed",
+    "we crashed",
+    "car crash",
+    "bike crash",
+    "motorcycle crash",
+    "collision",
+    "i was hit",
+    "got hit by a car",
+    "got hit by a bike",
+    "i am injured",
+    "i'm injured",
+    "seriously injured",
+    "severely injured",
+    "i am bleeding",
+    "i'm bleeding",
+    "bleeding heavily",
+    "unconscious",
+    "not breathing",
+    "can't breathe",
+    "cannot breathe",
+    "choking",
+    "severe injury",
+    "badly hurt",
+    "seriously hurt",
+    "i fell badly",
+    "trapped in",
+    "trapped inside",
+  ]);
+}
+
+function classifyIntent(message: string): "mental" | "physical" | "general" | "safety" | "emergency" {
+  if (detectEmergency(message)) return "emergency";
   if (detectCrisis(message)) return "safety";
 
   const mental = containsAny(message, [
@@ -48,6 +90,17 @@ export const chat = action({
     if (!identity) throw new ConvexError("UNAUTHENTICATED");
 
     const intent = classifyIntent(message);
+
+    if (intent === "emergency") {
+      return {
+        domain: "emergency",
+        payload: {
+          title: "Golden Hour activated",
+          message: "This sounds like an emergency. WellMate has switched this conversation into Golden Hour mode. Move to safety if you can, contact emergency services, and use the emergency actions below. Do not wait for an AI response if someone is seriously injured or in immediate danger.",
+          emergencyNumber: "112",
+        },
+      };
+    }
 
     if (intent === "safety" || intent === "mental") {
       return {
