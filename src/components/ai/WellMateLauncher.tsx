@@ -40,6 +40,18 @@ function loadChatMessages(): Message[] {
   return DEFAULT_MESSAGES;
 }
 
+function parseMentalPayload(payload: unknown): { summary: string; escalation: boolean; confidence?: string } {
+  if (!payload || typeof payload !== "object") {
+    return { summary: "I’m here with you. Tell me a little more about what’s going on.", escalation: false };
+  }
+  const obj = payload as Record<string, unknown>;
+  return {
+    summary: typeof obj.summary === "string" ? obj.summary : "I’m here with you. Tell me a little more about what’s going on.",
+    escalation: obj.escalation === true,
+    confidence: typeof obj.confidence === "string" ? obj.confidence : undefined,
+  };
+}
+
 type ClarifyPayload = {
   question: string;
   options?: string[];
@@ -208,8 +220,8 @@ function WellMateLauncher() {
       }
 
       if (res.domain === "mental") {
-        const summary = safeString(res.payload, "summary");
-        if (summary && detectCrisis(summary)) {
+        const mentalResponse = parseMentalPayload(res.payload);
+        if (detectCrisis(text) || detectCrisis(mentalResponse.summary) || mentalResponse.escalation) {
           setShowSafetyNotice(true);
         }
         setMessages((m) => [
@@ -217,7 +229,7 @@ function WellMateLauncher() {
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            text: summary ?? "I'm here with you.",
+            text: mentalResponse.summary,
           },
         ]);
       }
@@ -228,8 +240,10 @@ function WellMateLauncher() {
         const confidence = safeString(res.payload, "confidence");
         const lines: string[] = [];
         if (advice) lines.push(advice);
-        if (nutrition?.calories != null) lines.push(`Calories: ${nutrition.calories} kcal`);
+        const askedForNutrition = /\b(calorie|calories|macro|macros|protein|carb|carbs|fat|diet|meal|nutrition|recipe)\b/i.test(text);
+        if (askedForNutrition && nutrition?.calories != null) lines.push(`Calories: ${nutrition.calories} kcal`);
         if (
+          askedForNutrition &&
           nutrition?.protein != null &&
           nutrition?.carbs != null &&
           nutrition?.fat != null
@@ -238,7 +252,7 @@ function WellMateLauncher() {
             `Macros → Protein ${nutrition.protein}g · Carbs ${nutrition.carbs}g · Fat ${nutrition.fat}g`,
           );
         }
-        if (confidence) lines.push(`Confidence: ${confidence}`);
+        if (confidence && askedForNutrition) lines.push(`Confidence: ${confidence}`);
         setMessages((m) => [
           ...m,
           {
