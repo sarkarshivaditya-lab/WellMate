@@ -31,6 +31,7 @@ export function EmergencyTrackingPanel() {
   } = useEmergencyTracking();
   const [countdown, setCountdown] = useState<number | null>(null);
   const [callMessage, setCallMessage] = useState<string | null>(null);
+  const [manualEscalationCountdown, setManualEscalationCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     if (!snapshot.confirmationDeadlineAt) {
@@ -42,6 +43,14 @@ export function EmergencyTrackingPanel() {
     const timer = setInterval(update, 100);
     return () => clearInterval(timer);
   }, [snapshot.confirmationDeadlineAt]);
+
+  useEffect(() => {
+    if (snapshot.state !== "ESCALATED" || !snapshot.lastEscalation) {
+      setManualEscalationCountdown(null);
+      return;
+    }
+    setManualEscalationCountdown(null);
+  }, [snapshot.state, snapshot.lastEscalation]);
 
   const seconds = countdown === null ? null : Math.ceil(countdown / 1000);
   const coordinates = snapshot.latestSignal?.position;
@@ -114,10 +123,44 @@ export function EmergencyTrackingPanel() {
             <button type="button" onClick={() => void stop()} className="min-h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15">Stop tracking</button>
           )}
 
-          {!snapshot.trackingActive && snapshot.state !== "ESCALATED" && snapshot.state !== "CONFIRMATION_WINDOW" && (
-            <button type="button" onClick={() => void manualEmergency()} className="min-h-14 w-full rounded-2xl border-2 border-destructive/40 bg-destructive/[0.04] px-4 text-sm font-extrabold text-destructive focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/20">
+          {!snapshot.trackingActive && snapshot.state !== "ESCALATED" && snapshot.state !== "CONFIRMATION_WINDOW" && manualEscalationCountdown === null && (
+            <button
+              type="button"
+              onClick={() => {
+                setManualEscalationCountdown(10);
+                const timer = window.setInterval(() => {
+                  setManualEscalationCountdown((current) => {
+                    if (current === null) return null;
+                    if (current <= 1) {
+                      window.clearInterval(timer);
+                      void manualEmergency();
+                      return null;
+                    }
+                    return current - 1;
+                  });
+                }, 1000);
+              }}
+              className="min-h-14 w-full rounded-2xl border-2 border-destructive/40 bg-destructive/[0.04] px-4 text-sm font-extrabold text-destructive focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/20"
+            >
               <span className="inline-flex items-center gap-2"><AlertTriangle className="h-4 w-4" />SOS — SEND EMERGENCY ALERT</span>
             </button>
+          )}
+
+          {manualEscalationCountdown !== null && !snapshot.lastEscalation && (
+            <div className="space-y-3 rounded-3xl border-2 border-destructive/40 bg-destructive/[0.06] p-5" role="alert" aria-live="assertive">
+              <div className="text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-destructive">Emergency request pending</p>
+                <p className="mt-2 text-3xl font-black text-foreground">{manualEscalationCountdown}s</p>
+                <p className="mt-1 text-sm text-muted-foreground">The Golden Hour protocol will activate automatically when the countdown ends.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setManualEscalationCountdown(null)}
+                className="min-h-14 w-full rounded-2xl border-2 border-destructive bg-background px-5 text-base font-bold text-destructive focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-destructive/20"
+              >
+                Cancel request
+              </button>
+            </div>
           )}
 
           {(snapshot.state === "ESCALATED" || snapshot.lastEscalation) && (
