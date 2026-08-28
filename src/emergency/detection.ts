@@ -97,8 +97,16 @@ export function analyzeMotion(context: DetectionContext, nowMs = Date.now()): De
       (sample.accelerationG ?? 0) >= MIN_SUSPICIOUS_ACCEL_G ||
       (sample.rotationMagnitude ?? 0) >= MIN_SUSPICIOUS_ROTATION,
   );
-  const movingBeforeStop = usable.some((sample) => (sample.speedMps ?? 0) >= MIN_MOVING_SPEED_MPS);
-  const stoppedAfterMovement = usable.some((sample) => (sample.speedMps ?? Infinity) <= STOP_SPEED_MPS);
+  const ordered = [...usable].sort((a, b) => a.timestampMs - b.timestampMs);
+  const latest = ordered.at(-1);
+  const priorMovement = ordered.some(
+    (sample) =>
+      latest &&
+      latest.timestampMs - sample.timestampMs >= 0 &&
+      latest.timestampMs - sample.timestampMs <= MOTION_WINDOW_MS &&
+      (sample.speedMps ?? 0) >= MIN_MOVING_SPEED_MPS,
+  );
+  const latestIsStopped = (latest?.speedMps ?? Infinity) <= STOP_SPEED_MPS;
   const corroboratedImpact =
     usable.filter(
       (sample) =>
@@ -117,8 +125,8 @@ export function analyzeMotion(context: DetectionContext, nowMs = Date.now()): De
     context.state === "SUSPICIOUS_MOTION" &&
     suspicious &&
     suspiciousLongEnough &&
-    movingBeforeStop &&
-    stoppedAfterMovement &&
+    priorMovement &&
+    latestIsStopped &&
     corroboratedImpact
   ) {
     return { type: "abrupt_stop", nextState: "CONFIRMATION" };
