@@ -33,16 +33,14 @@ import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
 
-const AUTH_TIMEOUT_MS = 8000;
-
 function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   const [timedOut, setTimedOut] = React.useState(false);
   React.useEffect(() => {
     if (!onTimeout) return;
-    const t = setTimeout(() => { setTimedOut(true); onTimeout(); }, AUTH_TIMEOUT_MS);
+    const t = setTimeout(() => setTimedOut(true), 8000);
     return () => clearTimeout(t);
   }, [onTimeout]);
-  if (timedOut) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center"><p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p><p className="text-sm text-muted-foreground max-w-xs">Taking longer than expected. Check your connection or continue offline.</p><button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={() => window.location.replace("/onboarding")}>Continue offline</button></div>;
+  if (timedOut) return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center"><p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p><p className="text-sm text-muted-foreground max-w-xs">Taking longer than expected. Please sign in to continue.</p><button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={onTimeout}>Sign in</button></div>;
   return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6"><p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p><div className="flex flex-col items-center gap-2 w-28"><Skeleton className="h-1.5 w-full" /><Skeleton className="h-1.5 w-2/3" /></div></div>;
 }
 
@@ -54,9 +52,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       await loginWithRedirect(
         isCapacitorNative
           ? {
-              authorizationParams: {
-                redirect_uri: CAPACITOR_CALLBACK_URI,
-              },
+              authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI },
               openUrl: (url: string) => Browser.open({ url, windowName: "_self" }),
             }
           : undefined,
@@ -72,35 +68,17 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
         <p className="text-sm font-medium text-foreground">Sign-in could not be completed.</p>
         <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">{authError.message}</p>
-        <button
-          className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
-          onClick={() => void handleLogin()}
-        >
-          Try sign in again
-        </button>
+        <button className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3" onClick={() => void handleLogin()}>Try sign in again</button>
       </div>
     );
   }
 
   if (isLoading) return <AppLoadingScreen />;
-
-  if (!isAuthenticated) {
-    return (
-      <AppLoadingScreen
-        onTimeout={() => {
-          void handleLogin();
-        }}
-      />
-    );
-  }
-
+  if (!isAuthenticated) return <AppLoadingScreen onTimeout={() => void handleLogin()} />;
   return <>{children}</>;
 }
 
 export default function App() {
-  const [authBridgeReady, setAuthBridgeReady] = React.useState(!isCapacitorNative);
-  const handleAuthBridgeReady = React.useCallback(() => setAuthBridgeReady(true), []);
-
   React.useEffect(() => {
     void recoverAllInterruptedWrites();
     initLifecycle();
@@ -120,14 +98,14 @@ export default function App() {
 
   return (
     <>
-      <CapacitorAuthHandler onReady={handleAuthBridgeReady} />
+      <CapacitorAuthHandler />
       <BrowserRouter>
         <React.Suspense fallback={<AppLoadingScreen />}>
           <Routes>
             <Route path="/" element={<WelcomePage />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
-            <Route element={<RequireAuth authBridgeReady={authBridgeReady}><AppShell><Outlet /></AppShell></RequireAuth>}>
+            <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
               <Route path="/physical" element={<PhysicalDashboard />} />
               <Route path="/mental" element={<MentalOverview />} />
               <Route path="/mental/journal" element={<Journal />} />
