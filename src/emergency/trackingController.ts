@@ -12,6 +12,7 @@ import {
   type EmergencyEscalationAdapter,
   type EmergencyEscalationResult,
 } from "./emergencyEscalation";
+import { readCurrentLocation } from "./emergencyService";
 import type { LocalProfile } from "@/hooks/useLocalProfile";
 export type TrackingMode = "AUTOMATIC" | "MANUAL";
 export type EmergencyCallCapability = "SUPPORTED" | "REQUIRES_USER" | "UNAVAILABLE";
@@ -40,6 +41,28 @@ export class EmergencyTrackingController {
   public requestEmergencyCall(): Promise<EmergencyCallCapability> { return this.escalationAdapter.requestEmergencyCall(); }
   private handleSignal(signal: AccidentSignal): void { this.latestSignal = signal; const action = this.stateMachine.ingest(signal); this.handleAction(action); this.publish(); }
   private handleAction(action: AccidentDetectionAction): void { if (action.type !== "START_CONFIRMATION") return; if (this.confirmationTimer) clearInterval(this.confirmationTimer); this.confirmationTimer = setInterval(() => { const next = this.stateMachine.tick(Date.now()); if (next.type === "ESCALATE") { if (this.confirmationTimer) { clearInterval(this.confirmationTimer); this.confirmationTimer = null; } void this.escalate(next.reason); } this.publish(); }, 250); }
-  private async escalate(reason: "TIMEOUT" | "USER_NOT_OK" | "MANUAL" | "SHORTCUT"): Promise<void> { const now = Date.now(); if (now - this.lastEscalationAt < 30_000) return; this.lastEscalationAt = now; if (this.confirmationTimer) { clearInterval(this.confirmationTimer); this.confirmationTimer = null; } const profile = this.profileProvider(); const contacts = profile?.emergencyContactPhone ? [{ id: "primary", name: profile.emergencyContactName || "Emergency contact", phone: profile.emergencyContactPhone }] : []; const allergies = profile?.allergies ? profile.allergies.split(",").map((item) => item.trim()).filter(Boolean) : []; const event = createEmergencyEvent({ triggeredAt: now, reason, location: this.latestSignal?.position ? { ...this.latestSignal.position, capturedAt: now } : null, profile: { bloodType: profile?.bloodType, allergies }, contacts }); const result = await escalateEmergency(this.escalationAdapter, event); this.lastEscalation = result; this.stateMachine.markEscalated(now); this.publish(); }
+  private async escalate(reason: "TIMEOUT" | "USER_NOT_OK" | "MANUAL" | "SHORTCUT"): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastEscalationAt < 30_000) return;
+    this.lastEscalationAt = now;
+    if (this.confirmationTimer) { clearInterval(this.confirmationTimer); this.confirmationTimer = null; }
+
+    const profile = this.profileProvider();
+    const contacts = profile?.emergencyContactPhone ? [{ id: "primary", name: profile.emergencyContactName || "Emergency contact", phone: profile.emergencyContactPhone }] : [];
+    const allergies = profile?.allergies ? profile.allergies.split(",").map((item) => item.trim()).filter(Boolean) : [];
+
+    // Always attempt a fresh GPS fix at the moment of escalation. Manual SOS can
+    // be triggered without an active tracking session, so latestSignal may be null.
+    const trackedLocation = this.latestSignal?.position;
+    const freshLocation = trackedLocation ? null : await readCurrentLocation();
+    const position = trackedLocation ?? freshLocation;
+    const location = position ? { ...position, capturedAt: Date.now() } : null;
+
+    const event = createEmergencyEvent({ triggeredAt: now, reason, location, profile: { bloodType: profile?.bloodType, allergies }, contacts });
+    const result = await escalateEmergency(this.escalationAdapter, event);
+    this.lastEscalation = result;
+    this.stateMachine.markEscalated(now);
+    this.publish();
+  }
   private publish(): void { const snapshot = this.getSnapshot(); for (const listener of this.listeners) { try { listener(snapshot); } catch { } } }
 }
