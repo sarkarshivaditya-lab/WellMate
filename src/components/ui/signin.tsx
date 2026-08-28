@@ -47,7 +47,6 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
         try {
           if (!isAuthenticated) {
             await loginWithRedirect({
-              authorizationParams: {},
               appState: {
                 returnTo:
                   window.location.pathname !== "/"
