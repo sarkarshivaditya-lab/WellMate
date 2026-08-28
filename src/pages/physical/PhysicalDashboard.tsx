@@ -681,7 +681,29 @@ export default function PhysicalDashboard() {
     >
       {tab === "overview" && (
         <div key="overview" className="space-y-6 animate-wm-tab-in">
-          <GoldenHourSurface />
+          <div className="rounded-3xl glass-brand p-4 sm:p-5 border-primary/30">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-primary">Emergency readiness</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight">Golden Hour protection is ready.</h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
+                  WellMate watches for suspicious movement patterns and gives you a 15-second window to call for help before escalation.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="glass-interactive rounded-2xl min-h-12 min-w-12 px-3 text-sm font-semibold shrink-0"
+                onClick={() => window.location.hash = "#emergency-sos"}
+                aria-label="Open emergency SOS"
+              >
+                SOS
+              </button>
+            </div>
+          </div>
+
+          <div id="emergency-sos">
+            <GoldenHourSurface />
+          </div>
           <WelcomeCard />
           <PhysicalConfidenceCard />
           <TodayActivitySummary />
