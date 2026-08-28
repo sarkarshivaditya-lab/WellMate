@@ -421,25 +421,17 @@ async function idbChunkDiagnostic(modelId: string): Promise<void> {
 async function* getDirectoryEntries(
   dir: FileSystemDirectoryHandle,
 ): AsyncGenerator<FileSystemHandle> {
-  const directoryWithEntries = dir as FileSystemDirectoryHandle & {
+  const iterator = (dir as FileSystemDirectoryHandle & {
     values?: () => AsyncIterableIterator<FileSystemHandle>;
-  };
+  }).values;
 
-  if (typeof directoryWithEntries.values === "function") {
-    yield* directoryWithEntries.values();
+  if (typeof iterator === "function") {
+    const entries = iterator.call(dir);
+    for await (const entry of entries) yield entry;
     return;
   }
 
-  const directoryWithAsyncIterator = directoryWithEntries as FileSystemDirectoryHandle & {
-    [Symbol.asyncIterator]?: () => AsyncIterator<FileSystemHandle>;
-  };
-
-  if (directoryWithAsyncIterator[Symbol.asyncIterator]) {
-    for await (const entry of directoryWithAsyncIterator) yield entry;
-    return;
-  }
-
-  throw new Error("OPFS_DIRECTORY_ITERATION_UNSUPPORTED");
+  throw new Error("OPFS_DIRECTORY_VALUES_UNSUPPORTED");
 }
 
 async function readAllIdbChunks(modelId: string, chunkCount: number): Promise<Uint8Array[]> {
