@@ -191,21 +191,24 @@ function RootEntry() {
 
 
 function AuthCallbackBridge() {
-  const { isLoading, isAuthenticated, error } = useAuth0();
-  const navigate = React.useCallback((target: string) => {
-    window.history.replaceState({}, document.title, target);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }, []);
+  const { isLoading, isAuthenticated, error, loginWithRedirect } = useAuth0();
 
-  React.useEffect(() => {
-    if (isLoading) return;
-    if (error) {
-      console.error("[Auth] callback error", error);
-      navigate("/?auth_error=1");
-      return;
-    }
-    if (isAuthenticated) navigate("/");
-  }, [isLoading, isAuthenticated, error, navigate]);
+  if (isLoading) return <AppLoadingScreen />;
+
+  if (error) {
+    return (
+      <AuthErrorScreen
+        error={error}
+        onRetry={() => {
+          void loginWithRedirect({ appState: { returnTo: "/" } }).catch((retryError) =>
+            console.error("[Auth] callback retry failed", retryError),
+          );
+        }}
+      />
+    );
+  }
+
+  if (isAuthenticated) return <Navigate to="/" replace />;
 
   return <AppLoadingScreen />;
 }
