@@ -59,7 +59,7 @@ export function EmergencyTrackingPanel() {
 
   return (
     <div className="space-y-4">
-      <Card className="border-primary/20 bg-primary/[0.04]">
+      <Card className="glass-primary border-primary/20">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">
             <div className="rounded-2xl bg-primary/10 p-2.5 text-primary"><ShieldAlert className="h-5 w-5" /></div>
@@ -70,14 +70,14 @@ export function EmergencyTrackingPanel() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-2xl border border-border bg-background/60 px-4 py-4">
+          <div className="glass-subtle rounded-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Current status</p>
             <p className="mt-1 text-xl font-semibold text-foreground">{stateLabel(snapshot.state)}</p>
             {snapshot.mode && <p className="mt-1 text-xs text-muted-foreground">Mode: {snapshot.mode === "AUTOMATIC" ? "Automatic" : "Manual"}</p>}
           </div>
 
           {coordinates && (
-            <div className="flex items-start gap-3 rounded-2xl border border-border bg-background/40 px-4 py-3">
+            <div className="glass-subtle flex items-start gap-3 rounded-2xl">
               <MapPin className="mt-0.5 h-4 w-4 text-primary" />
               <div>
                 <p className="text-xs font-medium text-foreground">Location available</p>
@@ -128,7 +128,7 @@ export function EmergencyTrackingPanel() {
           {callMessage && <p className="text-xs leading-relaxed text-muted-foreground">{callMessage}</p>}
 
           {snapshot.state === "ESCALATED" && (
-            <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-4 text-center">
+            <div className="glass-subtle rounded-2xl px-4 py-4 text-center">
               <CheckCircle2 className="mx-auto h-5 w-5 text-primary" />
               <p className="mt-2 text-sm font-semibold text-foreground">Emergency workflow triggered</p>
               <p className="mt-1 text-xs text-muted-foreground">Delivery is shown explicitly below. WellMate never assumes an emergency message was received when the platform cannot confirm delivery.</p>
@@ -136,7 +136,7 @@ export function EmergencyTrackingPanel() {
           )}
 
           {snapshot.lastEscalation && (
-            <div className="space-y-2 rounded-2xl border border-border bg-background/50 px-4 py-3">
+            <div className="glass-subtle space-y-2 rounded-2xl px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Notification status</p>
               <p className="text-sm font-semibold text-foreground">{snapshot.lastEscalation.status}</p>
               {snapshot.lastEscalation.deliveries.map((delivery) => (
