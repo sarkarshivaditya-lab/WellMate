@@ -50,6 +50,12 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
               authorizationParams: {
                 prompt: "login",
               },
+              appState: {
+                returnTo:
+                  window.location.pathname !== "/"
+                    ? window.location.pathname + window.location.search
+                    : "/",
+              },
             });
             return;
           }
