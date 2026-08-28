@@ -20,7 +20,7 @@ function resolveRedirectUri(): string {
   const envUri = (import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined)?.trim();
   if (envUri) return envUri;
 
-  return typeof window !== "undefined" ? window.location.origin : "";
+  return typeof window !== "undefined" ? window.location.origin + "/callback" : "";
 }
 
 function AuthProviderWithNavigation({ children }: { children: React.ReactNode }) {
