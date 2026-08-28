@@ -153,6 +153,7 @@ export default function App() {
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
             <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
+              <Route path="/overview" element={<Index />} />
               <Route path="/physical" element={<PhysicalDashboard />} />
               <Route path="/mental" element={<MentalOverview />} />
               <Route path="/mental/journal" element={<Journal />} />
@@ -166,7 +167,6 @@ export default function App() {
               <Route path="/pricing" element={<Pricing />} />
               {DevPage && <Route path="/dev" element={<DevPage />} />}
               {StateInspectorPage && <Route path="/state-inspector" element={<StateInspectorPage />} />}
-              <Route path="/" element={<Index />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
