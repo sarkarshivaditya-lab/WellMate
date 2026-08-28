@@ -138,6 +138,40 @@ export default function Profile() {
           <p className="text-[11px] text-muted-foreground">
             Current: <span className="font-semibold text-foreground">{profile?.trackingMode === "manual" ? "Manual" : "Automatic"}</span>
           </p>
+          <div className="grid gap-3 pt-2">
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Emergency contact name</span>
+              <input
+                value={profile?.emergencyContactName ?? ""}
+                onChange={(e) => updateProfile({ emergencyContactName: e.target.value })}
+                className="glass-interactive w-full min-h-11 rounded-2xl px-3 text-sm outline-none"
+                placeholder="Contact name"
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Emergency contact phone</span>
+              <input
+                type="tel"
+                value={profile?.emergencyContactPhone ?? ""}
+                onChange={(e) => updateProfile({ emergencyContactPhone: e.target.value })}
+                className="glass-interactive w-full min-h-11 rounded-2xl px-3 text-sm outline-none"
+                placeholder="+91..."
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Local ambulance service number</span>
+              <input
+                type="tel"
+                value={profile?.localAmbulanceNumber ?? ""}
+                onChange={(e) => updateProfile({ localAmbulanceNumber: e.target.value })}
+                className="glass-interactive w-full min-h-11 rounded-2xl px-3 text-sm outline-none"
+                placeholder="Local ambulance number"
+              />
+            </label>
+            <p className="text-[11px] text-muted-foreground">
+              Ambulance service numbers can differ by Indian state. Keep the local number you want WellMate to use for emergency fallback.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
