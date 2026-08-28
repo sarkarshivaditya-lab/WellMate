@@ -1,4 +1,4 @@
-const KEY = "wellmate_disclaimer_acked";
+const KEY = "wellmate_disclaimer_acked_v2";
 
 export function hasAckedDisclaimer(): boolean {
   return localStorage.getItem(KEY) === "true";
