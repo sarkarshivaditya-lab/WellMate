@@ -12,7 +12,9 @@ export type EmergencyCommunicationCapability =
 
 function buildEmergencyMessage(event: EmergencyEvent): string {
   const lines = [
-    "WellMate emergency alert: a possible accident was detected.",
+    "🚨 WELLMATE EMERGENCY ALERT",
+    "A possible accident was detected.",
+    "",
     `Time: ${new Date(event.triggeredAt).toLocaleString()}`,
   ];
 
@@ -22,12 +24,17 @@ function buildEmergencyMessage(event: EmergencyEvent): string {
 
   lines.push(`Location: ${location ?? "Location unavailable"}`);
 
-  if (event.profile.bloodType) lines.push(`Blood type: ${event.profile.bloodType}`);
+  if (event.profile.bloodType) {
+    lines.push(`Blood type: ${event.profile.bloodType}`);
+  }
+
   if (event.profile.allergies?.length) {
     lines.push(`Allergies: ${event.profile.allergies.join(", ")}`);
   }
 
-  return lines.join("\\n");
+  lines.push("", "Please check on the user and contact emergency services if needed.");
+
+  return lines.join("\n");
 }
 
 export function buildEmergencySmsUri(contact: EmergencyContact, event: EmergencyEvent): string {
