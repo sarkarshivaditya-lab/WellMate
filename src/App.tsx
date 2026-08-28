@@ -55,10 +55,10 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     if (isLoading || isAuthenticated) return;
     const options = isCapacitorNative
       ? {
-          authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI, prompt: "login" },
+          authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI, prompt: "login" as const },
           openUrl: (url: string) => Browser.open({ url }),
         }
-      : { authorizationParams: { prompt: "login" } };
+      : { authorizationParams: { prompt: "login" as const } };
     loginWithRedirect(options).catch((error) => console.error("[WellMate Auth] loginWithRedirect failed:", error));
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
@@ -73,55 +73,53 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 }
 
 const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
-function RootEntry() {
-  const { isAuthenticated, isLoading } = useAuth0();
-  const [timedOut, setTimedOut] = React.useState(false);
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
-  if (isLoading && !timedOut) return <AppLoadingScreen onTimeout={handleTimeout} />;
-  const isOnboarded = localStorage.getItem("onboarded") === "true";
-  const hasSeenWelcome = !!localStorage.getItem(WELCOME_SEEN_KEY);
-  if (!isAuthenticated) {
-    if (isOnboarded) return <Navigate to="/physical" replace />;
-    if (!hasSeenWelcome) return <Navigate to="/welcome" replace />;
-    return <Navigate to="/onboarding" replace />;
-  }
-  if (!isOnboarded && !hasSeenWelcome) return <Navigate to="/welcome" replace />;
-  return <Navigate to="/physical" replace />;
-}
-
-function useAppStartup() {
-  React.useEffect(() => {
-    recoverAllInterruptedWrites(); startHydration(); initLifecycle(); markHydrationReady(); initAnalytics(); initNotifications();
-    return () => { disposeLifecycle(); disposeAnalytics(); disposeNotifications(); };
-  }, []);
-}
-
-function useGlobalRuntimeGuards() {
-  React.useEffect(() => {
-    const onError = (event: ErrorEvent) => console.error("Global runtime error:", event.error ?? event.message);
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => console.error("Unhandled promise rejection:", event.reason);
-    window.addEventListener("error", onError); window.addEventListener("unhandledrejection", onUnhandledRejection);
-    return () => { window.removeEventListener("error", onError); window.removeEventListener("unhandledrejection", onUnhandledRejection); };
-  }, []);
-}
 
 export default function App() {
-  useAppStartup(); useGlobalRuntimeGuards();
-  return <BrowserRouter><AuthSyncBoundary /><CapacitorAuthHandler /><React.Suspense fallback={<AppLoadingScreen />}><Routes>
-    <Route path="/" element={<RootEntry />} /><Route path="/welcome" element={<WelcomePage />} /><Route path="/onboarding" element={<Onboarding />} />
-    <Route path="/overview" element={<RequireAuth><RequireOnboarding><AppShell><Index /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/physical" element={<RequireAuth><RequireOnboarding><AppShell><TransitionGate><PhysicalDashboard /></TransitionGate></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/mental" element={<RequireAuth><RequireOnboarding><AppShell><MentalOverview /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/journal" element={<RequireAuth><RequireOnboarding><AppShell><Journal /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/mental/coach" element={<RequireAuth><RequireOnboarding><AppShell><AiMentalCoach /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/habits" element={<RequireAuth><RequireOnboarding><AppShell><Habits /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/tools" element={<RequireAuth><RequireOnboarding><AppShell><Tools /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/profile" element={<RequireAuth><RequireOnboarding><AppShell><Profile /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/chat" element={<RequireAuth><RequireOnboarding><AppShell><Chat /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/sleep" element={<RequireAuth><RequireOnboarding><AppShell><Sleep /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/roadmap" element={<RequireAuth><RequireOnboarding><AppShell><Roadmap /></AppShell></RequireOnboarding></RequireAuth>} />
-    <Route path="/pricing" element={<RequireAuth><RequireOnboarding><AppShell><Pricing /></AppShell></RequireOnboarding></RequireAuth>} />
-    {import.meta.env.DEV && DevPage && <Route path="/dev" element={<DevPage />} />}{import.meta.env.DEV && StateInspectorPage && <Route path="/dev/state" element={<StateInspectorPage />} />}
-    <Route path="*" element={<NotFound />} />
-  </Routes></React.Suspense></BrowserRouter>;
+  React.useEffect(() => {
+    void recoverAllInterruptedWrites();
+    initLifecycle();
+    initAnalytics();
+    initNotifications();
+    return () => {
+      disposeLifecycle();
+      disposeAnalytics();
+      disposeNotifications();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    startHydration().finally(markHydrationReady);
+  }, []);
+
+  return (
+    <>
+      <CapacitorAuthHandler />
+      <BrowserRouter>
+        <React.Suspense fallback={<AppLoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<WelcomePage />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/transition" element={<TransitionGate />} />
+            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+              <Route path="/physical" element={<PhysicalDashboard />} />
+              <Route path="/mental" element={<MentalOverview />} />
+              <Route path="/mental/journal" element={<Journal />} />
+              <Route path="/mental/coach" element={<AiMentalCoach />} />
+              <Route path="/habits" element={<Habits />} />
+              <Route path="/tools" element={<Tools />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/roadmap" element={<Roadmap />} />
+              <Route path="/sleep" element={<Sleep />} />
+              <Route path="/pricing" element={<Pricing />} />
+              {DevPage && <Route path="/dev" element={<DevPage />} />}
+              {StateInspectorPage && <Route path="/state-inspector" element={<StateInspectorPage />} />}
+              <Route path="/" element={<Index />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </React.Suspense>
+      </BrowserRouter>
+    </>
+  );
 }
