@@ -126,7 +126,9 @@ export default function Profile() {
 
               <Button
                 className="w-full"
-                onClick={() => loginWithRedirect()}
+                onClick={() =>
+                  void loginWithRedirect({ appState: { returnTo: "/profile" } })
+                }
               >
                 Sign in
               </Button>
