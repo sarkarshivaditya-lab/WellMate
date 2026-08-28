@@ -27,16 +27,8 @@ import { localDateIso } from "@/services/dateUtils";
 export default function Progress() {
   const today = localDateIso();
 
-  /* =========================
-     DATA SOURCES
-     ========================= */
-
   const { meals } = useMealsByDate(today);
   const user = useQuery(api.users.getCurrentUser);
-
-  /* =========================
-     DAILY TOTALS (LOCAL)
-     ========================= */
 
   type DayTotals = {
     calories: number;
@@ -46,28 +38,22 @@ export default function Progress() {
     micros: Record<string, number>;
   };
 
-  const initialTotals: DayTotals = {
-    calories: 0,
-    protein: 0,
-    fat: 0,
-    carbs: 0,
-    micros: {},
-  };
-
-  const dayTotals = meals.reduce(
-    (acc: DayTotals, meal): DayTotals => ({
-      calories: acc.calories + meal.totalCalories,
-      protein: acc.protein + meal.totalProteinG,
-      fat: acc.fat + meal.totalFatG,
-      carbs: acc.carbs + meal.totalCarbsG,
+  const dayTotals = meals.reduce<DayTotals>(
+    (acc, meal) => ({
+      calories: acc.calories + (Number.isFinite(meal.totalCalories) ? meal.totalCalories : 0),
+      protein: acc.protein + (Number.isFinite(meal.totalProteinG) ? meal.totalProteinG : 0),
+      fat: acc.fat + (Number.isFinite(meal.totalFatG) ? meal.totalFatG : 0),
+      carbs: acc.carbs + (Number.isFinite(meal.totalCarbsG) ? meal.totalCarbsG : 0),
       micros: acc.micros,
     }),
-    initialTotals,
+    {
+      calories: 0,
+      protein: 0,
+      fat: 0,
+      carbs: 0,
+      micros: {},
+    },
   );
-
-  /* =========================
-     TARGETS
-     ========================= */
 
   let calorieTarget = 2000;
   let macroTargets = { proteinG: 150, fatG: 67, carbsG: 200 };
@@ -91,6 +77,7 @@ export default function Progress() {
     );
   } else {
     const payload = readOnboardingPayload();
+
     if (
       payload?.dob &&
       payload?.heightCm &&
@@ -106,8 +93,14 @@ export default function Progress() {
         age,
         payload.sex as "male" | "female" | "other",
       );
-      const tdee = calculateTDEE(bmr, payload.activityLevel as ActivityLevel);
-      calorieTarget = calculateCalorieTarget(tdee, payload.weightGoal as Goal);
+      const tdee = calculateTDEE(
+        bmr,
+        payload.activityLevel as ActivityLevel,
+      );
+      calorieTarget = calculateCalorieTarget(
+        tdee,
+        payload.weightGoal as Goal,
+      );
       macroTargets = calculateMacroTargets(
         calorieTarget,
         payload.weightKg,
@@ -116,49 +109,36 @@ export default function Progress() {
     }
   }
 
-  /* =========================
-     CHART DATA
-     ========================= */
+  const macroSlices = [
+    {
+      label: "Protein",
+      value: Math.max(0, dayTotals.protein),
+      color: "oklch(0.55 0.18 160)",
+    },
+    {
+      label: "Fat",
+      value: Math.max(0, dayTotals.fat),
+      color: "oklch(0.65 0.15 200)",
+    },
+    {
+      label: "Carbs",
+      value: Math.max(0, dayTotals.carbs),
+      color: "oklch(0.70 0.12 280)",
+    },
+  ];
 
-  const pieData =
-    meals.length > 0
-      ? [
-          {
-            label: "Protein",
-            value: dayTotals.protein,
-            color: "oklch(0.55 0.18 160)",
-          },
-          {
-            label: "Fat",
-            value: dayTotals.fat,
-            color: "oklch(0.65 0.15 200)",
-          },
-          {
-            label: "Carbs",
-            value: dayTotals.carbs,
-            color: "oklch(0.70 0.12 280)",
-          },
-        ]
-      : [];
-
-  /* =========================
-     WEEKLY ACTIVITY (LOCAL)
-     ========================= */
+  const hasMacroData = macroSlices.some((slice) => slice.value > 0);
 
   const weeklyExercise = useWeeklyExerciseTrend();
 
   const weeklyActivityData = weeklyExercise
-    .filter((d) => d.calories > 0)
-    .map((d) => ({
-      label: d.label,
-      value: Math.round(d.calories),
+    .filter((day) => Number.isFinite(day.calories) && day.calories > 0)
+    .map((day) => ({
+      label: day.label,
+      value: Math.round(day.calories),
       target: 0,
       unit: "kcal",
     }));
-
-  /* =========================
-     MICROS (LOCAL)
-     ========================= */
 
   const micronutrientTargets: Record<string, number> = {
     vitaminA_mcg: 900,
@@ -170,52 +150,79 @@ export default function Progress() {
   };
 
   const aggregateMicros: Record<string, number> = {};
+
   meals.forEach((meal) => {
-    if (meal.micronutrientsJson) {
-      try {
-        const micros = JSON.parse(meal.micronutrientsJson);
-        for (const [key, value] of Object.entries(micros)) {
-          aggregateMicros[key] =
-            (aggregateMicros[key] || 0) + (value as number);
-        }
-      } catch {
-        /* silent */
+    if (!meal.micronutrientsJson) return;
+
+    try {
+      const micros = JSON.parse(meal.micronutrientsJson);
+
+      if (!micros || typeof micros !== "object") return;
+
+      for (const [key, value] of Object.entries(micros)) {
+        const numericValue =
+          typeof value === "number"
+            ? value
+            : Number(value);
+
+        if (!Number.isFinite(numericValue)) continue;
+
+        aggregateMicros[key] =
+          (aggregateMicros[key] || 0) + numericValue;
       }
+    } catch {
+      // Ignore malformed optional micronutrient data.
     }
   });
 
-  const barData = Object.entries(micronutrientTargets)
-    .map(([key, target]) => {
-      const value = aggregateMicros[key] || 0;
-      const label = key.split("_")[0];
-      const unit = key.includes("_mg")
-        ? "mg"
-        : key.includes("_mcg")
-          ? "μg"
-          : "";
-      return { label, value: Math.round(value), target, unit };
-    })
-    .filter((d) => d.value > 0);
+  const micronutrientBarData = Object.entries(
+    micronutrientTargets,
+  ).map(([key, target]) => {
+    const value = Math.max(
+      0,
+      aggregateMicros[key] || 0,
+    );
 
-  /* =========================
-     RENDER
-     ========================= */
+    const label = key
+      .replace(/_(mcg|mg)$/, "")
+      .replace(/_/g, " ");
 
-  const hasMacroData = dayTotals.protein + dayTotals.fat + dayTotals.carbs > 0;
-  const hasActivityData = weeklyExercise.some((d) => d.calories > 0);
+    const unit = key.endsWith("_mg")
+      ? "mg"
+      : key.endsWith("_mcg")
+        ? "μg"
+        : "";
+
+    return {
+      label,
+      value: Math.round(value),
+      target,
+      unit,
+    };
+  });
+
+  const hasMicronutrientData = micronutrientBarData.some(
+    (item) => item.value > 0,
+  );
+
+  const hasActivityData = weeklyActivityData.length > 0;
 
   return (
     <div className="space-y-4">
-      {/* DAILY SUMMARY */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle>Daily Summary</CardTitle>
-          <CardDescription>Your nutrition for today</CardDescription>
+          <CardDescription>
+            Your nutrition for today
+          </CardDescription>
         </CardHeader>
+
         <CardContent>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
             <div>
-              <div className="text-xs text-muted-foreground">Calories</div>
+              <div className="text-xs text-muted-foreground">
+                Calories
+              </div>
               <div className="text-xl font-semibold">
                 {dayTotals.calories}
               </div>
@@ -223,8 +230,11 @@ export default function Progress() {
                 of {calorieTarget}
               </div>
             </div>
+
             <div>
-              <div className="text-xs text-muted-foreground">Protein</div>
+              <div className="text-xs text-muted-foreground">
+                Protein
+              </div>
               <div className="text-xl font-semibold">
                 {dayTotals.protein.toFixed(1)}g
               </div>
@@ -232,8 +242,11 @@ export default function Progress() {
                 of {macroTargets.proteinG}g
               </div>
             </div>
+
             <div>
-              <div className="text-xs text-muted-foreground">Fat</div>
+              <div className="text-xs text-muted-foreground">
+                Fat
+              </div>
               <div className="text-xl font-semibold">
                 {dayTotals.fat.toFixed(1)}g
               </div>
@@ -241,8 +254,11 @@ export default function Progress() {
                 of {macroTargets.fatG}g
               </div>
             </div>
+
             <div>
-              <div className="text-xs text-muted-foreground">Carbs</div>
+              <div className="text-xs text-muted-foreground">
+                Carbs
+              </div>
               <div className="text-xl font-semibold">
                 {dayTotals.carbs.toFixed(1)}g
               </div>
@@ -254,7 +270,6 @@ export default function Progress() {
         </CardContent>
       </Card>
 
-      {/* CHARTS */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
@@ -265,16 +280,21 @@ export default function Progress() {
               Relative balance for today
             </CardDescription>
           </CardHeader>
+
           <CardContent className="flex justify-center">
             {hasMacroData ? (
               <ChartPie
-                data={pieData.filter((slice) => slice.value > 0)}
+                data={macroSlices.filter(
+                  (slice) => slice.value > 0,
+                )}
                 size={220}
               />
             ) : (
               <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
                 <UtensilsCrossed className="h-8 w-8 opacity-30" />
-                <p className="text-sm">No meals logged today</p>
+                <p className="text-sm">
+                  No nutritional values logged today
+                </p>
               </div>
             )}
           </CardContent>
@@ -289,18 +309,46 @@ export default function Progress() {
               Calories burned over the last 7 days
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             {hasActivityData ? (
-              <ChartBar data={weeklyActivityData} height={240} />
+              <ChartBar
+                data={weeklyActivityData}
+                height={240}
+              />
             ) : (
               <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
                 <Activity className="h-8 w-8 opacity-30" />
-                <p className="text-sm">No activity logged yet</p>
+                <p className="text-sm">
+                  No activity logged yet
+                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {hasMicronutrientData && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              Micronutrients
+            </CardTitle>
+            <CardDescription>
+              Today's logged micronutrients
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <ChartBar
+              data={micronutrientBarData.filter(
+                (item) => item.value > 0,
+              )}
+              height={240}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
