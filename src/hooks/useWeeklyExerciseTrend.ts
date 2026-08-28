@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAllExercises } from "@/hooks/useAllExercises";
+import { localDateIso } from "@/services/dateUtils";
 
 type DayPoint = {
   dateIso: string;
@@ -15,7 +16,7 @@ function getLast7Days(): { dateIso: string; label: string }[] {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
 
-    const dateIso = d.toISOString().split("T")[0];
+    const dateIso = localDateIso(d);
     const label = d.toLocaleDateString(undefined, {
       weekday: "short",
     });
