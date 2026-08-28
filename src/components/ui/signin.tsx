@@ -38,8 +38,6 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
-
-        // ✅ CRITICAL: do nothing while Auth0 is hydrating
         if (isLoading) return;
 
         onClick?.(event);
@@ -47,8 +45,11 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
         try {
           if (!isAuthenticated) {
             await loginWithRedirect({
-              authorizationParams: {
-                prompt: "login",
+              appState: {
+                returnTo:
+                  window.location.pathname +
+                  window.location.search +
+                  window.location.hash,
               },
             });
             return;
@@ -65,11 +66,7 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
     );
 
     const isDisabled = disabled || isLoading;
-
-    const defaultLoadingText = isAuthenticated
-      ? "Signing Out..."
-      : "Signing In...";
-
+    const defaultLoadingText = isAuthenticated ? "Signing Out..." : "Signing In...";
     const buttonText = isLoading
       ? loadingText || defaultLoadingText
       : isAuthenticated
@@ -93,11 +90,7 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
         size={size}
         className={className}
         asChild={asChild}
-        aria-label={
-          isAuthenticated
-            ? "Sign out of your account"
-            : "Sign in to your account"
-        }
+        aria-label={isAuthenticated ? "Sign out of your account" : "Sign in to your account"}
         {...props}
       >
         {showIcon && icon}
