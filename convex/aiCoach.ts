@@ -68,7 +68,7 @@ export const chat = action({
     };
 
     // Call OpenAI
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return createFallbackResponse(calories, macros);
     }
@@ -84,20 +84,20 @@ export const chat = action({
       );
 
       const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
+        "https://openrouter.ai/api/v1/chat/completions",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: "Bearer " + apiKey,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
+            model: "openrouter/free",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt },
             ],
-            max_tokens: 1000,
+            max_tokens: 900,
             temperature: 0.2,
           }),
         },
