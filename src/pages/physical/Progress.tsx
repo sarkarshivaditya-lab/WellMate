@@ -22,9 +22,10 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api.js";
 import { readOnboardingPayload } from "@/data/local/onboardingPayload";
+import { localDateIso } from "@/services/dateUtils";
 
 export default function Progress() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateIso();
 
   /* =========================
      DATA SOURCES
