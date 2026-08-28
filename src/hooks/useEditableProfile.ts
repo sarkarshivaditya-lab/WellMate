@@ -14,33 +14,77 @@ import { appendWeightEntry } from "@/data/local/weightHistory";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
+type RemoteUser = {
+  dob?: string;
+  sex?: "male" | "female" | "other";
+  heightCm?: number;
+  weightKg?: number;
+  activityLevel?:
+    | "sedentary"
+    | "light"
+    | "moderate"
+    | "active"
+    | "veryActive";
+  goal?: "lose" | "maintain" | "gain";
+  dietaryPreference?: string;
+  allergies?: string[];
+  periodTrackingEnabled?: boolean;
+  dailySteps?: string;
+  weightGoal?: string;
+  muscleGoal?: string;
+  cycleLength?: number;
+  lastPeriod?: string;
+  additionalHealthNotes?: string;
+  bloodType?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  localAmbulanceNumber?: string;
+  trackingMode?: "automatic" | "manual";
+};
+
 function remoteToLocal(
-  remote: NonNullable<ReturnType<typeof useQuery>>,
+  remote: RemoteUser,
   local: OnboardingPayload | null,
 ): OnboardingPayload {
   return {
-    dob: remote?.dob ?? local?.dob ?? "",
-    sex: remote?.sex ?? local?.sex ?? "",
-    heightCm: remote?.heightCm ?? local?.heightCm ?? 0,
-    weightKg: remote?.weightKg ?? local?.weightKg ?? 0,
-    activityLevel: remote?.activityLevel ?? local?.activityLevel ?? null,
-    dailySteps: remote?.dailySteps ?? local?.dailySteps ?? "",
-    weightGoal: remote?.weightGoal ?? local?.weightGoal ?? "",
-    muscleGoal: remote?.muscleGoal ?? local?.muscleGoal ?? "",
-    cycleLength: remote?.cycleLength ?? local?.cycleLength,
-    lastPeriod: remote?.lastPeriod ?? local?.lastPeriod,
+    dob: remote.dob ?? local?.dob ?? "",
+    sex: remote.sex ?? local?.sex ?? "",
+    heightCm: remote.heightCm ?? local?.heightCm ?? 0,
+    weightKg: remote.weightKg ?? local?.weightKg ?? 0,
+    activityLevel: remote.activityLevel ?? local?.activityLevel ?? null,
+    dailySteps: remote.dailySteps ?? local?.dailySteps ?? "",
+    weightGoal:
+      remote.weightGoal ??
+      remote.goal ??
+      local?.weightGoal ??
+      "",
+    muscleGoal: remote.muscleGoal ?? local?.muscleGoal ?? "",
+    cycleLength: remote.cycleLength ?? local?.cycleLength,
+    lastPeriod: remote.lastPeriod ?? local?.lastPeriod,
     additionalHealthNotes:
-      remote?.additionalHealthNotes ?? local?.additionalHealthNotes,
-    bloodType: remote?.bloodType ?? local?.bloodType ?? "",
-    allergies: remote?.allergies?.join(", ") ?? local?.allergies ?? "",
+      remote.additionalHealthNotes ??
+      local?.additionalHealthNotes,
+    bloodType: remote.bloodType ?? local?.bloodType ?? "",
+    allergies:
+      remote.allergies?.join(", ") ??
+      local?.allergies ??
+      "",
     emergencyContactName:
-      remote?.emergencyContactName ?? local?.emergencyContactName ?? "",
+      remote.emergencyContactName ??
+      local?.emergencyContactName ??
+      "",
     emergencyContactPhone:
-      remote?.emergencyContactPhone ?? local?.emergencyContactPhone ?? "",
+      remote.emergencyContactPhone ??
+      local?.emergencyContactPhone ??
+      "",
     localAmbulanceNumber:
-      remote?.localAmbulanceNumber ?? local?.localAmbulanceNumber ?? "",
+      remote.localAmbulanceNumber ??
+      local?.localAmbulanceNumber ??
+      "",
     trackingMode:
-      remote?.trackingMode ?? local?.trackingMode ?? "automatic",
+      remote.trackingMode ??
+      local?.trackingMode ??
+      "automatic",
     createdAt: local?.createdAt ?? Date.now(),
   };
 }
@@ -50,6 +94,7 @@ export function useEditableProfile() {
     React.useState<OnboardingPayload | null>(
       () => readOnboardingPayload(),
     );
+
   const [extras, setExtras] =
     React.useState<HealthExtras>(
       () => readHealthExtras(),
@@ -67,15 +112,15 @@ export function useEditableProfile() {
   }, []);
 
   React.useEffect(() => {
-    if (remoteUser === undefined) return;
-
-    const local = readOnboardingPayload();
-
-    if (remoteUser === null) {
+    if (remoteUser === undefined || remoteUser === null) {
       return;
     }
 
-    const merged = remoteToLocal(remoteUser, local);
+    const local = readOnboardingPayload();
+    const merged = remoteToLocal(
+      remoteUser as RemoteUser,
+      local,
+    );
 
     try {
       localStorage.setItem(
@@ -91,7 +136,9 @@ export function useEditableProfile() {
 
   const updateProfile = React.useCallback(
     (
-      patch: Partial<Omit<OnboardingPayload, "createdAt">>,
+      patch: Partial<
+        Omit<OnboardingPayload, "createdAt">
+      >,
     ) => {
       if (typeof patch.weightKg === "number") {
         appendWeightEntry(patch.weightKg);
@@ -123,7 +170,6 @@ export function useEditableProfile() {
           patch.weightGoal === "gain"
             ? patch.weightGoal
             : undefined,
-        dietaryPreference: undefined,
         allergies: patch.allergies
           ? patch.allergies
               .split(",")
