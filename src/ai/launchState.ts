@@ -15,12 +15,12 @@ export const LAUNCH_STATE = {
   // Advanced mental wellbeing coaching via cloud intelligence infrastructure.
   // When false: informational notices are shown in CoachTabContent and WellMateLauncher.
   // When true: notices are removed; full coaching functionality is available.
-  mentalCoachingAvailable: false,
+  mentalCoachingAvailable: true,
 
   // WellMate floating assistant cloud fallback (wellmateChat Convex action).
   // When false: assistant gates on local AI readiness only; cloud path is suppressed.
   // When true: cloud fallback is attempted when local AI is unavailable.
-  cloudAssistantAvailable: false,
+  cloudAssistantAvailable: true,
 } as const;
 
 export type LaunchState = typeof LAUNCH_STATE;
