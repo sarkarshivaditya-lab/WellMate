@@ -71,31 +71,49 @@ function AuthProviderWithNavigation({ children }: { children: React.ReactNode })
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  if (isCapacitorNative) {
-    // Capacitor does not use BrowserRouter for its external callback scheme.
-    // The callback is completed by CapacitorAuthHandler.
+  const domain = (import.meta.env.VITE_AUTH0_DOMAIN as string | undefined)?.trim();
+  const clientId = (import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined)?.trim();
+  const audience = (import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined)?.trim();
+
+  if (!domain || !clientId) {
+    if (import.meta.env.DEV) {
+      console.error(
+        "[Auth] Missing VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID. " +
+          "Add the Auth0 SPA application settings before testing sign-in.",
+      );
+    }
+
     return (
-      <Auth0Provider
-        domain={((import.meta.env.VITE_AUTH0_DOMAIN as string | undefined) ?? "").trim()}
-        clientId={((import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined) ?? "").trim()}
-        authorizationParams={{
-          redirect_uri: CAPACITOR_CALLBACK_URI,
-          ...(import.meta.env.VITE_AUTH0_AUDIENCE
-            ? { audience: import.meta.env.VITE_AUTH0_AUDIENCE as string }
-            : {}),
-          scope: "openid profile email",
-        }}
-        cacheLocation="localstorage"
-        useRefreshTokens
-      >
-        {children}
-      </Auth0Provider>
+      <div className="min-h-screen flex items-center justify-center px-8 text-center">
+        <p className="max-w-md text-sm text-muted-foreground">
+          Authentication is not configured for this build.
+        </p>
+      </div>
     );
   }
 
-  return <BrowserAuthProviderWithNavigation>{children}</BrowserAuthProviderWithNavigation>;
-}
+  return (
+    <Auth0Provider
+      domain={domain}
+      clientId={clientId}
+      authorizationParams={{
+        redirect_uri: resolveRedirectUri(),
+        ...(audience ? { audience } : {}),
+        scope: "openid profile email",
+      }}
+      cacheLocation="localstorage"
+      useRefreshTokens
+      onRedirectCallback={(appState) => {
+        const returnTo =
+          typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")
+            ? appState.returnTo
+            : "/";
 
-function BrowserAuthProviderWithNavigation({ children }: { children: React.ReactNode }) {
-  return <AuthProviderWithNavigation>{children}</AuthProviderWithNavigation>;
+        window.history.replaceState({}, document.title, returnTo);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }}
+    >
+      {children}
+    </Auth0Provider>
+  );
 }
