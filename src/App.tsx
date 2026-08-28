@@ -54,12 +54,8 @@ import { initAutoModelLifecycle } from "./ai/production/autoModelLifecycle";
 import { scheduleConsolidation } from "./ai/memory/memoryConsolidationScheduler";
 
 /* ======================================================
-   LOADING SCREEN — with timeout guard
-   Never stays loading forever: after AUTH_TIMEOUT_MS with no
-   resolution it shows a recovery button so the user isn't frozen.
+   LOADING SCREEN
    ====================================================== */
-
-
 
 function AppLoadingScreen() {
   return (
@@ -176,8 +172,7 @@ function RootEntry() {
   const hasSeenWelcome = !!localStorage.getItem(WELCOME_SEEN_KEY);
 
   if (!isAuthenticated) {
-    // Auth is slow or timed out. If already onboarded, go to /physical — RequireAuth
-    // there will re-prompt login if the session is genuinely expired.
+    // Existing onboarded users return to their protected destination.
     if (isOnboarded) return <Navigate to="/physical" replace />;
     // First-time users see the welcome experience before onboarding.
     if (!hasSeenWelcome) return <Navigate to="/welcome" replace />;
