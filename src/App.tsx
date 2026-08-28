@@ -42,6 +42,13 @@ import { recoverAllInterruptedWrites } from "./reliability/transactionGuard";
 import { startHydration, markHydrationReady } from "./reliability/hydration";
 import { initAnalytics, disposeAnalytics } from "./analytics";
 import { initNotifications, disposeNotifications } from "./notifications";
+import { initAIRuntime, disposeAIRuntime } from "./ai/runtime/aiRuntime";
+import { initAssistantBehaviorRuntime } from "./ai/assistant/assistantBehaviorRuntime";
+import { bindProactiveCognitionToLifecycle, unbindProactiveCognition } from "./ai/cognition/proactiveCognitionLoop";
+import { initMobileHardener } from "./ai/platform/mobileExecutionHardener";
+import { initSelfHealingRuntime, disposeSelfHealingRuntime } from "./ai/runtime/selfHealingRuntime";
+import { initAutoModelLifecycle } from "./ai/production/autoModelLifecycle";
+import { scheduleConsolidation } from "./ai/memory/memoryConsolidationScheduler";
 
 /* ======================================================
    LOADING SCREEN — with timeout guard
