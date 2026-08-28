@@ -4,9 +4,9 @@ import { Capacitor } from "@capacitor/core";
 
 export const isCapacitorNative = Capacitor.isNativePlatform();
 
-// Custom URI scheme used for Auth0 callback on Capacitor Android/iOS.
-// Must be registered in AndroidManifest.xml and in Auth0 Allowed Callback URLs.
-export const CAPACITOR_CALLBACK_URI = "com.wellmate.app://callback";
+// Official Auth0 Ionic/Capacitor callback format:
+// <packageId>://<auth0Domain>/capacitor/<packageId>/callback
+export const CAPACITOR_CALLBACK_URI = `com.wellmate.app://${import.meta.env.VITE_AUTH0_DOMAIN}/capacitor/com.wellmate.app/callback`;
 
 function resolveRedirectUri(): string {
   if (isCapacitorNative) return CAPACITOR_CALLBACK_URI;
@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }}
       cacheLocation="localstorage"
       useRefreshTokens
+      useRefreshTokensFallback={false}
     >
       {children}
     </Auth0Provider>
