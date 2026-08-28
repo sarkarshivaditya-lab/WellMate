@@ -47,12 +47,12 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   return <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6"><p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p><div className="flex flex-col items-center gap-2 w-28"><Skeleton className="h-1.5 w-full" /><Skeleton className="h-1.5 w-2/3" /></div></div>;
 }
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
+function RequireAuth({ children, authBridgeReady }: { children: React.ReactNode; authBridgeReady: boolean }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
 
   React.useEffect(() => {
-    if (isLoading || isAuthenticated) return;
+    if (!authBridgeReady || isLoading || isAuthenticated) return;
     const options = isCapacitorNative
       ? {
           authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI, prompt: "login" as const },
@@ -60,21 +60,18 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         }
       : { authorizationParams: { prompt: "login" as const } };
     loginWithRedirect(options).catch((error) => console.error("[WellMate Auth] loginWithRedirect failed:", error));
-  }, [isLoading, isAuthenticated, loginWithRedirect]);
+  }, [authBridgeReady, isLoading, isAuthenticated, loginWithRedirect]);
 
   const handleTimeout = React.useCallback(() => setTimedOut(true), []);
   if (timedOut) return <Navigate to="/onboarding" replace />;
-  if (isLoading || !isAuthenticated) return <AppLoadingScreen onTimeout={handleTimeout} />;
+  if (!authBridgeReady || isLoading || !isAuthenticated) return <AppLoadingScreen onTimeout={handleTimeout} />;
   return <>{children}</>;
 }
 
-function RequireOnboarding({ children }: { children: React.ReactNode }) {
-  return localStorage.getItem("onboarded") === "true" ? <>{children}</> : <Navigate to="/onboarding" replace />;
-}
-
-const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
-
 export default function App() {
+  const [authBridgeReady, setAuthBridgeReady] = React.useState(!isCapacitorNative);
+  const handleAuthBridgeReady = React.useCallback(() => setAuthBridgeReady(true), []);
+
   React.useEffect(() => {
     void recoverAllInterruptedWrites();
     initLifecycle();
@@ -94,14 +91,14 @@ export default function App() {
 
   return (
     <>
-      <CapacitorAuthHandler />
+      <CapacitorAuthHandler onReady={handleAuthBridgeReady} />
       <BrowserRouter>
         <React.Suspense fallback={<AppLoadingScreen />}>
           <Routes>
             <Route path="/" element={<WelcomePage />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
-            <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
+            <Route element={<RequireAuth authBridgeReady={authBridgeReady}><AppShell><Outlet /></AppShell></RequireAuth>}>
               <Route path="/physical" element={<PhysicalDashboard />} />
               <Route path="/mental" element={<MentalOverview />} />
               <Route path="/mental/journal" element={<Journal />} />
