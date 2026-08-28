@@ -23,7 +23,8 @@ function classifyIntent(message: string): "mental" | "physical" | "general" | "s
     "depression", "sad", "overwhelmed", "burnout", "lonely", "hopeless",
     "emotionally", "mental health", "feel down", "feeling low", "motivation",
     "unmotivated", "frustrated", "angry", "upset", "worried", "worry",
-    "can't cope", "cannot cope", "just want to talk", "long day",
+    "can't cope", "cannot cope", "just want to talk", "long day", "tired",
+    "fatigue", "exhausted", "low energy", "can't sleep", "cannot sleep",
   ]);
 
   const physical = containsAny(message, [
@@ -31,8 +32,7 @@ function classifyIntent(message: string): "mental" | "physical" | "general" | "s
     "lose weight", "gain muscle", "fat loss", "training", "meal",
     "nutrition", "hydration", "water", "steps", "walking", "running",
     "strength", "cardio", "recipe", "breakfast", "lunch", "dinner",
-    "sleep", "sleeping", "insomnia", "waking up", "wake up", "tired",
-    "fatigue", "exhausted", "low energy", "sore", "recovery",
+    "sore", "recovery", "rest day", "sets", "reps", "lift", "lifting",
   ]);
 
   if (mental && !physical) return "mental";
