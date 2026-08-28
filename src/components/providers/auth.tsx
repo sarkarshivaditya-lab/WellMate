@@ -93,21 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <BrowserAuthProvider>{children}</BrowserAuthProvider>;
+  return <BrowserAuthProviderWithNavigation>{children}</BrowserAuthProviderWithNavigation>;
 }
 
-function BrowserAuthProvider({ children }: { children: React.ReactNode }) {
-  return <BrowserAuthProviderInner>{children}</BrowserAuthProviderInner>;
-}
-
-function BrowserAuthProviderInner({ children }: { children: React.ReactNode }) {
-  return (
-    <BrowserAuthProviderWithRouter>
-      {children}
-    </BrowserAuthProviderWithRouter>
-  );
-}
-
-function BrowserAuthProviderWithRouter({ children }: { children: React.ReactNode }) {
-  return <AuthProviderWithNavigate>{children}</AuthProviderWithNavigate>;
+function BrowserAuthProviderWithNavigation({ children }: { children: React.ReactNode }) {
+  return <AuthProviderWithNavigation>{children}</AuthProviderWithNavigation>;
 }
