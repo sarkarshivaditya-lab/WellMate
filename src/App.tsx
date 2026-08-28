@@ -2,6 +2,8 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
+
 import { Browser } from "@capacitor/browser";
 
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
@@ -89,7 +91,13 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
   if (isLoading) return <AppLoadingScreen />;
-  if (isAuthenticated) return <>{children}</>;
+  if (isAuthenticated) {
+    return (
+      <AuthSyncBoundary>
+        {children}
+      </AuthSyncBoundary>
+    );
+  }
 
   return <SignInScreen onSignIn={() => void handleLogin()} error={authError?.message} />;
 }

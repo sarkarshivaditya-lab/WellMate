@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
-import { Authenticated, useConvex, useConvexAuth, useMutation } from "convex/react";
+import React from "react";
+import {
+  Authenticated,
+  useConvex,
+  useConvexAuth,
+  useMutation,
+} from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { runOfflineSync } from "@/sync/syncScheduler";
 import { runSyncEngine } from "@/reliability/syncEngine";
@@ -15,18 +20,8 @@ import {
 } from "@/reliability/lifecycleCoordinator";
 import { hasPendingWork as opQueueHasPendingWork } from "@/reliability/operationQueue";
 
-/* ======================================================
-   CONSTANTS
-   ====================================================== */
+const RETRY_INTERVAL_MS = 5 * 60 * 1000;
 
-/** Periodic retry interval when there are pending items */
-const RETRY_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-
-/* ======================================================
-   HELPERS
-   ====================================================== */
-
-/** Returns true if any local entity has pending items that need syncing */
 function hasPendingWork(): boolean {
   try {
     if (getSyncQueue().length > 0) return true;
@@ -41,52 +36,19 @@ function hasPendingWork(): boolean {
   }
 }
 
-/* ======================================================
-   SYNC WORKER
-   ====================================================== */
-
-/**
- * SyncWorker — only mounts when Convex confirms auth.
- *
- * Three-layer auth safety:
- *
- * 1. <Authenticated> (outer component) — structurally prevents this component
- *    from mounting until useConvexAuth().isAuthenticated is true.
- *
- * 2. cancelledRef — set to true in the startup useEffect cleanup (runs on
- *    unmount). Any async sync closure that outlives the component reads this
- *    before every worker call and stops immediately.
- *
- * 3. checkAuth passed to runOfflineSync — tested before each sync worker so
- *    auth loss mid-sync stops further mutations without waiting for React.
- *
- * Online-resume fix:
- *    Previously hasRunRef=true after initial sync blocked ALL future syncs,
- *    including when the user adds new data offline then comes back online.
- *    This version separates "has run at least once" from "should run on
- *    reconnect". The connectivity subscription triggers a new sync whenever
- *    the device comes back online AND there is pending work.
- *
- * Periodic retry:
- *    A 5-minute interval fires while mounted, triggering sync if there is
- *    pending work and the device is online. This catches cases where an
- *    online-event was missed (e.g., airplane mode → background → foreground).
- */
 function SyncWorker() {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const updateCurrentUser = useMutation(api.users.updateCurrentUser);
 
-  const isAuthRef = useRef(false);
+  const isAuthRef = React.useRef(false);
   isAuthRef.current = isAuthenticated;
 
-  const cancelledRef = useRef(false);
-  const hasRunInitialRef = useRef(false);
-  const isSyncingRef = useRef(false);
+  const cancelledRef = React.useRef(false);
+  const isSyncingRef = React.useRef(false);
 
-  // Stable ref to the sync function — reassigned on every render so it
-  // always closes over fresh ref values without stale-closure risk.
-  const doSync = useRef<() => void>(() => {});
+  const doSync = React.useRef<() => void>(() => {});
+
   doSync.current = () => {
     if (cancelledRef.current) return;
     if (!isOnline()) return;
@@ -95,19 +57,17 @@ function SyncWorker() {
 
     isSyncingRef.current = true;
 
-    const checkAuth = () => isAuthRef.current && !cancelledRef.current;
+    const checkAuth = () =>
+      isAuthRef.current && !cancelledRef.current;
 
-    (async () => {
+    void (async () => {
       try {
-        // Identity bootstrap — best effort only
         try {
           await updateCurrentUser();
         } catch {
-          // swallow — identity may already exist
+          // User bootstrap is handled by UserBootstrapGate.
         }
 
-        // Unified sync engine: drains new operation queue first,
-        // then runs legacy entity-specific sync via legacySyncFn.
         try {
           await runSyncEngine({
             convex,
@@ -115,7 +75,7 @@ function SyncWorker() {
             legacySyncFn: () => runOfflineSync(convex, checkAuth),
           });
         } catch {
-          // swallow — sync must never destabilize app
+          // Sync must never destabilize the app.
         }
       } finally {
         isSyncingRef.current = false;
@@ -123,12 +83,10 @@ function SyncWorker() {
     })();
   };
 
-  // Startup trigger — runs once on mount (inside <Authenticated> so auth is confirmed)
-  useEffect(() => {
+  React.useEffect(() => {
     cancelledRef.current = false;
 
-    if (!hasRunInitialRef.current) {
-      hasRunInitialRef.current = true;
+    if (isOnline()) {
       doSync.current();
     }
 
@@ -137,29 +95,26 @@ function SyncWorker() {
     };
   }, []);
 
-  // Connectivity-aware online-resume trigger.
-  // Unlike the old approach, this runs on EVERY reconnect (not just the first),
-  // and only if there is actually pending work — avoiding no-op syncs.
-  //
-  // Debounced by 2 seconds: unstable mobile connections (airplane mode toggle,
-  // brief signal drops) can fire online/offline events rapidly. Without a debounce,
-  // each online event triggers a sync attempt that hits the isSyncing gate and aborts —
-  // harmless but wasteful on battery. The debounce absorbs flapping and fires once
-  // when the connection stabilises.
-  const connectivityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectivityDebounceRef =
+    React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const unsub = subscribeToConnectivity((state) => {
       if (state === "online" && hasPendingWork()) {
-        if (connectivityDebounceRef.current) clearTimeout(connectivityDebounceRef.current);
+        if (connectivityDebounceRef.current) {
+          clearTimeout(connectivityDebounceRef.current);
+        }
+
         connectivityDebounceRef.current = setTimeout(() => {
           connectivityDebounceRef.current = null;
           doSync.current();
         }, 2000);
       }
     });
+
     return () => {
       unsub();
+
       if (connectivityDebounceRef.current) {
         clearTimeout(connectivityDebounceRef.current);
         connectivityDebounceRef.current = null;
@@ -167,9 +122,7 @@ function SyncWorker() {
     };
   }, []);
 
-  // Periodic retry — catches missed online events and long-running pending queues.
-  // Only fires a sync if there is pending work; no-ops otherwise.
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
       if (hasPendingWork()) {
         doSync.current();
@@ -179,49 +132,113 @@ function SyncWorker() {
     return () => clearInterval(interval);
   }, []);
 
-  // Lifecycle coordinator bridge — trigger sync on any sync_requested event
-  // (foreground resume, connectivity restore, auth acquired).
-  useEffect(() => {
+  React.useEffect(() => {
     const unsub = subscribeToLifecycle((event) => {
       if (event.type === "sync_requested" && hasPendingWork()) {
         doSync.current();
       }
     });
+
     return unsub;
   }, []);
 
-  // Notify lifecycle coordinator of auth state changes so other subscribers
-  // (future AI sync, background recovery) can react to auth transitions.
-  useEffect(() => {
+  React.useEffect(() => {
     notifyAuthChange(isAuthenticated);
   }, [isAuthenticated]);
 
   return null;
 }
 
-/* ======================================================
-   AUTH SYNC BOUNDARY
-   ====================================================== */
+function UserBootstrapGate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const [ready, setReady] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-/**
- * AuthSyncBoundary
- *
- * Renders SyncWorker exclusively inside <Authenticated>. Convex's
- * <Authenticated> returns null until useConvexAuth().isAuthenticated is true
- * (backend-confirmed, not Auth0 optimistic state). SyncWorker cannot mount,
- * register effects, or fire mutations until that guarantee holds.
- *
- * HARD GUARANTEES:
- * - NEVER redirects
- * - NEVER blocks rendering
- * - NEVER throws
- * - Safe offline
- * - Safe unauthenticated
- */
-export default function AuthSyncBoundary() {
+  React.useEffect(() => {
+    let cancelled = false;
+
+    void updateCurrentUser()
+      .then(() => {
+        if (!cancelled) {
+          setReady(true);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        console.error("[WellMate] User bootstrap failed:", err);
+
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to initialize your account.",
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [updateCurrentUser]);
+
+  if (ready) {
+    return (
+      <>
+        <SyncWorker />
+        {children}
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          WellMate
+        </p>
+
+        <p className="max-w-sm text-sm text-muted-foreground">
+          We couldn't initialize your account. Please try again.
+        </p>
+
+        <button
+          className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
+          onClick={() => {
+            setError(null);
+            setReady(false);
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        WellMate
+      </p>
+
+      <p className="text-sm text-muted-foreground">
+        Preparing your account…
+      </p>
+    </div>
+  );
+}
+
+export default function AuthSyncBoundary({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <Authenticated>
-      <SyncWorker />
+      <UserBootstrapGate>{children}</UserBootstrapGate>
     </Authenticated>
   );
 }
