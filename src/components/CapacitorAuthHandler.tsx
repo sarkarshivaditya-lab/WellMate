@@ -11,18 +11,29 @@ import { isCapacitorNative, CAPACITOR_CALLBACK_URI } from "./providers/auth";
  *  - appUrlOpen when the app is already running/backgrounded
  *  - getLaunchUrl when Android cold-starts the app from the callback URI
  *
- * Handling both paths is important on Android; otherwise a successful Auth0
- * login can return to the app without ever reaching handleRedirectCallback,
- * leaving Auth0 isAuthenticated=false and sending the user back to login.
+ * The readiness callback is intentionally held until a cold-start callback has
+ * been processed. This prevents RequireAuth from immediately starting a new
+ * Auth0 login and overwriting the transaction before the returning callback
+ * can be consumed.
  */
-export default function CapacitorAuthHandler() {
+export default function CapacitorAuthHandler({ onReady }: { onReady?: () => void }) {
   const { handleRedirectCallback } = useAuth0();
 
   useEffect(() => {
-    if (!isCapacitorNative) return;
+    if (!isCapacitorNative) {
+      onReady?.();
+      return;
+    }
 
     let disposed = false;
     let handlingUrl = "";
+    let readySignalled = false;
+
+    const signalReady = () => {
+      if (disposed || readySignalled) return;
+      readySignalled = true;
+      onReady?.();
+    };
 
     const isAuthCallback = (url: string) => {
       return url.startsWith(CAPACITOR_CALLBACK_URI) &&
@@ -43,6 +54,7 @@ export default function CapacitorAuthHandler() {
         } catch {
           // Browser may already be closed when Android cold-started the app.
         }
+        signalReady();
       }
     };
 
@@ -53,13 +65,14 @@ export default function CapacitorAuthHandler() {
         void handleCallbackUrl(url);
       });
 
-      // Android may launch the activity directly from the Auth0 callback.
-      // In that case appUrlOpen is not guaranteed to be emitted after this
-      // React component mounts, so explicitly inspect the launch URL.
       const launch = await CapApp.getLaunchUrl();
-      if (launch?.url) {
-        void handleCallbackUrl(launch.url);
+      if (launch?.url && isAuthCallback(launch.url)) {
+        // Do not release the auth gate until the callback has been consumed.
+        await handleCallbackUrl(launch.url);
+        return;
       }
+
+      signalReady();
     };
 
     void setup();
@@ -68,7 +81,7 @@ export default function CapacitorAuthHandler() {
       disposed = true;
       if (listenerHandle) void listenerHandle.remove();
     };
-  }, [handleRedirectCallback]);
+  }, [handleRedirectCallback, onReady]);
 
   return null;
 }
