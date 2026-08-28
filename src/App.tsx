@@ -4,7 +4,6 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Browser } from "@capacitor/browser";
 
-import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
 import { isCapacitorNative, CAPACITOR_CALLBACK_URI } from "./components/providers/auth";
 
@@ -50,17 +49,35 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
 function RequireAuth({ children, authBridgeReady }: { children: React.ReactNode; authBridgeReady: boolean }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
+  const loginStartedRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (!authBridgeReady || isLoading || isAuthenticated) return;
+    if (!authBridgeReady || isLoading || isAuthenticated || loginStartedRef.current) return;
+    loginStartedRef.current = true;
+
     const options = isCapacitorNative
       ? {
-          authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI, prompt: "login" as const },
+          authorizationParams: {
+            redirect_uri: CAPACITOR_CALLBACK_URI,
+            appState: { returnTo: "/physical" },
+          },
           openUrl: (url: string) => Browser.open({ url }),
         }
-      : { authorizationParams: { prompt: "login" as const } };
-    loginWithRedirect(options).catch((error) => console.error("[WellMate Auth] loginWithRedirect failed:", error));
+      : {
+          authorizationParams: {
+            appState: { returnTo: "/physical" },
+          },
+        };
+
+    loginWithRedirect(options).catch((error) => {
+      loginStartedRef.current = false;
+      console.error("[WellMate Auth] loginWithRedirect failed:", error);
+    });
   }, [authBridgeReady, isLoading, isAuthenticated, loginWithRedirect]);
+
+  React.useEffect(() => {
+    if (isAuthenticated) loginStartedRef.current = false;
+  }, [isAuthenticated]);
 
   const handleTimeout = React.useCallback(() => setTimedOut(true), []);
   if (timedOut) return <Navigate to="/onboarding" replace />;
