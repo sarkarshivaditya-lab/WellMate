@@ -87,7 +87,6 @@
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",
     "@usehercules/eslint-plugin": "^1.0.32",
-    "@usehercules/eslint-plugin": "^1.0.32",
     "@usehercules/vite": "^1.0.32",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "autoprefixer": "^10.4.23",
