@@ -1,5 +1,6 @@
 import React from "react";
 import { Auth0Provider } from "@auth0/auth0-react";
+import { useNavigate } from "react-router-dom";
 
 declare global {
   interface Window {
@@ -11,39 +12,23 @@ export const isCapacitorNative =
   typeof window !== "undefined" &&
   window.Capacitor?.isNativePlatform?.() === true;
 
-// Custom URI scheme used for Auth0 callback on Capacitor Android/iOS.
-// Must be registered in AndroidManifest.xml intent-filter and in the
-// Auth0 dashboard under "Allowed Callback URLs".
 export const CAPACITOR_CALLBACK_URI = "com.wellmate.app://callback";
 
 function resolveRedirectUri(): string {
-  // On Capacitor native, we open Auth0 in the system browser via @capacitor/browser
-  // and intercept the callback via the custom URI scheme. The WebView never navigates away.
   if (isCapacitorNative) return CAPACITOR_CALLBACK_URI;
 
-  // Explicit env var takes priority for web / custom deploys.
-  const envUri = import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined;
+  const envUri = (import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined)?.trim();
   if (envUri) return envUri;
 
   return typeof window !== "undefined" ? window.location.origin : "";
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const domain = import.meta.env.VITE_AUTH0_DOMAIN as string | undefined;
-  const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined;
+function AuthProviderWithNavigation({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const domain = (import.meta.env.VITE_AUTH0_DOMAIN as string | undefined)?.trim();
+  const clientId = (import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined)?.trim();
 
-  // If Auth0 is not configured at all, render children without the Auth0 context.
-  // The app will work in offline/guest mode; auth-gated features degrade gracefully.
   if (!domain || !clientId) {
-    if (import.meta.env.DEV) {
-      console.warn(
-        "[AuthProvider] VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID is missing. " +
-          "Running without Auth0 — auth-gated routes will loop to onboarding."
-      );
-    }
-    // Provide a minimal stub so useAuth0() doesn't crash when called by child components.
-    // We re-export the real Auth0Provider with placeholder values; Auth0 will fail to
-    // initialize and leave isAuthenticated=false, isLoading=false — safe for offline mode.
     return (
       <Auth0Provider
         domain="placeholder.auth0.com"
@@ -62,13 +47,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clientId={clientId}
       authorizationParams={{
         redirect_uri: resolveRedirectUri(),
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined,
+        ...(import.meta.env.VITE_AUTH0_AUDIENCE
+          ? { audience: import.meta.env.VITE_AUTH0_AUDIENCE as string }
+          : {}),
         scope: "openid profile email",
       }}
       cacheLocation="localstorage"
       useRefreshTokens
+      onRedirectCallback={(appState) => {
+        if (isCapacitorNative) return;
+
+        const returnTo =
+          typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")
+            ? appState.returnTo
+            : "/";
+
+        navigate(returnTo, { replace: true });
+      }}
     >
       {children}
     </Auth0Provider>
   );
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  if (isCapacitorNative) {
+    // Capacitor does not use BrowserRouter for its external callback scheme.
+    // The callback is completed by CapacitorAuthHandler.
+    return (
+      <Auth0Provider
+        domain={((import.meta.env.VITE_AUTH0_DOMAIN as string | undefined) ?? "").trim()}
+        clientId={((import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined) ?? "").trim()}
+        authorizationParams={{
+          redirect_uri: CAPACITOR_CALLBACK_URI,
+          ...(import.meta.env.VITE_AUTH0_AUDIENCE
+            ? { audience: import.meta.env.VITE_AUTH0_AUDIENCE as string }
+            : {}),
+          scope: "openid profile email",
+        }}
+        cacheLocation="localstorage"
+        useRefreshTokens
+      >
+        {children}
+      </Auth0Provider>
+    );
+  }
+
+  return <BrowserAuthProvider>{children}</BrowserAuthProvider>;
+}
+
+function BrowserAuthProvider({ children }: { children: React.ReactNode }) {
+  return <BrowserAuthProviderInner>{children}</BrowserAuthProviderInner>;
+}
+
+function BrowserAuthProviderInner({ children }: { children: React.ReactNode }) {
+  return (
+    <BrowserAuthProviderWithRouter>
+      {children}
+    </BrowserAuthProviderWithRouter>
+  );
+}
+
+function BrowserAuthProviderWithRouter({ children }: { children: React.ReactNode }) {
+  return <AuthProviderWithNavigate>{children}</AuthProviderWithNavigate>;
 }
