@@ -1,5 +1,4 @@
 // AI runtime type contracts.
-// Separate from src/ai/types.ts (context/citation layer) — these are runtime concerns.
 
 export type RuntimeStatus =
   | "idle"
@@ -15,13 +14,13 @@ export type ModelLoadStatus =
   | "loading"
   | "ready"
   | "failed"
-  | "failed_oom"      // WASM heap allocation failed — device is out of memory
-  | "failed_degraded" // max retry attempts exhausted — no further attempts this session
+  | "failed_oom"
+  | "failed_degraded"
   | "unloading";
 
 export type ThermalState = "nominal" | "warm" | "hot" | "critical" | "emergency";
 
-export type ProviderType = "local" | "openai" | "claude" | "stub";
+export type ProviderType = "local" | "openai" | "claude" | "openrouter" | "stub";
 
 export type InferencePriority = "high" | "normal" | "low";
 
@@ -33,8 +32,6 @@ export type InferenceRequest = {
   temperature: number;
   priority: InferencePriority;
   controller: AbortController;
-  // Called with each token as it is generated — enables streaming UI.
-  // Optional: callers that don't need streaming can omit it.
   onToken?: (token: string) => void;
 };
 
