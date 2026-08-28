@@ -112,7 +112,7 @@ export const askMentalCoach = action({
     }
 
     try {
-      const openai = new OpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" });
+      const openai = new OpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1", defaultHeaders: { "HTTP-Referer": "https://wellmate-website.vercel.app", "X-Title": "WellMate" } });
       const response = await openai.chat.completions.create({
         model: "openrouter/free",
         messages: [
