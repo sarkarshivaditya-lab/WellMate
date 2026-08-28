@@ -15,12 +15,13 @@ import {
 import { useAuth0 } from "@auth0/auth0-react";
 import { getAllLocalExercises } from "@/data/local/exercises";
 import { getPendingMeals } from "@/data/local/mealsStore";
-import { ChevronRight, ShieldAlert, Sparkles } from "lucide-react";
+import { ChevronRight, ShieldAlert, Sparkles, Siren } from "lucide-react";
 import { PolicyContent } from "@/components/PolicyContent";
 import NotificationSettings from "@/components/NotificationSettings";
 import { DataOwnershipCard } from "@/components/profile/DataOwnershipCard";
 import { HealthProfileSection } from "@/components/profile/HealthProfileSection";
 import { AiPrivacyCard } from "@/components/profile/AiPrivacyCard";
+import { useEditableProfile } from "@/hooks/useEditableProfile";
 
 /**
  * Profile / Settings
@@ -42,7 +43,9 @@ export default function Profile() {
   } = useAuth0();
 
   const [safetySheetOpen, setSafetySheetOpen] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
   const navigate = useNavigate();
+  const { profile, updateProfile } = useEditableProfile();
 
   // ---------- Sync status (best-effort, read-only) ----------
   let pendingCount = 0;
@@ -89,6 +92,119 @@ export default function Profile() {
           HEALTH PROFILE
          ========================= */}
       <HealthProfileSection />
+
+      <Card className="glass-brand border-primary/25">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-primary" />
+            Golden Hour
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold">Tracking mode</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Change how WellMate monitors for suspicious movement.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              aria-pressed={(profile?.trackingMode ?? "automatic") === "automatic"}
+              onClick={() => updateProfile({ trackingMode: "automatic" })}
+              className={cn(
+                "min-h-12 rounded-2xl border px-3 text-sm font-semibold transition-premium",
+                (profile?.trackingMode ?? "automatic") === "automatic"
+                  ? "glass-brand border-primary/35 text-primary"
+                  : "glass-subtle border-white/40 text-foreground/70",
+              )}
+            >
+              Automatic
+            </button>
+            <button
+              type="button"
+              aria-pressed={profile?.trackingMode === "manual"}
+              onClick={() => updateProfile({ trackingMode: "manual" })}
+              className={cn(
+                "min-h-12 rounded-2xl border px-3 text-sm font-semibold transition-premium",
+                profile?.trackingMode === "manual"
+                  ? "glass-brand border-primary/35 text-primary"
+                  : "glass-subtle border-white/40 text-foreground/70",
+              )}
+            >
+              Manual
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Current: <span className="font-semibold text-foreground">{profile?.trackingMode === "manual" ? "Manual" : "Automatic"}</span>
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-emergency rounded-3xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Siren className="h-5 w-5" aria-hidden />
+            Emergency SOS
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-white/85">
+            Need help immediately? Use the emergency profile and contact flow.
+          </p>
+          <Button
+            variant="destructive"
+            className="w-full min-h-14 bg-white text-destructive hover:bg-white/90"
+            onClick={() => setSosOpen(true)}
+          >
+            Open Emergency SOS
+          </Button>
+        </CardContent>
+      </Card>
+
+      {sosOpen && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-sos-title"
+        >
+          <div className="w-full max-w-md rounded-3xl glass-elevated border-white/50 p-6 space-y-5">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] font-bold text-destructive">Emergency SOS</p>
+              <h2 id="profile-sos-title" className="mt-2 text-2xl font-bold">Act during the Golden Hour.</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This action uses your configured emergency contact and current location where the platform allows it.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-destructive/25 bg-background p-4 space-y-2">
+              <p className="text-sm font-semibold">{profile?.emergencyContactName || "No emergency contact"}</p>
+              <p className="text-sm text-muted-foreground">{profile?.emergencyContactPhone || "Add a contact in your emergency profile."}</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <Button
+                variant="destructive"
+                className="min-h-14 text-base font-bold"
+                onClick={() => {
+                  window.location.href = profile?.emergencyContactPhone ? `tel:${profile.emergencyContactPhone}` : "#";
+                }}
+                disabled={!profile?.emergencyContactPhone}
+              >
+                CALL EMERGENCY CONTACT
+              </Button>
+              <Button
+                variant="outline"
+                className="min-h-12"
+                onClick={() => setSosOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================
           ACCOUNT
