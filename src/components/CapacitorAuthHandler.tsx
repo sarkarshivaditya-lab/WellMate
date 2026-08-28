@@ -2,20 +2,18 @@ import { useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { App as CapApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
-import { isCapacitorNative } from "./providers/auth";
+import { isCapacitorNative, CAPACITOR_CALLBACK_URI } from "./providers/auth";
 
 /**
- * Listens for the Auth0 callback URL when running inside Capacitor Android/iOS.
+ * Bridges Auth0 Universal Login callbacks back into the Capacitor WebView.
  *
- * Flow:
- *   1. RequireAuth opens Auth0 Universal Login in the system browser via Browser.open().
- *   2. Auth0 redirects to com.wellmate.app://callback?code=...&state=...
- *   3. Android routes that URI back to MainActivity via the intent-filter.
- *   4. Capacitor fires the appUrlOpen event here.
- *   5. We call handleRedirectCallback(url) to exchange the code for tokens.
- *   6. We close the system browser — user is now authenticated inside the app.
+ * The callback can arrive in two ways:
+ *  - appUrlOpen when the app is already running/backgrounded
+ *  - getLaunchUrl when Android cold-starts the app from the callback URI
  *
- * This component renders nothing; mount it once inside App.
+ * Handling both paths is important on Android; otherwise a successful Auth0
+ * login can return to the app without ever reaching handleRedirectCallback,
+ * leaving Auth0 isAuthenticated=false and sending the user back to login.
  */
 export default function CapacitorAuthHandler() {
   const { handleRedirectCallback } = useAuth0();
@@ -23,29 +21,52 @@ export default function CapacitorAuthHandler() {
   useEffect(() => {
     if (!isCapacitorNative) return;
 
-    let removed = false;
+    let disposed = false;
+    let handlingUrl = "";
 
-    const setup = async () => {
-      const listener = await CapApp.addListener("appUrlOpen", async ({ url }) => {
-        if (!url.startsWith("com.wellmate.app://")) return;
+    const isAuthCallback = (url: string) => {
+      return url.startsWith(CAPACITOR_CALLBACK_URI) &&
+        (url.includes("code=") || url.includes("error="));
+    };
+
+    const handleCallbackUrl = async (url: string) => {
+      if (disposed || !isAuthCallback(url) || handlingUrl === url) return;
+      handlingUrl = url;
+
+      try {
+        await handleRedirectCallback(url);
+      } catch (err) {
+        console.error("[CapacitorAuthHandler] Auth0 callback handling failed:", err);
+      } finally {
         try {
-          await handleRedirectCallback(url);
-        } catch (err) {
-          console.error("[CapacitorAuthHandler] handleRedirectCallback failed:", err);
-        } finally {
           await Browser.close();
+        } catch {
+          // Browser may already be closed when Android cold-started the app.
         }
-      });
-
-      if (removed) {
-        listener.remove();
       }
     };
 
-    setup();
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+
+    const setup = async () => {
+      listenerHandle = await CapApp.addListener("appUrlOpen", ({ url }) => {
+        void handleCallbackUrl(url);
+      });
+
+      // Android may launch the activity directly from the Auth0 callback.
+      // In that case appUrlOpen is not guaranteed to be emitted after this
+      // React component mounts, so explicitly inspect the launch URL.
+      const launch = await CapApp.getLaunchUrl();
+      if (launch?.url) {
+        void handleCallbackUrl(launch.url);
+      }
+    };
+
+    void setup();
 
     return () => {
-      removed = true;
+      disposed = true;
+      if (listenerHandle) void listenerHandle.remove();
     };
   }, [handleRedirectCallback]);
 
