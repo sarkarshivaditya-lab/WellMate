@@ -294,7 +294,6 @@ export default function App() {
   useGlobalRuntimeGuards();
 
   return (
-    <BrowserRouter>
       <AuthSyncBoundary />
       <CapacitorAuthHandler />
 
