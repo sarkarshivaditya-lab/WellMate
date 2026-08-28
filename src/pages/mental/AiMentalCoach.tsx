@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Heart, Info, RotateCcw, Send, Sparkles, WifiOff } from "lucide-react";
+import { AlertTriangle, Heart, Info, MapPin, Phone, RotateCcw, Send, Sparkles, WifiOff } from "lucide-react";
 import type { AiMentalResponse } from "@/services/aiMentalTypes";
 import { EMERGENCY_COPY } from "@/content/disclaimerCopy";
 import { haptics } from "@/motion";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { useLocalProfile } from "@/hooks/useLocalProfile";
+import { readCurrentLocation } from "@/emergency/emergencyService";
 import { LAUNCH_STATE } from "@/ai/launchState";
 
 const emotionConfig: Record<AiMentalResponse["emotion"], { bg: string; emoji: string }> = {
@@ -43,30 +45,70 @@ const FALLBACK_RESPONSE: AiMentalResponse = {
 const STARTER_PROMPTS = ["Hi", "I'm feeling a bit overwhelmed", "I just want to talk", "I had a long day", "I want to feel calmer"];
 
 type CoachTabContentProps = { compact?: boolean; onClose?: () => void; initialMessage?: string };
+type EmergencyPayload = { title: string; message: string; emergencyNumber: string };
+type Location = { latitude: number; longitude: number; accuracy?: number } | null;
 
 export function CoachTabContent({ compact = false, onClose, initialMessage = "" }: CoachTabContentProps = {}) {
   const [message, setMessage] = useState(initialMessage);
   const [response, setResponse] = useState<AiMentalResponse | null>(null);
+  const [emergency, setEmergency] = useState<EmergencyPayload | null>(null);
+  const [location, setLocation] = useState<Location>(null);
+  const [assistantNotice, setAssistantNotice] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const connectivity = useConnectivity();
-  const askCoach = useAction(api.aiMentalCoach.askMentalCoach);
+  const profile = useLocalProfile();
+  const chat = useAction(api.wellmateChat.chat);
 
   useEffect(() => {
     if (initialMessage) setMessage(initialMessage);
   }, [initialMessage]);
+
+  useEffect(() => {
+    if (!emergency) return;
+    let cancelled = false;
+    void readCurrentLocation().then((next) => {
+      if (!cancelled) setLocation(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [emergency]);
 
   async function submit(text: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
     haptics.light();
     setIsLoading(true);
+    setResponse(null);
+    setEmergency(null);
+    setAssistantNotice("");
+    setLocation(null);
     try {
-      const result = await askCoach({ message: trimmed });
-      setResponse(result);
+      const result = await chat({ message: trimmed });
       setMessage("");
+
+      if (result.domain === "emergency") {
+        setEmergency(result.payload);
+        return;
+      }
+
+      if (result.domain === "mental") {
+        setResponse(result.payload as AiMentalResponse);
+        return;
+      }
+
+      if (result.domain === "physical") {
+        const payload = result.payload as Record<string, unknown>;
+        const advice = typeof payload.advice_text === "string" ? payload.advice_text : "I can help you work through that.";
+        setAssistantNotice(advice);
+        return;
+      }
+
+      if (result.domain === "clarify") {
+        setAssistantNotice(result.payload.question);
+      }
     } catch {
       setResponse(FALLBACK_RESPONSE);
-      setMessage("");
     } finally {
       setIsLoading(false);
     }
@@ -125,11 +167,80 @@ export function CoachTabContent({ compact = false, onClose, initialMessage = "" 
 
       {isLoading && <Card><CardContent className="space-y-3 pt-4 pb-4"><Skeleton className="h-3.5 w-3/4" /><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-5/6" /><Skeleton className="mt-2 h-14 w-full" /></CardContent></Card>}
 
-      {response?.escalation && (
+      {emergency && (
+        <Card className="border-destructive/35 bg-destructive/5 shadow-[0_0_0_1px_rgba(220,38,38,0.08)]" role="alert" aria-live="assertive">
+          <CardHeader className="pb-2">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"><AlertTriangle className="h-5 w-5" /></div>
+              <div>
+                <CardTitle className="text-base text-destructive">{emergency.title}</CardTitle>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{emergency.message}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            <div className="rounded-xl border border-destructive/20 bg-background/70 p-3 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Immediate actions</p>
+              <p className="text-[12px] text-muted-foreground">If someone is seriously injured or in immediate danger, call emergency services now.</p>
+            </div>
+
+            {location && (
+              <a
+                href={`https://maps.google.com/?q=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-border/50 bg-background/70 px-3 py-2.5 text-[12px] text-foreground/80"
+              >
+                <MapPin className="h-4 w-4 text-primary" />
+                Location captured — open map
+              </a>
+            )}
+
+            <div className="grid gap-2">
+              <Button
+                variant="destructive"
+                className="min-h-12 font-bold"
+                onClick={() => { window.location.href = `tel:${emergency.emergencyNumber}`; }}
+              >
+                <Phone className="h-4 w-4" />
+                CALL 112 NOW
+              </Button>
+              {profile?.localAmbulanceNumber && (
+                <Button variant="outline" className="min-h-11" onClick={() => { window.location.href = `tel:${profile.localAmbulanceNumber}`; }}>
+                  <Phone className="h-4 w-4" />
+                  Call local ambulance
+                </Button>
+              )}
+              {profile?.emergencyContactPhone && (
+                <Button variant="outline" className="min-h-11" onClick={() => { window.location.href = `tel:${profile.emergencyContactPhone}`; }}>
+                  <Phone className="h-4 w-4" />
+                  Call {profile.emergencyContactName || "emergency contact"}
+                </Button>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border/40 bg-background/60 p-3 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Safety notice</p>
+              <p className="text-[12px] text-muted-foreground">{EMERGENCY_COPY.body}</p>
+            </div>
+
+            <Button variant="outline" size="sm" onClick={() => { setEmergency(null); setLocation(null); setMessage(""); }} className="w-full text-muted-foreground">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Return to WellMate Coach
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {response?.escalation && !emergency && (
         <Card className="border-destructive/25 bg-destructive/5"><CardContent className="space-y-3 pt-4 pb-4"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" /><div className="space-y-1"><p className="text-sm font-semibold">You're not alone</p><p className="text-[13px] leading-relaxed text-muted-foreground">It sounds like you might benefit from talking to someone right now. Reaching out is a sign of strength.</p></div></div><div className="rounded-xl border border-border/40 bg-background/60 p-3 space-y-2"><p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{EMERGENCY_COPY.title}</p><p className="text-[12px] text-muted-foreground">{EMERGENCY_COPY.body}</p><div className="space-y-1.5 text-[13px]">{EMERGENCY_COPY.resources.map((r) => <div key={r.label}><span className="font-semibold">{r.label}</span> — {r.description}</div>)}</div></div>{response.summary && !isFallbackResponse(response) && <p className="text-[13px] leading-relaxed text-muted-foreground">{response.summary}</p>}<Button variant="outline" size="sm" onClick={() => { setResponse(null); setMessage(""); }} className="w-full text-muted-foreground"><RotateCcw className="h-3.5 w-3.5" />Start over</Button></CardContent></Card>
       )}
 
-      {response && !response.escalation && (
+      {assistantNotice && !emergency && !response && (
+        <Card><CardContent className="pt-4 pb-4"><p className="text-[13px] leading-relaxed text-foreground/85">{assistantNotice}</p></CardContent></Card>
+      )}
+
+      {response && !response.escalation && !emergency && (
         <div className="space-y-3">
           <Card><CardHeader className="pb-2"><div className="flex items-center justify-between gap-2"><CardTitle className="text-base">Reflection</CardTitle><span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium", emotionConfig[response.emotion].bg)}>{emotionConfig[response.emotion].emoji} {response.emotion}</span></div></CardHeader><CardContent className="pt-0"><p className="text-[14px] leading-relaxed text-foreground/90">{response.summary}</p></CardContent></Card>
           {response.suggestions.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-base">Gentle suggestions</CardTitle></CardHeader><CardContent className="pt-0 space-y-2.5">{response.suggestions.map((s, i) => <div key={i} className="flex items-start gap-2.5 text-[13px]"><span className="mt-0.5 flex-shrink-0 text-primary">•</span><span className="leading-snug text-foreground/85">{s}</span></div>)}</CardContent></Card>}
@@ -137,7 +248,7 @@ export function CoachTabContent({ compact = false, onClose, initialMessage = "" 
         </div>
       )}
 
-      {!response && !isLoading && !compact && <Card><CardHeader className="pb-2"><CardTitle className="text-[13px] font-medium text-muted-foreground">You could start with:</CardTitle></CardHeader><CardContent className="pt-0 grid gap-1.5">{STARTER_PROMPTS.map((p) => <button key={p} onClick={() => setMessage(p)} className={cn("text-left text-[13px] px-3 py-2.5 rounded-xl min-h-[36px]", "bg-secondary/50 hover:bg-secondary", "transition-premium")}>"{p}"</button>)}</CardContent></Card>}
+      {!response && !emergency && !assistantNotice && !isLoading && !compact && <Card><CardHeader className="pb-2"><CardTitle className="text-[13px] font-medium text-muted-foreground">You could start with:</CardTitle></CardHeader><CardContent className="pt-0 grid gap-1.5">{STARTER_PROMPTS.map((p) => <button key={p} onClick={() => setMessage(p)} className={cn("text-left text-[13px] px-3 py-2.5 rounded-xl min-h-[36px]", "bg-secondary/50 hover:bg-secondary", "transition-premium")}>"{p}"</button>)}</CardContent></Card>}
     </div>
   );
 }
