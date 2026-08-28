@@ -1,4 +1,3 @@
-// Crisis detection keywords — used by AI safety layer, not for display.
 export const CRISIS_KEYWORDS = [
   "suicide",
   "suicidal",
@@ -16,20 +15,23 @@ export const CRISIS_KEYWORDS = [
   "don't want to be here",
   "feeling hopeless",
   "hopeless",
-];
+] as const;
 
-// Emergency copy used by WellMateLauncher crisis detection UI.
 export const EMERGENCY_COPY = {
-  title: "If you're in crisis",
-  body: "This is not a crisis intervention service. Please contact national helplines immediately.",
+  title: "If you are in immediate danger",
+  body: "WellMate is not a replacement for emergency services or professional medical care. If someone is seriously injured, unconscious, not breathing normally, or in immediate danger, contact emergency services now.",
   resources: [
-    { label: "Tele-MANAS", description: "14416" },
-    { label: "Toll-Free", description: "844-844-0632" },
-    { label: "Emergency", description: "Visit nearest psychiatric emergency facility" },
+    { label: "Emergency services", description: "112 in India" },
+    { label: "Emergency contact", description: "Use the contact configured in WellMate" },
+    { label: "Local ambulance", description: "Use the local number configured in your emergency profile" },
   ],
 } as const;
 
-// ── Policy document types ──────────────────────────────────────────────────────
+export const GOLDEN_HOUR_DISCLAIMER = {
+  title: "WellMate health & safety notice",
+  body: "WellMate provides wellness guidance, health tracking, and emergency-support features. AI guidance is informational and is not medical advice, diagnosis, or treatment. Golden Hour features are designed to help you act quickly during an emergency, but they depend on device permissions, connectivity, configured contacts, and platform capabilities. Always contact emergency services for an immediate medical emergency.",
+  privacy: "Your health and profile information is used to personalize WellMate features and emergency readiness. Keep emergency contacts, medical details, and permissions accurate and up to date.",
+} as const;
 
 export type PolicyItem = {
   label: string;
@@ -50,73 +52,52 @@ export type PolicyGroup = {
   subsections?: PolicySubsection[];
 };
 
-// ── Full policy document ───────────────────────────────────────────────────────
-// Exact wording per ToS & Privacy Policy. Do not paraphrase or reorder.
-
 export const POLICY_DOCUMENT: PolicyGroup[] = [
   {
-    groupTitle: "Terms of Service (ToS) & Non-Clinical Disclaimer",
+    groupTitle: "WellMate Terms & Health Safety",
     intro:
-      "Dr Anuradha Palta's consultancy operates as a non-clinical, educational, and advisory platform. We specialise in interdisciplinary research mentorship, corporate wellness, and cognitive performance coaching.",
+      "WellMate is a digital wellness and health-support application designed to help users understand their wellbeing, build healthier habits, and respond more quickly when an emergency may be occurring.",
     items: [
       {
-        label: "No Medical Advice",
-        text: "The information provided on this website and during consultations is for educational and developmental purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment.",
+        label: "AI guidance is not medical advice",
+        text: "WellMate's AI features provide informational and wellness-oriented guidance. They do not replace a qualified doctor, emergency clinician, diagnosis, prescription, or treatment plan.",
       },
       {
-        label: "No Clinical Intervention",
-        text: "We do not provide clinical therapy, psychiatric medication management.",
+        label: "Emergency support is not a guarantee of rescue",
+        text: "Golden Hour features can help surface an emergency, prepare location and profile context, and initiate supported contact actions. Actual delivery depends on device permissions, connectivity, operating-system capabilities, configured contacts, and available emergency services.",
       },
       {
-        label: "No Crisis Support",
-        text: "This is not a crisis intervention service. In the event of an emergency, self-harm thoughts, or acute psychological distress, please contact national helplines such as Tele-MANAS (14416) or Toll-Free Number: 844-844-0632 OR visit the nearest psychiatric emergency facility.",
+        label: "Use emergency services for urgent danger",
+        text: "If there is an immediate threat to life or serious injury, contact emergency services directly. In India, call 112. Do not wait for an AI response before seeking urgent care.",
+      },
+      {
+        label: "Keep emergency information current",
+        text: "Emergency contacts, local ambulance numbers, blood type, allergies, and other profile information should be kept accurate. WellMate cannot independently verify the information you provide.",
       },
     ],
   },
   {
-    groupTitle: "Privacy Policy (DPDP Act 2023 Compliant)",
+    groupTitle: "Privacy & Data",
     subsections: [
       {
-        title: "Data Collection & Purpose",
+        title: "How information is used",
         intro:
-          "In compliance with the Digital Personal Data Protection Act (DPDP) of India, we collect personal data (Name, Contact, Academic/Professional background) only with your explicit consent. This data is used solely for:",
-        bullets: [
-          "Tailoring research mentorship and wellness frameworks.",
-          "Processing psychometric assessments.",
-          "Managing service bookings and billing.",
-        ],
+          "WellMate may use information you provide or generate through the app to personalize wellness features, provide AI guidance, support emergency readiness, and maintain app functionality.",
       },
       {
-        title: "Your Rights (The Data Principal)",
+        title: "Your responsibility",
         items: [
           {
-            label: "Right to Correction",
-            text: "You may update or correct your data at any time.",
+            label: "Accuracy",
+            text: "Review your profile and emergency settings regularly, especially after changing phone numbers, contacts, location, or relevant health information.",
           },
           {
-            label: "Right to Erasure",
-            text: "You may request the deletion of your personal data once the service contract is fulfilled.",
+            label: "Permissions",
+            text: "Location, motion, notification, calling, messaging, and other device capabilities may be required for particular features. You can control these permissions through your device settings.",
           },
           {
-            label: "Data Security",
-            text: "We implement industry-standard encryption to protect your “Digital Personal Data” from unauthorized access. We do not sell or share your data with third-party marketing firms.",
-          },
-        ],
-      },
-      {
-        title: "Conflict of Interest & Professional Ethics",
-        items: [
-          {
-            label: "Academic Neutrality",
-            text: "Dr. Palta maintains strict academic neutrality. Consultancy provided to corporate entities does not influence her independent research or university-affiliated duties.",
-          },
-          {
-            label: "Dual-Role Disclosure",
-            text: "In cases where Dr. Palta serves both an institution (College/School) and an individual within that institution, the boundaries of confidentiality and reporting will be established in a separate tripartite agreement to prevent conflicts of interest.",
-          },
-          {
-            label: "Third-Party Tools",
-            text: "Any psychometric or digital health tools recommended are selected based on merit. We disclose any prior professional associations with tool developers, if applicable.",
+            label: "Third-party services",
+            text: "Some WellMate features rely on external infrastructure or device services. Their availability may vary by platform, network, region, or service provider.",
           },
         ],
       },
@@ -124,16 +105,14 @@ export const POLICY_DOCUMENT: PolicyGroup[] = [
   },
 ];
 
-// ── Legacy aliases — kept so non-disclaimer code that imports these still compiles.
-// These are no longer rendered in the disclaimer UI.
-// @deprecated use POLICY_DOCUMENT instead.
 export const FIRST_LAUNCH_POINTS: readonly string[] = [
-  "Dr Anuradha Palta's consultancy is a non-clinical, educational, and advisory platform.",
-  "No Medical Advice: information is for educational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment.",
-  "No Clinical Intervention: we do not provide clinical therapy or psychiatric medication management.",
-  "No Crisis Support: contact Tele-MANAS (14416) or 844-844-0632 for emergencies or acute distress.",
-  "Your personal data is collected only with explicit consent and is not sold to third-party marketing firms.",
+  "WellMate provides wellness and health-support features; AI guidance is not medical advice.",
+  "Golden Hour features are designed to help you act quickly during emergencies but depend on permissions, connectivity, configured contacts, and platform capabilities.",
+  "For immediate danger or serious injury, contact emergency services directly. In India, call 112.",
+  "Keep emergency contacts and health information accurate and up to date.",
 ];
 
-// @deprecated use POLICY_DOCUMENT instead.
-export const DISCLAIMER_SECTIONS: readonly { title: string; body: string }[] = [];
+export const DISCLAIMER_SECTIONS: readonly { title: string; body: string }[] = [
+  { title: GOLDEN_HOUR_DISCLAIMER.title, body: GOLDEN_HOUR_DISCLAIMER.body },
+  { title: "Privacy", body: GOLDEN_HOUR_DISCLAIMER.privacy },
+];
