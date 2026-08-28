@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Browser } from "@capacitor/browser";
@@ -59,39 +59,9 @@ import { scheduleConsolidation } from "./ai/memory/memoryConsolidationScheduler"
    resolution it shows a recovery button so the user isn't frozen.
    ====================================================== */
 
-const AUTH_TIMEOUT_MS = 8000;
 
-function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
-  const [timedOut, setTimedOut] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!onTimeout) return;
-    const t = setTimeout(() => {
-      setTimedOut(true);
-      onTimeout();
-    }, AUTH_TIMEOUT_MS);
-    return () => clearTimeout(t);
-  }, [onTimeout]);
-
-  if (timedOut) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8 text-center">
-        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-          WellMate
-        </p>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Taking longer than expected. Check your connection or continue offline.
-        </p>
-        <button
-          className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
-          onClick={() => window.location.replace("/onboarding")}
-        >
-          Continue offline
-        </button>
-      </div>
-    );
-  }
-
+function AppLoadingScreen() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
       <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
@@ -105,13 +75,30 @@ function AppLoadingScreen({ onTimeout }: { onTimeout?: () => void } = {}) {
   );
 }
 
+function AuthErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        We could not finish signing you in. Please try again.
+      </p>
+      <button
+        className="rounded-xl bg-primary text-primary-foreground text-sm font-semibold px-6 py-3"
+        onClick={onRetry}
+      >
+        Try again
+      </button>
+      <p className="text-[11px] text-muted-foreground/60 max-w-sm break-words">{error.message}</p>
+    </div>
+  );
+}
+
 /* ======================================================
    ROUTE HELPERS
    ====================================================== */
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
-  const [timedOut, setTimedOut] = React.useState(false);
+  const { isAuthenticated, isLoading, error, loginWithRedirect } = useAuth0();
 
   const loginStartedRef = React.useRef(false);
 
@@ -133,12 +120,27 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     });
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
-
-  if (timedOut) return <Navigate to="/onboarding" replace />;
-  if (isLoading || !isAuthenticated) {
-    return <AppLoadingScreen onTimeout={handleTimeout} />;
+  if (isLoading) return <AppLoadingScreen />;
+  if (error) {
+    return (
+      <AuthErrorScreen
+        error={error}
+        onRetry={() => {
+          void loginWithRedirect({
+            appState: {
+              returnTo:
+                window.location.pathname !== "/"
+                  ? window.location.pathname + window.location.search
+                  : "/",
+            },
+          }).catch((retryError) => {
+            console.error("[Auth] retry failed", retryError);
+          });
+        }}
+      />
+    );
   }
+  if (!isAuthenticated) return <AppLoadingScreen />;
 
   return <>{children}</>;
 }
@@ -154,12 +156,20 @@ function RequireOnboarding({ children }: { children: React.ReactNode }) {
 const WELCOME_SEEN_KEY = "wellmate_welcome_v1";
 
 function RootEntry() {
-  const { isAuthenticated, isLoading } = useAuth0();
-  const [timedOut, setTimedOut] = React.useState(false);
-  const handleTimeout = React.useCallback(() => setTimedOut(true), []);
+  const { isAuthenticated, isLoading, error, loginWithRedirect } = useAuth0();
 
-  if (isLoading && !timedOut) {
-    return <AppLoadingScreen onTimeout={handleTimeout} />;
+  if (isLoading) return <AppLoadingScreen />;
+  if (error) {
+    return (
+      <AuthErrorScreen
+        error={error}
+        onRetry={() => {
+          void loginWithRedirect({
+            appState: { returnTo: "/" },
+          }).catch((retryError) => console.error("[Auth] retry failed", retryError));
+        }}
+      />
+    );
   }
 
   const isOnboarded = localStorage.getItem("onboarded") === "true";
@@ -199,7 +209,8 @@ function AuthCallbackBridge() {
 
   return <AppLoadingScreen />;
 }
-\n/* ======================================================
+
+/* ======================================================
    APP STARTUP — lifecycle init + interrupted write recovery
    ====================================================== */
 
@@ -468,6 +479,5 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </React.Suspense>
-    </BrowserRouter>
   );
 }
