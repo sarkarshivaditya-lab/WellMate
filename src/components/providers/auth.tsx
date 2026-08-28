@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (import.meta.env.DEV) {
       console.warn(
         "[AuthProvider] VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID is missing. " +
-          "Running without Auth0 — auth-gated routes will loop to onboarding."
+          "Auth-gated routes cannot authenticate until the Auth0 environment is configured."
       );
     }
     return (
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cacheLocation="localstorage"
       useRefreshTokens
       useRefreshTokensFallback={false}
+      useCookiesForTransactions
     >
       {children}
     </Auth0Provider>
