@@ -1,32 +1,61 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-/* =========================
-   UPDATE / CREATE USER
-   ========================= */
+const sexValidator = v.optional(v.union(v.literal("male"), v.literal("female"), v.literal("other")));
+const activityValidator = v.optional(v.union(v.literal("sedentary"), v.literal("light"), v.literal("moderate"), v.literal("active"), v.literal("veryActive")));
+const goalValidator = v.optional(v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")));
+const trackingValidator = v.optional(v.union(v.literal("automatic"), v.literal("manual")));
+
+const profileArgs = {
+  dob: v.optional(v.string()),
+  sex: sexValidator,
+  heightCm: v.optional(v.number()),
+  weightKg: v.optional(v.number()),
+  activityLevel: activityValidator,
+  goal: goalValidator,
+  dietaryPreference: v.optional(v.string()),
+  allergies: v.optional(v.array(v.string())),
+  periodTrackingEnabled: v.optional(v.boolean()),
+  dailySteps: v.optional(v.string()),
+  weightGoal: v.optional(v.string()),
+  muscleGoal: v.optional(v.string()),
+  cycleLength: v.optional(v.number()),
+  lastPeriod: v.optional(v.string()),
+  additionalHealthNotes: v.optional(v.string()),
+  bloodType: v.optional(v.string()),
+  emergencyContactName: v.optional(v.string()),
+  emergencyContactPhone: v.optional(v.string()),
+  localAmbulanceNumber: v.optional(v.string()),
+  trackingMode: trackingValidator,
+};
+
+async function getIdentity(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new ConvexError({
+      code: "UNAUTHENTICATED",
+      message: "User not authenticated",
+    });
+  }
+  return identity;
+}
+
+async function getCurrentUserDoc(ctx: any, identity: any) {
+  return await ctx.db
+    .query("users")
+    .withIndex("by_token", (q: any) =>
+      q.eq("tokenIdentifier", identity.tokenIdentifier),
+    )
+    .unique();
+}
 
 export const updateCurrentUser = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getIdentity(ctx);
+    const user = await getCurrentUserDoc(ctx, identity);
 
-    if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "User not authenticated",
-      });
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
-      .unique();
-
-    if (user !== null) {
-      return user._id;
-    }
+    if (user) return user._id;
 
     return await ctx.db.insert("users", {
       name: identity.name,
@@ -37,163 +66,64 @@ export const updateCurrentUser = mutation({
   },
 });
 
-/* =========================
-   GET CURRENT USER
-   ========================= */
-
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
-      .unique();
-
-    return user;
+    if (!identity) return null;
+    return await getCurrentUserDoc(ctx, identity);
   },
 });
 
-/* =========================
-   COMPLETE ONBOARDING
-   ========================= */
-
 export const completeOnboarding = mutation({
-  args: {
-    dob: v.optional(v.string()),
-    sex: v.optional(
-      v.union(v.literal("male"), v.literal("female"), v.literal("other")),
-    ),
-    heightCm: v.optional(v.number()),
-    weightKg: v.optional(v.number()),
-    activityLevel: v.optional(
-      v.union(
-        v.literal("sedentary"),
-        v.literal("light"),
-        v.literal("moderate"),
-        v.literal("active"),
-        v.literal("veryActive"),
-      ),
-    ),
-    goal: v.optional(
-      v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")),
-    ),
-    dietaryPreference: v.optional(v.string()),
-    allergies: v.optional(v.array(v.string())),
-    periodTrackingEnabled: v.optional(v.boolean()),
-  },
+  args: profileArgs,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getIdentity(ctx);
+    let user = await getCurrentUserDoc(ctx, identity);
 
-    if (!identity) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "User not authenticated",
+    if (!user) {
+      const userId = await ctx.db.insert("users", {
+        name: identity.name,
+        email: identity.email,
+        tokenIdentifier: identity.tokenIdentifier,
+        hasCompletedOnboarding: false,
       });
+      user = await ctx.db.get(userId);
     }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
-      .unique();
 
     if (!user) {
       throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "User record not found",
+        code: "INTERNAL_ERROR",
+        message: "Unable to initialize user record",
       });
     }
 
-    // 🔒 Idempotency: onboarding is write-once
-    if (user.hasCompletedOnboarding === true) {
-      return user._id;
-    }
-
-    // Apply only defined fields (schema-safe)
     const patch: Record<string, unknown> = {
       hasCompletedOnboarding: true,
     };
 
-    if (args.dob !== undefined) patch.dob = args.dob;
-    if (args.sex !== undefined) patch.sex = args.sex;
-    if (args.heightCm !== undefined) patch.heightCm = args.heightCm;
-    if (args.weightKg !== undefined) patch.weightKg = args.weightKg;
-    if (args.activityLevel !== undefined)
-      patch.activityLevel = args.activityLevel;
-    if (args.goal !== undefined) patch.goal = args.goal;
-    if (args.dietaryPreference !== undefined)
-      patch.dietaryPreference = args.dietaryPreference;
-    if (args.allergies !== undefined) patch.allergies = args.allergies;
-    if (args.periodTrackingEnabled !== undefined)
-      patch.periodTrackingEnabled = args.periodTrackingEnabled;
+    for (const [key, value] of Object.entries(args)) {
+      if (value !== undefined) patch[key] = value;
+    }
 
     await ctx.db.patch(user._id, patch);
-
     return user._id;
   },
 });
 
-/* =========================
-   UPDATE USER PROFILE
-   Unlike completeOnboarding(), this works after onboarding is done.
-   Called as a background sync when the user edits their health profile.
-   Local state is always updated first — this is additive and non-blocking.
-   ========================= */
-
 export const updateUserProfile = mutation({
-  args: {
-    dob: v.optional(v.string()),
-    sex: v.optional(
-      v.union(v.literal("male"), v.literal("female"), v.literal("other")),
-    ),
-    heightCm: v.optional(v.number()),
-    weightKg: v.optional(v.number()),
-    activityLevel: v.optional(
-      v.union(
-        v.literal("sedentary"),
-        v.literal("light"),
-        v.literal("moderate"),
-        v.literal("active"),
-        v.literal("veryActive"),
-      ),
-    ),
-    goal: v.optional(
-      v.union(v.literal("lose"), v.literal("maintain"), v.literal("gain")),
-    ),
-    dietaryPreference: v.optional(v.string()),
-    allergies: v.optional(v.array(v.string())),
-  },
+  args: profileArgs,
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return;
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
-      .unique();
+    const identity = await getIdentity(ctx);
+    const user = await getCurrentUserDoc(ctx, identity);
 
     if (!user) return;
 
     const patch: Record<string, unknown> = {};
-    if (args.dob !== undefined) patch.dob = args.dob;
-    if (args.sex !== undefined) patch.sex = args.sex;
-    if (args.heightCm !== undefined) patch.heightCm = args.heightCm;
-    if (args.weightKg !== undefined) patch.weightKg = args.weightKg;
-    if (args.activityLevel !== undefined) patch.activityLevel = args.activityLevel;
-    if (args.goal !== undefined) patch.goal = args.goal;
-    if (args.dietaryPreference !== undefined) patch.dietaryPreference = args.dietaryPreference;
-    if (args.allergies !== undefined) patch.allergies = args.allergies;
+
+    for (const [key, value] of Object.entries(args)) {
+      if (value !== undefined) patch[key] = value;
+    }
 
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(user._id, patch);
@@ -201,26 +131,23 @@ export const updateUserProfile = mutation({
   },
 });
 
-/* =========================
-   SET PERIOD TRACKING
-   ========================= */
-
 export const setPeriodTracking = mutation({
-  args: { enabled: v.boolean() },
+  args: {
+    enabled: v.boolean(),
+  },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new ConvexError({ code: "UNAUTHENTICATED", message: "Not authenticated" });
-    }
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier),
-      )
-      .unique();
+    const identity = await getIdentity(ctx);
+    const user = await getCurrentUserDoc(ctx, identity);
+
     if (!user) {
-      throw new ConvexError({ code: "NOT_FOUND", message: "User not found" });
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
     }
-    await ctx.db.patch(user._id, { periodTrackingEnabled: args.enabled });
+
+    await ctx.db.patch(user._id, {
+      periodTrackingEnabled: args.enabled,
+    });
   },
 });
