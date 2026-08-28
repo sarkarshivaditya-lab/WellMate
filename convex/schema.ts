@@ -27,17 +27,6 @@ export default defineSchema({
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
     localAmbulanceNumber: v.optional(v.string()),
-    trackingMode: v.optional(v.union(v.literal("automatic"), v.literal("manual"))),
-    dailySteps: v.optional(v.string()),
-    weightGoal: v.optional(v.string()),
-    muscleGoal: v.optional(v.string()),
-    cycleLength: v.optional(v.number()),
-    lastPeriod: v.optional(v.string()),
-    additionalHealthNotes: v.optional(v.string()),
-    bloodType: v.optional(v.string()),
-    emergencyContactName: v.optional(v.string()),
-    emergencyContactPhone: v.optional(v.string()),
-    localAmbulanceNumber: v.optional(v.string()),
     trackingMode: v.optional(
       v.union(
         v.literal("automatic"),
