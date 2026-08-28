@@ -2,6 +2,7 @@ import "./index.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { BrowserRouter } from "react-router-dom";
 import { DefaultProviders } from "./components/providers/default";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 
@@ -11,9 +12,11 @@ export function Root() {
   return (
     <React.StrictMode>
       <AppErrorBoundary>
-        <DefaultProviders>
-          <App />
-        </DefaultProviders>
+        <BrowserRouter>
+          <DefaultProviders>
+            <App />
+          </DefaultProviders>
+        </BrowserRouter>
       </AppErrorBoundary>
     </React.StrictMode>
   );
