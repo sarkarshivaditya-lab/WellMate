@@ -22,8 +22,65 @@ const BURST_LIMIT = 5;
 const DAILY_LIMIT = 20;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+const MENTAL_RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    summary: { type: "string" },
+    emotion: {
+      type: "string",
+      enum: ["calm", "stressed", "anxious", "sad", "content", "frustrated", "overwhelmed", "hopeful"],
+    },
+    suggestions: {
+      type: "array",
+      items: { type: "string" },
+    },
+    practice: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        id: { type: "string" },
+        title: { type: "string" },
+        steps: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+      required: ["id", "title", "steps"],
+    },
+    escalation: { type: "boolean" },
+    confidence: {
+      type: "string",
+      enum: ["low", "medium", "high"],
+    },
+  },
+  required: ["summary", "emotion", "suggestions", "practice", "escalation", "confidence"],
+} as const;
+
 function technicalFallback(message: string, crisisFromUser: boolean): AiMentalResponse {
   return createSafetyFallback(message, crisisFromUser);
+}
+
+function extractJsonObject(content: string): unknown | null {
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned) as unknown;
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+
+    try {
+      return JSON.parse(cleaned.slice(start, end + 1)) as unknown;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const askMentalCoach = action({
@@ -87,7 +144,15 @@ export const askMentalCoach = action({
             { role: "system", content: SYSTEM_PROMPT_MENTAL },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.7,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "wellmate_mental_response",
+              strict: true,
+              schema: MENTAL_RESPONSE_SCHEMA,
+            },
+          },
+          temperature: 0.4,
           max_tokens: 900,
         }),
       });
@@ -108,16 +173,14 @@ export const askMentalCoach = action({
         return technicalFallback("I’m unable to answer right now. Please try again shortly.", crisisFromUser);
       }
 
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(content);
-      } catch (parseError) {
-        console.error("WellMate Mental AI invalid JSON:", parseError);
+      const parsed = extractJsonObject(content);
+      if (!parsed) {
+        console.error("WellMate Mental AI could not parse structured response", data.model ?? "unknown-model");
         return technicalFallback("I couldn’t format that response safely. Please try again.", crisisFromUser);
       }
 
       const validated = validateMentalResponse(parsed);
-      const escalation = crisisFromUser && validated.escalation;
+      const escalation = crisisFromUser || validated.escalation;
       return {
         ...validated,
         escalation,
