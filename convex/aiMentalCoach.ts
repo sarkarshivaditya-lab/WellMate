@@ -117,10 +117,11 @@ export const askMentalCoach = action({
       }
 
       const validated = validateMentalResponse(parsed);
+      const escalation = crisisFromUser && validated.escalation;
       return {
         ...validated,
-        escalation: validated.escalation || crisisFromUser,
-        confidence: validated.escalation || crisisFromUser ? "low" : validated.confidence,
+        escalation,
+        confidence: escalation ? "low" : validated.confidence,
       };
     } catch (error) {
       console.error("WellMate Mental AI error:", error);
