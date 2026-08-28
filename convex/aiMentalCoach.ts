@@ -21,11 +21,10 @@ const BURST_WINDOW_MS = 60_000;
 const BURST_LIMIT = 5;
 const DAILY_LIMIT = 20;
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODELS = [
-  "openrouter/free",
-  "openai/gpt-oss-20b:free",
-  "google/gemma-4-26b-a4b-it:free",
-];
+
+function technicalFallback(message: string, crisisFromUser: boolean): AiMentalResponse {
+  return createSafetyFallback(message, crisisFromUser);
+}
 
 export const askMentalCoach = action({
   args: { message: v.string() },
@@ -39,22 +38,24 @@ export const askMentalCoach = action({
     const userId = user._id;
     const today = new Date().toISOString().split("T")[0];
     const now = Date.now();
+    const crisisFromUser = detectCrisis(args.message);
     const usage = await ctx.runQuery(api.mentalAiUsage.getByUserAndDate, {
       userId,
       dateIso: today,
     });
 
     if (usage) {
-      if (usage.count >= DAILY_LIMIT) throw new Error("MENTAL_AI_DAILY_LIMIT_EXCEEDED");
+      if (usage.count >= DAILY_LIMIT) {
+        return technicalFallback("You’ve reached today’s AI limit. Please try again tomorrow.", crisisFromUser);
+      }
       if (now - usage.lastCallTs < BURST_WINDOW_MS && usage.count % BURST_LIMIT === 0) {
-        throw new Error("MENTAL_AI_RATE_LIMITED");
+        return technicalFallback("I’m taking a short pause. Please try again in a moment.", crisisFromUser);
       }
       await ctx.runMutation(api.mentalAiUsage.increment, { id: usage._id, now });
     } else {
       await ctx.runMutation(api.mentalAiUsage.create, { userId, dateIso: today, now });
     }
 
-    const crisisFromUser = detectCrisis(args.message);
     const moods = await ctx.runQuery(api.moods.listMoods, { limit: 7 });
     const journals = await ctx.runQuery(api.journal.listJournalEntries, { limit: 7 });
     const todayMood = await ctx.runQuery(api.moods.getMoodByDate, { dateIso: today });
@@ -68,7 +69,7 @@ export const askMentalCoach = action({
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.error("WellMate Mental AI: OPENROUTER_API_KEY is not configured");
-      return createSafetyFallback("AI service is unavailable. Please reach out to local support resources.", true);
+      return technicalFallback("AI service is unavailable right now. Please try again shortly.", crisisFromUser);
     }
 
     try {
@@ -82,12 +83,10 @@ export const askMentalCoach = action({
         },
         body: JSON.stringify({
           model: "openrouter/free",
-          models: OPENROUTER_MODELS.slice(1),
           messages: [
             { role: "system", content: SYSTEM_PROMPT_MENTAL },
             { role: "user", content: userPrompt },
           ],
-          response_format: { type: "json_object" },
           temperature: 0.7,
           max_tokens: 900,
         }),
@@ -96,7 +95,7 @@ export const askMentalCoach = action({
       if (!response.ok) {
         const detail = await response.text().catch(() => "");
         console.error("WellMate Mental AI OpenRouter error:", response.status, detail.slice(0, 500));
-        return createSafetyFallback("The AI service is temporarily unavailable. Please try again shortly.", true);
+        return technicalFallback("The AI service is temporarily unavailable. Please try again shortly.", crisisFromUser);
       }
 
       const data = (await response.json()) as {
@@ -106,7 +105,7 @@ export const askMentalCoach = action({
       const content = data.choices?.[0]?.message?.content?.trim();
       if (!content) {
         console.error("WellMate Mental AI OpenRouter returned no content", data.model ?? "unknown-model");
-        return createSafetyFallback("Unable to respond right now.", true);
+        return technicalFallback("I’m unable to answer right now. Please try again shortly.", crisisFromUser);
       }
 
       let parsed: unknown;
@@ -114,8 +113,9 @@ export const askMentalCoach = action({
         parsed = JSON.parse(content);
       } catch (parseError) {
         console.error("WellMate Mental AI invalid JSON:", parseError);
-        return createSafetyFallback("I could not safely format that response. Please try again.", false);
+        return technicalFallback("I couldn’t format that response safely. Please try again.", crisisFromUser);
       }
+
       const validated = validateMentalResponse(parsed);
       return {
         ...validated,
@@ -124,7 +124,7 @@ export const askMentalCoach = action({
       };
     } catch (error) {
       console.error("WellMate Mental AI error:", error);
-      return createSafetyFallback("Something went wrong. You’re not alone.", true);
+      return technicalFallback("Something went wrong while connecting to WellMate AI. Please try again.", crisisFromUser);
     }
   },
 });
