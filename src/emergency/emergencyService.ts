@@ -45,38 +45,44 @@ function buildSmsBody(event: EmergencyEvent): string {
   ].join(" ");
 }
 
-function browserCall(phone: string): DeliveryStatus {
-  if (!phone) return "FAILED";
-  window.location.href = `tel:${phone}`;
+function openCall(phone: string): DeliveryStatus {
+  if (!phone || typeof window === "undefined") return "FAILED";
+  window.location.assign(`tel:${phone}`);
   return "PENDING";
 }
 
-function browserSms(phone: string, body: string): DeliveryStatus {
-  if (!phone) return "FAILED";
-  window.location.href = `sms:${phone}?body=${encodeURIComponent(body)}`;
+function openSms(phone: string, body: string): DeliveryStatus {
+  if (!phone || typeof window === "undefined") return "FAILED";
+  window.location.assign(`sms:${phone}?body=${encodeURIComponent(body)}`);
   return "PENDING";
 }
 
 export class WebEmergencyDispatcher implements EmergencyDispatcher {
   async dispatch(event: EmergencyEvent): Promise<DispatchResult> {
     const phone = event.profile.emergencyContactPhone;
-    const call = browserCall(phone);
-    const sms = browserSms(phone, buildSmsBody(event));
-
+    const sms = openSms(phone, buildSmsBody(event));
     return {
-      call,
+      call: "PENDING",
       sms,
-      overall: call === "FAILED" && sms === "FAILED" ? "FAILED" : "PENDING",
+      overall: sms === "FAILED" ? "FAILED" : "PENDING",
     };
   }
 }
 
 export class NativeEmergencyDispatcher implements EmergencyDispatcher {
-  async dispatch(): Promise<DispatchResult> {
+  async dispatch(event: EmergencyEvent): Promise<DispatchResult> {
     if (!Capacitor.isNativePlatform()) {
       return { call: "FAILED", sms: "FAILED", overall: "FAILED" };
     }
-    return { call: "PENDING", sms: "PENDING", overall: "PENDING" };
+
+    const phone = event.profile.emergencyContactPhone;
+    const sms = openSms(phone, buildSmsBody(event));
+
+    return {
+      call: "PENDING",
+      sms,
+      overall: sms === "FAILED" ? "FAILED" : "PENDING",
+    };
   }
 }
 
@@ -113,7 +119,7 @@ export async function readCurrentLocation(): Promise<{
           accuracy: position.coords.accuracy,
         }),
       () => resolve(null),
-      { enableHighAccuracy: false, maximumAge: 10_000, timeout: 5_000 },
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 8_000 },
     );
   });
 }
