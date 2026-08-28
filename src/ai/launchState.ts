@@ -5,11 +5,11 @@
 //
 // To enable mental coaching at launch:
 //   Set mentalCoachingAvailable: true
-//   Prerequisite: cloud AI API (Claude/OpenAI) active + aiMentalCoach Convex action configured
+//   Prerequisite: OpenRouter free-model routing + aiMentalCoach Convex action configured
 //
 // To enable the floating assistant cloud fallback:
 //   Set cloudAssistantAvailable: true
-//   Prerequisite: wellmateChat Convex action configured and API keys set
+//   Prerequisite: wellmateChat Convex action configured with OpenRouter
 
 export const LAUNCH_STATE = {
   // Advanced mental wellbeing coaching via cloud intelligence infrastructure.
