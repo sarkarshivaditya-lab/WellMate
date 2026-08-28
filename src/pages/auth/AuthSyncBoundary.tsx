@@ -40,6 +40,7 @@ function SyncWorker() {
   const convex = useConvex();
   const { isAuthenticated } = useConvexAuth();
   const updateCurrentUser = useMutation(api.users.updateCurrentUser);
+  const completeOnboarding = useMutation(api.users.completeOnboarding);
 
   const isAuthRef = React.useRef(false);
   isAuthRef.current = isAuthenticated;
@@ -161,14 +162,159 @@ function UserBootstrapGate({
   React.useEffect(() => {
     let cancelled = false;
 
-    void updateCurrentUser()
-      .then(() => {
+    const bootstrap = async () => {
+      try {
+        await updateCurrentUser();
+
+        if (cancelled) return;
+
+        try {
+          const raw = localStorage.getItem("onboarding_profile");
+
+          if (raw) {
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+            const payload: Record<string, unknown> = {};
+
+            if (typeof parsed.dob === "string" && parsed.dob) {
+              payload.dob = parsed.dob;
+            }
+
+            if (
+              parsed.sex === "male" ||
+              parsed.sex === "female" ||
+              parsed.sex === "other"
+            ) {
+              payload.sex = parsed.sex;
+            }
+
+            if (
+              typeof parsed.heightCm === "number" &&
+              Number.isFinite(parsed.heightCm) &&
+              parsed.heightCm > 0
+            ) {
+              payload.heightCm = parsed.heightCm;
+            }
+
+            if (
+              typeof parsed.weightKg === "number" &&
+              Number.isFinite(parsed.weightKg) &&
+              parsed.weightKg > 0
+            ) {
+              payload.weightKg = parsed.weightKg;
+            }
+
+            if (
+              parsed.activityLevel === "sedentary" ||
+              parsed.activityLevel === "light" ||
+              parsed.activityLevel === "moderate" ||
+              parsed.activityLevel === "active" ||
+              parsed.activityLevel === "veryActive"
+            ) {
+              payload.activityLevel = parsed.activityLevel;
+            }
+
+            if (
+              parsed.weightGoal === "lose" ||
+              parsed.weightGoal === "maintain" ||
+              parsed.weightGoal === "gain"
+            ) {
+              payload.weightGoal = parsed.weightGoal;
+              payload.goal = parsed.weightGoal;
+            }
+
+            if (typeof parsed.dailySteps === "string" && parsed.dailySteps) {
+              payload.dailySteps = parsed.dailySteps;
+            }
+
+            if (typeof parsed.muscleGoal === "string" && parsed.muscleGoal) {
+              payload.muscleGoal = parsed.muscleGoal;
+            }
+
+            if (
+              typeof parsed.cycleLength === "number" &&
+              Number.isFinite(parsed.cycleLength)
+            ) {
+              payload.cycleLength = parsed.cycleLength;
+            }
+
+            if (typeof parsed.lastPeriod === "string" && parsed.lastPeriod) {
+              payload.lastPeriod = parsed.lastPeriod;
+            }
+
+            if (
+              typeof parsed.additionalHealthNotes === "string" &&
+              parsed.additionalHealthNotes
+            ) {
+              payload.additionalHealthNotes =
+                parsed.additionalHealthNotes;
+            }
+
+            if (typeof parsed.bloodType === "string" && parsed.bloodType) {
+              payload.bloodType = parsed.bloodType;
+            }
+
+            if (typeof parsed.allergies === "string" && parsed.allergies) {
+              payload.allergies = parsed.allergies
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean);
+            }
+
+            if (
+              typeof parsed.emergencyContactName === "string" &&
+              parsed.emergencyContactName.trim()
+            ) {
+              payload.emergencyContactName =
+                parsed.emergencyContactName.trim();
+            }
+
+            if (
+              typeof parsed.emergencyContactPhone === "string" &&
+              parsed.emergencyContactPhone.trim()
+            ) {
+              payload.emergencyContactPhone =
+                parsed.emergencyContactPhone.trim();
+            }
+
+            if (
+              typeof parsed.localAmbulanceNumber === "string" &&
+              parsed.localAmbulanceNumber.trim()
+            ) {
+              payload.localAmbulanceNumber =
+                parsed.localAmbulanceNumber.trim();
+            }
+
+            if (
+              parsed.trackingMode === "automatic" ||
+              parsed.trackingMode === "manual"
+            ) {
+              payload.trackingMode = parsed.trackingMode;
+            }
+
+            if (Object.keys(payload).length > 0) {
+              await completeOnboarding(payload);
+
+              if (!cancelled) {
+                localStorage.setItem(
+                  "onboarded",
+                  "true",
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error(
+            "[WellMate] Onboarding promotion failed:",
+            error,
+          );
+        }
+
         if (!cancelled) {
           setReady(true);
           setError(null);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("[WellMate] User bootstrap failed:", err);
 
         if (!cancelled) {
@@ -178,12 +324,15 @@ function UserBootstrapGate({
               : "Unable to initialize your account.",
           );
         }
-      });
+      }
+    };
+
+    void bootstrap();
 
     return () => {
       cancelled = true;
     };
-  }, [updateCurrentUser]);
+  }, [updateCurrentUser, completeOnboarding]);
 
   if (ready) {
     return (
