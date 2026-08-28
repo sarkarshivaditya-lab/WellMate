@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 
 export const isCapacitorNative = Capacitor.isNativePlatform();
 
-// Official Auth0 Ionic/Capacitor callback format:
+// Auth0's documented Ionic/Capacitor callback format:
 // <packageId>://<auth0Domain>/capacitor/<packageId>/callback
 export const CAPACITOR_CALLBACK_URI = `com.wellmate.app://${import.meta.env.VITE_AUTH0_DOMAIN}/capacitor/com.wellmate.app/callback`;
 
@@ -25,14 +25,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (import.meta.env.DEV) {
       console.warn(
         "[AuthProvider] VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID is missing. " +
-          "Auth-gated routes cannot authenticate until the Auth0 environment is configured."
+          "Auth-gated routes cannot authenticate until the Auth0 environment is configured.",
       );
     }
+
     return (
       <Auth0Provider
         domain="placeholder.auth0.com"
         clientId="placeholder"
-        authorizationParams={{ redirect_uri: typeof window !== "undefined" ? window.location.origin : "" }}
+        authorizationParams={{
+          redirect_uri: typeof window !== "undefined" ? window.location.origin : "",
+        }}
         cacheLocation="localstorage"
       >
         {children}
@@ -46,13 +49,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clientId={clientId}
       authorizationParams={{
         redirect_uri: resolveRedirectUri(),
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined,
+        ...(import.meta.env.VITE_AUTH0_AUDIENCE
+          ? { audience: import.meta.env.VITE_AUTH0_AUDIENCE as string }
+          : {}),
         scope: "openid profile email",
       }}
       cacheLocation="localstorage"
       useRefreshTokens
       useRefreshTokensFallback={false}
-      useCookiesForTransactions
+      onRedirectCallback={(appState) => {
+        const returnTo =
+          typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")
+            ? appState.returnTo
+            : "/physical";
+        window.history.replaceState({}, document.title, returnTo);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }}
     >
       {children}
     </Auth0Provider>
