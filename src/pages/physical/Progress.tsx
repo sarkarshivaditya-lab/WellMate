@@ -147,12 +147,14 @@ export default function Progress() {
 
   const weeklyExercise = useWeeklyExerciseTrend();
 
-  const weeklyActivityData = weeklyExercise.map((d) => ({
-    label: d.label,
-    value: Math.round(d.calories),
-    target: 0,
-    unit: "kcal",
-  }));
+  const weeklyActivityData = weeklyExercise
+    .filter((d) => d.calories > 0)
+    .map((d) => ({
+      label: d.label,
+      value: Math.round(d.calories),
+      target: 0,
+      unit: "kcal",
+    }));
 
   /* =========================
      MICROS (LOCAL)
@@ -198,6 +200,9 @@ export default function Progress() {
   /* =========================
      RENDER
      ========================= */
+
+  const hasMacroData = dayTotals.protein + dayTotals.fat + dayTotals.carbs > 0;
+  const hasActivityData = weeklyExercise.some((d) => d.calories > 0);
 
   return (
     <div className="space-y-4">
@@ -261,8 +266,11 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            {pieData.length > 0 ? (
-              <ChartPie data={pieData} size={220} />
+            {hasMacroData ? (
+              <ChartPie
+                data={pieData.filter((slice) => slice.value > 0)}
+                size={220}
+              />
             ) : (
               <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
                 <UtensilsCrossed className="h-8 w-8 opacity-30" />
@@ -282,7 +290,7 @@ export default function Progress() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {weeklyActivityData.length > 0 ? (
+            {hasActivityData ? (
               <ChartBar data={weeklyActivityData} height={240} />
             ) : (
               <div className="py-10 flex flex-col items-center gap-2 text-muted-foreground">
