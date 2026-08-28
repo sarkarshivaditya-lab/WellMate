@@ -37,7 +37,7 @@ function NavItem({
         "relative flex flex-col items-center justify-center gap-0.5",
         "flex-1 py-1.5 px-1 min-h-[44px] rounded-2xl transition-premium",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+        active ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground",
       )}
     >
       <span
@@ -45,7 +45,7 @@ function NavItem({
         className={cn(
           "absolute inset-x-1 top-1 bottom-1 rounded-xl",
           "transition-premium",
-          active ? "glass-brand opacity-100" : "opacity-0",
+          active ? "glass-brand opacity-100 shadow-[0_4px_18px_rgba(20,60,50,0.12)]" : "opacity-0",
         )}
       />
       <span className="relative flex items-center justify-center h-5 w-5">
