@@ -3,7 +3,6 @@
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { v } from "convex/values";
-import OpenAI from "openai";
 import {
   SYSTEM_PROMPT_MENTAL,
   buildMentalUserPrompt,
@@ -21,81 +20,44 @@ import {
 const BURST_WINDOW_MS = 60_000;
 const BURST_LIMIT = 3;
 const DAILY_LIMIT = 20;
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODELS = [
+  "openrouter/free",
+  "openai/gpt-oss-20b:free",
+  "google/gemma-4-26b-a4b-it:free",
+];
 
 export const askMentalCoach = action({
-  args: {
-    message: v.string(),
-  },
+  args: { message: v.string() },
   handler: async (ctx, args): Promise<AiMentalResponse> => {
-    /* ======================================================
-       AUTH (Stage 14.3.2)
-       ====================================================== */
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("UNAUTHENTICATED_MENTAL_AI_ACCESS");
-    }
+    if (!identity) throw new Error("UNAUTHENTICATED_MENTAL_AI_ACCESS");
 
-    /* ======================================================
-       RESOLVE USER
-       ====================================================== */
     const user = await ctx.runQuery(api.users.getCurrentUser, {});
-    if (!user) {
-      throw new Error("USER_RECORD_NOT_FOUND");
-    }
+    if (!user) throw new Error("USER_RECORD_NOT_FOUND");
 
     const userId = user._id;
     const today = new Date().toISOString().split("T")[0];
     const now = Date.now();
-
-    /* ======================================================
-       RATE LIMITING (Stage 14.3.3)
-       ====================================================== */
     const usage = await ctx.runQuery(api.mentalAiUsage.getByUserAndDate, {
       userId,
       dateIso: today,
     });
 
     if (usage) {
-      if (usage.count >= DAILY_LIMIT) {
-        throw new Error("MENTAL_AI_DAILY_LIMIT_EXCEEDED");
-      }
-      if (
-        now - usage.lastCallTs < BURST_WINDOW_MS &&
-        usage.count % BURST_LIMIT === 0
-      ) {
+      if (usage.count >= DAILY_LIMIT) throw new Error("MENTAL_AI_DAILY_LIMIT_EXCEEDED");
+      if (now - usage.lastCallTs < BURST_WINDOW_MS && usage.count % BURST_LIMIT === 0) {
         throw new Error("MENTAL_AI_RATE_LIMITED");
       }
-    }
-
-    if (usage) {
-      await ctx.runMutation(api.mentalAiUsage.increment, {
-        id: usage._id,
-        now,
-      });
+      await ctx.runMutation(api.mentalAiUsage.increment, { id: usage._id, now });
     } else {
-      await ctx.runMutation(api.mentalAiUsage.create, {
-        userId,
-        dateIso: today,
-        now,
-      });
+      await ctx.runMutation(api.mentalAiUsage.create, { userId, dateIso: today, now });
     }
 
-    /* ======================================================
-       CRISIS PRE-CHECK (FAIL-SAFE)
-       ====================================================== */
     const crisisFromUser = detectCrisis(args.message);
-
-    /* ======================================================
-       CONTEXT BUILD
-       ====================================================== */
     const moods = await ctx.runQuery(api.moods.listMoods, { limit: 7 });
-    const journals = await ctx.runQuery(api.journal.listJournalEntries, {
-      limit: 7,
-    });
-    const todayMood = await ctx.runQuery(api.moods.getMoodByDate, {
-      dateIso: today,
-    });
-
+    const journals = await ctx.runQuery(api.journal.listJournalEntries, { limit: 7 });
+    const todayMood = await ctx.runQuery(api.moods.getMoodByDate, { dateIso: today });
     const userPrompt = buildMentalUserPrompt({
       userMessage: args.message,
       moodHistory: buildMoodHistory(moods, todayMood),
@@ -105,6 +67,7 @@ export const askMentalCoach = action({
 
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
+      console.error("WellMate Mental AI: OPENROUTER_API_KEY is not configured");
       return createSafetyFallback(
         "AI service is unavailable. Please reach out to local support resources.",
         true,
@@ -112,38 +75,55 @@ export const askMentalCoach = action({
     }
 
     try {
-      const openai = new OpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1", defaultHeaders: { "HTTP-Referer": "https://wellmate-website.vercel.app", "X-Title": "WellMate" } });
-      const response = await openai.chat.completions.create({
-        model: "openrouter/free",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT_MENTAL },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-        max_tokens: 900,
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + apiKey,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://wellmate-website.vercel.app",
+          "X-Title": "WellMate",
+        },
+        body: JSON.stringify({
+          models: OPENROUTER_MODELS,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT_MENTAL },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.7,
+          max_tokens: 900,
+        }),
       });
 
-      const content = response.choices[0]?.message?.content;
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        console.error("WellMate Mental AI OpenRouter error:", response.status, detail.slice(0, 500));
+        return createSafetyFallback(
+          "The AI service is temporarily unavailable. Please try again shortly.",
+          true,
+        );
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string | null } }>;
+        model?: string;
+      };
+      const content = data.choices?.[0]?.message?.content?.trim();
+
       if (!content) {
+        console.error("WellMate Mental AI OpenRouter returned no content", data.model ?? "unknown-model");
         return createSafetyFallback("Unable to respond right now.", true);
       }
 
-      const parsed = JSON.parse(content);
-      const validated = validateMentalResponse(parsed);
-
+      const validated = validateMentalResponse(JSON.parse(content));
       return {
         ...validated,
         escalation: validated.escalation || crisisFromUser,
-        confidence:
-          validated.escalation || crisisFromUser ? "low" : validated.confidence,
+        confidence: validated.escalation || crisisFromUser ? "low" : validated.confidence,
       };
     } catch (error) {
-      console.error("AI Mental Coach error:", error);
-      return createSafetyFallback(
-        "Something went wrong. You’re not alone.",
-        true,
-      );
+      console.error("WellMate Mental AI error:", error);
+      return createSafetyFallback("Something went wrong. You’re not alone.", true);
     }
   },
 });
