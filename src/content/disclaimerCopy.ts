@@ -24,6 +24,7 @@ export const EMERGENCY_COPY = {
     { label: "Emergency services", description: "112 in India" },
     { label: "Emergency contact", description: "Use the contact configured in WellMate" },
     { label: "Local ambulance", description: "Use the local number configured in your emergency profile" },
+    { label: "Mental health support", description: "Tele-MANAS — 14416" },
   ],
 } as const;
 
