@@ -9,12 +9,15 @@ import {
 } from "@/emergency/trackingController";
 import { useLocalProfile } from "@/hooks/useLocalProfile";
 
+const DEFAULT_EMERGENCY_NUMBER = "112";
+
 function createController(profile: ReturnType<typeof useLocalProfile>): EmergencyTrackingController {
   const sensorService = new EmergencySensorService(new BrowserEmergencySensorAdapter());
-  const configuredEmergencyNumber = (import.meta.env.VITE_EMERGENCY_NUMBER as string | undefined) ?? null;
+  const configuredEmergencyNumber =
+    (import.meta.env.VITE_EMERGENCY_NUMBER as string | undefined)?.trim() || DEFAULT_EMERGENCY_NUMBER;
   const communication = new (class extends BrowserCommunicationAdapter {
     public override async requestEmergencyCall(): Promise<EmergencyCallCapability> {
-      if (!configuredEmergencyNumber || typeof window === "undefined") return "UNAVAILABLE";
+      if (typeof window === "undefined") return "UNAVAILABLE";
       window.location.assign(`tel:${configuredEmergencyNumber}`);
       return "REQUIRES_USER";
     }
