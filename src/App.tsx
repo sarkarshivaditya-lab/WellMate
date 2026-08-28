@@ -113,19 +113,28 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const [timedOut, setTimedOut] = React.useState(false);
 
+  const loginStartedRef = React.useRef(false);
+
   React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      if (isCapacitorNative) {
-        // On Capacitor, open Auth0 in the system browser so the OS can intercept
-        // the com.wellmate.app:// callback and route it back to the app.
-        // CapacitorAuthHandler listens for appUrlOpen and completes the exchange.
-        loginWithRedirect({
-          openUrl: (url) => Browser.open({ url, presentationStyle: "popover" }),
-        }).catch(() => {});
-      } else {
-        loginWithRedirect().catch(() => {});
-      }
-    }
+    if (isLoading || isAuthenticated || loginStartedRef.current) return;
+
+    loginStartedRef.current = true;
+    const openUrl = isCapacitorNative
+      ? (url: string) => Browser.open({ url, presentationStyle: "popover" })
+      : undefined;
+
+    void loginWithRedirect({
+      ...(openUrl ? { openUrl } : {}),
+      appState: {
+        returnTo:
+          window.location.pathname !== "/"
+            ? window.location.pathname + window.location.search
+            : "/",
+      },
+    }).catch((error) => {
+      loginStartedRef.current = false;
+      console.error("[Auth] loginWithRedirect failed", error);
+    });
   }, [isLoading, isAuthenticated, loginWithRedirect]);
 
   const handleTimeout = React.useCallback(() => setTimedOut(true), []);
