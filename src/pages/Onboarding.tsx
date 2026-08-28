@@ -147,6 +147,9 @@ export default function Onboarding() {
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(
     () => readOnboardingDraft()?.emergencyContactPhone ?? "",
   );
+  const [localAmbulanceNumber, setLocalAmbulanceNumber] = useState(
+    () => readOnboardingDraft()?.localAmbulanceNumber ?? "",
+  );
   const [trackingMode, setTrackingMode] = useState<"automatic" | "manual">(
     () => (readOnboardingDraft()?.trackingMode === "manual" ? "manual" : "automatic"),
   );
@@ -176,6 +179,7 @@ export default function Onboarding() {
       allergies,
       emergencyContactName,
       emergencyContactPhone,
+      localAmbulanceNumber,
       trackingMode,
     });
   }, [
@@ -199,6 +203,7 @@ export default function Onboarding() {
     allergies,
     emergencyContactName,
     emergencyContactPhone,
+    localAmbulanceNumber,
     trackingMode,
   ]);
 
@@ -228,6 +233,7 @@ export default function Onboarding() {
       allergies,
       emergencyContactName,
       emergencyContactPhone,
+      localAmbulanceNumber,
       trackingMode,
 
       // metadata
@@ -262,6 +268,7 @@ export default function Onboarding() {
         bloodType &&
         emergencyContactName.trim() &&
         emergencyContactPhone.trim() &&
+        localAmbulanceNumber.trim() &&
         trackingMode,
       );
     }
@@ -667,6 +674,15 @@ export default function Onboarding() {
               value={emergencyContactPhone}
               onChange={setEmergencyContactPhone}
             />
+            <Field
+              label="Local ambulance service number"
+              type="tel"
+              value={localAmbulanceNumber}
+              onChange={setLocalAmbulanceNumber}
+            />
+            <p className="text-[11px] text-muted-foreground -mt-2">
+              Ambulance numbers can vary by state. Enter the local service number you want WellMate to use.
+            </p>
 
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
