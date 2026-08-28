@@ -119,12 +119,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     if (isLoading || isAuthenticated || loginStartedRef.current) return;
 
     loginStartedRef.current = true;
-    const openUrl = isCapacitorNative
-      ? (url: string) => Browser.open({ url, presentationStyle: "popover" })
-      : undefined;
 
     void loginWithRedirect({
-      ...(openUrl ? { openUrl } : {}),
       appState: {
         returnTo:
           window.location.pathname !== "/"
