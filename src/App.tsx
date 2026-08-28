@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Browser } from "@capacitor/browser";
@@ -88,7 +88,8 @@ export default function App() {
   }, []);
 
   React.useEffect(() => {
-    startHydration().finally(markHydrationReady);
+    startHydration();
+    markHydrationReady();
   }, []);
 
   return (
@@ -99,8 +100,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<WelcomePage />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/transition" element={<TransitionGate />} />
-            <Route element={<RequireAuth><AppShell /></RequireAuth>}>
+            <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
+            <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
               <Route path="/physical" element={<PhysicalDashboard />} />
               <Route path="/mental" element={<MentalOverview />} />
               <Route path="/mental/journal" element={<Journal />} />
