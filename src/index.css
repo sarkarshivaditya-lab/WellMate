@@ -129,35 +129,35 @@
   }
 
   .glass-primary {
-    background: hsl(var(--glass-tint-neutral) / 0.80);
-    border: 1px solid hsl(var(--glass-highlight) / 0.55);
-    box-shadow: 0 1px 2px hsl(var(--glass-shadow-standard)), 0 12px 32px hsl(var(--glass-shadow-standard));
-    backdrop-filter: blur(18px) saturate(115%);
-    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    background: hsl(var(--glass-tint-neutral) / 0.90);
+    border: 1px solid hsl(var(--glass-highlight) / 0.68);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-standard)), 0 18px 42px hsl(var(--glass-shadow-standard));
+    backdrop-filter: blur(22px) saturate(125%);
+    -webkit-backdrop-filter: blur(22px) saturate(125%);
   }
 
   .glass-secondary {
-    background: hsl(var(--glass-tint-neutral) / 0.70);
-    border: 1px solid hsl(var(--glass-highlight) / 0.45);
-    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle)), 0 8px 24px hsl(var(--glass-shadow-subtle));
-    backdrop-filter: blur(12px) saturate(110%);
-    -webkit-backdrop-filter: blur(12px) saturate(110%);
+    background: hsl(var(--glass-tint-neutral) / 0.86);
+    border: 1px solid hsl(var(--glass-highlight) / 0.58);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle)), 0 12px 30px hsl(var(--glass-shadow-subtle));
+    backdrop-filter: blur(18px) saturate(120%);
+    -webkit-backdrop-filter: blur(18px) saturate(120%);
   }
 
   .glass-elevated {
-    background: hsl(var(--glass-tint-neutral) / 0.88);
-    border: 1px solid hsl(var(--glass-highlight) / 0.60);
-    box-shadow: 0 2px 6px hsl(var(--glass-shadow-standard)), 0 18px 46px hsl(var(--glass-shadow-elevated));
-    backdrop-filter: blur(20px) saturate(115%);
-    -webkit-backdrop-filter: blur(20px) saturate(115%);
+    background: hsl(var(--glass-tint-neutral) / 0.92);
+    border: 1px solid hsl(var(--glass-highlight) / 0.72);
+    box-shadow: 0 2px 8px hsl(var(--glass-shadow-standard)), 0 22px 54px hsl(var(--glass-shadow-elevated));
+    backdrop-filter: blur(26px) saturate(130%);
+    -webkit-backdrop-filter: blur(26px) saturate(130%);
   }
 
   .glass-subtle {
-    background: hsl(var(--glass-tint-neutral) / 0.58);
-    border: 1px solid hsl(var(--glass-highlight) / 0.40);
-    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle));
-    backdrop-filter: blur(8px) saturate(105%);
-    -webkit-backdrop-filter: blur(8px) saturate(105%);
+    background: hsl(var(--glass-tint-neutral) / 0.80);
+    border: 1px solid hsl(var(--glass-highlight) / 0.48);
+    box-shadow: 0 1px 2px hsl(var(--glass-shadow-subtle)), 0 8px 20px hsl(var(--glass-shadow-subtle));
+    backdrop-filter: blur(14px) saturate(115%);
+    -webkit-backdrop-filter: blur(14px) saturate(115%);
   }
 
   .glass-primary::before,
@@ -177,18 +177,53 @@
   }
 
   .glass-brand {
-    background: linear-gradient(
-      180deg,
-      hsl(var(--glass-tint-brand-strong) / 0.90),
-      hsl(var(--glass-tint-brand) / 0.80)
-    );
-    border-color: hsl(var(--glass-border-active) / 0.24);
+    background:
+      linear-gradient(180deg, hsl(var(--glass-highlight) / 0.20), transparent 42%),
+      linear-gradient(
+        180deg,
+        hsl(var(--glass-tint-brand-strong) / 0.90),
+        hsl(var(--glass-tint-brand) / 0.78)
+      );
+    border-color: hsl(var(--glass-border-active) / 0.32);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--glass-highlight) / 0.26),
+      0 8px 28px hsl(var(--glass-shadow-standard));
   }
 
   .glass-fallback {
     background: hsl(var(--card));
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+
+  button:not([data-emergency-action]),
+  [role="button"]:not([data-emergency-action]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .glass-interactive {
+    position: relative;
+    background:
+      linear-gradient(180deg, hsl(var(--glass-highlight) / 0.22), transparent 46%),
+      hsl(var(--glass-tint-neutral) / 0.90);
+    border: 1px solid hsl(var(--glass-highlight) / 0.68);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--glass-highlight) / 0.16),
+      0 8px 24px hsl(var(--glass-shadow-subtle));
+    backdrop-filter: blur(22px) saturate(125%);
+    -webkit-backdrop-filter: blur(22px) saturate(125%);
+  }
+
+  .glass-interactive:hover {
+    box-shadow:
+      inset 0 1px 0 hsl(var(--glass-highlight) / 0.22),
+      0 10px 30px hsl(var(--glass-shadow-standard));
+    transform: translateY(-1px);
+  }
+
+  .glass-interactive:active {
+    transform: translateY(0) scale(0.985);
   }
 
   .glass-focus:focus-visible {
