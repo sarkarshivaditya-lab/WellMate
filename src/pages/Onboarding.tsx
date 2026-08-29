@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { readOnboardingDraft, saveOnboardingDraft, clearOnboardingDraft } from "@/data/local/onboardingPayload";
 
@@ -9,8 +7,6 @@ type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "veryActive
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const completeOnboarding = useMutation(api.users.completeOnboarding);
-
   useEffect(() => {
     if (localStorage.getItem("onboarded") === "true") {
       navigate("/physical", { replace: true });
@@ -141,44 +137,26 @@ export default function Onboarding() {
     setStep((current) => Math.max(1, current - 1));
   };
 
-  const finish = async () => {
+  const finish = () => {
     setAttemptedNext(true);
     if (!isStepValid() || saving) return;
     setAttemptedNext(false);
     setSaving(true);
 
-    const profile = buildOnboardingProfile();
+    const now = Date.now();
+    const profile = {
+      ...buildOnboardingProfile(),
+      completedAt: now,
+    };
 
     try {
-      await completeOnboarding({
-        dob: profile.dob || undefined,
-        sex: profile.sex === "male" || profile.sex === "female" || profile.sex === "other" ? profile.sex : undefined,
-        heightCm: profile.heightCm > 0 ? profile.heightCm : undefined,
-        weightKg: profile.weightKg > 0 ? profile.weightKg : undefined,
-        activityLevel: profile.activityLevel ?? undefined,
-        goal: profile.weightGoal === "lose" || profile.weightGoal === "maintain" || profile.weightGoal === "gain" ? profile.weightGoal : undefined,
-        allergies: profile.allergies ? profile.allergies.split(",").map((item) => item.trim()).filter(Boolean) : undefined,
-        periodTrackingEnabled: profile.sex === "female" ? true : undefined,
-        dailySteps: profile.dailySteps || undefined,
-        weightGoal: profile.weightGoal || undefined,
-        muscleGoal: profile.muscleGoal || undefined,
-        cycleLength: profile.cycleLength,
-        lastPeriod: profile.lastPeriod,
-        additionalHealthNotes: profile.additionalHealthNotes,
-        bloodType: profile.bloodType || undefined,
-        emergencyContactName: profile.emergencyContactName.trim() || undefined,
-        emergencyContactPhone: profile.emergencyContactPhone.trim() || undefined,
-        localAmbulanceNumber: profile.localAmbulanceNumber.trim() || undefined,
-        trackingMode: profile.trackingMode,
-      });
-
       localStorage.setItem("onboarding_profile", JSON.stringify(profile));
       localStorage.setItem("onboarded", "true");
       localStorage.removeItem("postOnboardingTransitionShown");
       clearOnboardingDraft();
-      navigate("/physical", { replace: true });
+      navigate("/transition", { replace: true });
     } catch (error) {
-      console.error("[WellMate] Failed to save onboarding profile:", error);
+      console.error("[WellMate] Failed to save onboarding profile locally:", error);
       setSaving(false);
       setAttemptedNext(true);
     }
