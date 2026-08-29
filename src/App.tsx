@@ -114,7 +114,7 @@ function OnboardingRoute() {
       // Treat malformed onboarding state as incomplete.
     }
 
-    // Keep the completion flag intact when a profile predates the transition guard.\n    if (rawProfile) return;\n\n    localStorage.removeItem("onboarded");
+    // A stored profile means onboarding has completed, even for older profiles.\n    if (rawProfile) return;\n\n    localStorage.removeItem("onboarded");
   }, []);
 
   return <Onboarding />;
