@@ -15,6 +15,10 @@ dist-ssr
 .eslintcache
 tsconfig.tsbuildinfo
 
+# Environment variables
+.env*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -26,5 +30,15 @@ tsconfig.tsbuildinfo
 *.sln
 *.sw?
 
-# Environment variables
-.env*
+# Development / AI-assistance tooling
+.claude/
+.claudeignore
+.engineering-skills/
+CLAUDE.md
+PROJECT_FILE_LIST.txt
+PROJECT_FILE_INVENTORY_BASELINE.txt
+PROJECT_STRUCTURE.txt
+
+# Local development diagnostics
+src/pages/Dev.tsx
+src/pages/StateInspector.tsx
