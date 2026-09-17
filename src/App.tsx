@@ -3,9 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "rea
 import { useAuth0 } from "@auth0/auth0-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
-
 import { Browser } from "@capacitor/browser";
-
 import CapacitorAuthHandler from "./components/CapacitorAuthHandler";
 import { isCapacitorNative, CAPACITOR_CALLBACK_URI } from "./components/providers/auth";
 
@@ -25,8 +23,6 @@ const Roadmap = React.lazy(() => import("./pages/Roadmap"));
 const Sleep = React.lazy(() => import("./pages/Sleep"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
-const DevPage = import.meta.env.DEV ? React.lazy(() => import("./pages/Dev")) : null;
-const StateInspectorPage = import.meta.env.DEV ? React.lazy(() => import("./pages/StateInspector")) : null;
 
 import AppShell from "./components/layout/AppShell";
 import { init as initLifecycle, dispose as disposeLifecycle } from "./reliability/lifecycleCoordinator";
@@ -114,7 +110,9 @@ function OnboardingRoute() {
       // Treat malformed onboarding state as incomplete.
     }
 
-    // A stored profile means onboarding has completed, even for older profiles.\n    if (rawProfile) return;\n\n    localStorage.removeItem("onboarded");
+    if (rawProfile) return;
+
+    localStorage.removeItem("onboarded");
   }, []);
 
   return <Onboarding />;
@@ -173,8 +171,6 @@ export default function App() {
               <Route path="/roadmap" element={<Roadmap />} />
               <Route path="/sleep" element={<Sleep />} />
               <Route path="/pricing" element={<Pricing />} />
-              {DevPage && <Route path="/dev" element={<DevPage />} />}
-              {StateInspectorPage && <Route path="/state-inspector" element={<StateInspectorPage />} />}
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
