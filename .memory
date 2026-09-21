@@ -90,3 +90,22 @@ Rationale:
 
 Important:
 - Runtime verification on an affected Android device and a previously authenticated desktop profile is still required before declaring the issue resolved.
+
+
+### 2026-09-21 — Android Chrome startup + Vercel deployment fix
+Status: code fixes committed; latest Vercel deployment still building
+Findings:
+- Vercel production deployments were failing with errorCode `ENOENT` and message `Command "'pnpm run build'" exited with 127`. This is a malformed Vercel Build Command containing literal quote characters, not a `sharp` failure.
+- `sharp@0.32.6` is transitive through `@capacitor/assets@3.0.5`. The observed `fs.R_OK` message is a Node deprecation warning from that old sharp release, not the fatal deployment error. @capacitor/assets 3.0.5 remains the current npm release as of this investigation.
+- Root route previously mounted `WelcomePage` unconditionally. This meant returning users could remain on the lotus surface before Auth0's protected-route recovery logic was even reached.
+Changes:
+- Added `buildCommand: "pnpm run build"` to `vercel.json` to override the malformed deployment command.
+- Changed `/\` routing so `wellmate_welcome_v1` controls the first-visit welcome; returning users go directly to `/physical`.
+- Kept first-time users on the existing Welcome experience.
+- Extended Auth0 startup recovery so that a prolonged loading state without recoverable cached Auth0 state eventually exposes the existing Sign In screen instead of leaving the user indefinitely on a loader.
+- No dependency upgrades or broad refactors were made.
+Verification:
+- A deployment at commit `f47cdda...` reached READY, confirming the corrected Vercel build command works.
+- The newer deployment containing the final Auth0/root-route adjustment is currently BUILDING; runtime verification on affected Android Chrome profiles remains necessary.
+Research:
+- Auth0's current guidance confirms refresh-token failures with `useRefreshTokensFallback={false}` should be handled and can otherwise leave repeated authentication failures; Auth0 also documents browser cookie restrictions as a source of silent-auth failures. citeturn3search0turn3search3
