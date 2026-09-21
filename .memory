@@ -59,3 +59,17 @@ Verification:
 - Repository metadata and the default branch were readable.
 - Source tree and key TypeScript/auth/Convex/reliability files were audited.
 - No application behavior was intentionally changed in this foundation commit.
+
+
+### 2026-09-21 — Cached-session startup investigation
+Status: diagnosis in progress
+Findings:
+- Affected behavior is reported on Android and normal PC browser profiles, while incognito works. This makes persisted browser/app state a primary suspect, but not sufficient to declare root cause.
+- Auth0 is configured with `cacheLocation="localstorage"`, `useRefreshTokens`, and `useRefreshTokensFallback={false}`. Auth0 documents that persisted refresh-token cache is used to restore sessions; disabling fallback causes refresh-token failures to surface instead of silently switching to iframe authentication. citeturn835831search0turn835831search3turn835831search12
+- `RequireAuth` renders only `AppLoadingScreen` while Auth0 reports `isLoading`; any SDK restoration stall therefore presents as a persistent loading screen.
+- `Welcome.tsx` documents `wellmate_welcome_v1` as a once-per-install flag but currently does not read that key at mount. The key is written only after a tap, and the route is always rendered at `/`.
+- Native Android has a separate Auth0 callback handler and custom-scheme launch path; this remains a distinct compatibility surface.
+- The application has multiple startup/recovery systems, so a fix must not collapse or bypass existing reliability guarantees.
+
+Compatibility constraint:
+- No existing auth, onboarding, route, persistence, sync, native callback, or deployment behavior should be removed. The fix must be additive/compatibility-first and validated against both first-time and returning authenticated users.
