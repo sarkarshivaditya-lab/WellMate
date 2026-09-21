@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
+import { AUTH0_CLIENT_CACHE_PREFIX, clearAuth0AppCache } from "./auth/auth0Recovery";
 import { Skeleton } from "@/components/ui/skeleton";
 import AuthSyncBoundary from "./pages/auth/AuthSyncBoundary";
 import { Browser } from "@capacitor/browser";
@@ -63,6 +64,27 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, error: authError, loginWithRedirect } = useAuth0();
   const location = useLocation();
   const loginInFlight = React.useRef(false);
+  const [authRecoveryAttempted, setAuthRecoveryAttempted] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading || authRecoveryAttempted) return;
+
+    const timer = window.setTimeout(() => {
+      try {
+        const hasAuth0Cache = Object.keys(localStorage).some((key) =>
+          key.startsWith(AUTH0_CLIENT_CACHE_PREFIX),
+        );
+
+        if (hasAuth0Cache) {
+          clearAuth0AppCache();
+        }
+      } finally {
+        setAuthRecoveryAttempted(true);
+      }
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoading, authRecoveryAttempted]);
 
   const handleLogin = React.useCallback(async () => {
     if (loginInFlight.current) return;
@@ -86,7 +108,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     }
   }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
-  if (isLoading) return <AppLoadingScreen />;
+  if (isLoading && !authRecoveryAttempted) return <AppLoadingScreen />;
+  if (isLoading && authRecoveryAttempted) return <AppLoadingScreen />;
   if (isAuthenticated) {
     return (
       <AuthSyncBoundary>
