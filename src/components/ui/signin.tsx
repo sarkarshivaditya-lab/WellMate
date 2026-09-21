@@ -51,6 +51,7 @@ export const SignInButton = forwardRef<HTMLButtonElement, SignInButtonProps>(
                   window.location.search +
                   window.location.hash,
               },
+              authorizationParams: { prompt: "login" as const },
             });
             return;
           }
