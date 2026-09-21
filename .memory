@@ -1,0 +1,43 @@
+# WellMate Engineering Memory
+
+This file is the persistent engineering ledger for repository changes.
+
+## Repository baseline
+- Repository: sarkarshivaditya-lab/WellMate
+- Default branch: main
+- Primary stack: React 19, TypeScript 5.9, Vite 7, React Router 7, Auth0, Convex, Capacitor 7, Tailwind CSS.
+- Browser authentication uses Auth0; native Capacitor authentication has a dedicated callback handler.
+- Convex is the backend and authenticated user records are associated through tokenIdentifier.
+- Reliability architecture is documented in RELIABILITY.md.
+- CI currently runs lint, TypeScript checking, deterministic emergency tests, and production build.
+- Onboarding state uses localStorage keys including onboarding_profile and onboarded.
+
+## Engineering constraints
+- Do not patch symptoms while leaving duplicate or conflicting architecture behind.
+- Trace callers and dependencies before structural changes.
+- Preserve offline-first and recovery guarantees.
+- Never edit convex/_generated manually.
+- Authentication changes require end-to-end flow analysis across browser and native paths.
+- Every completed code edit must be recorded below.
+
+## Change ledger
+
+### 2026-09-21 — Engineering foundation initialized
+Status: complete
+Changes:
+- Added .github/skills/react-typescript-engineering.md for React/TypeScript architecture, lifecycle, typing, accessibility, and verification discipline.
+- Added .github/skills/convex-engineering.md for Convex authorization, validation, idempotency, and generated-code boundaries.
+- Added .github/skills/auth-and-session-engineering.md for full Auth0/OIDC/Capacitor authentication-flow analysis.
+- Added .github/skills/reliability-and-safe-edits.md to preserve the repository's existing local-first, sync, hydration, and recovery contracts.
+- Added .memory as the persistent change ledger.
+
+Repository observations used to establish these skills:
+- src/App.tsx owns the top-level RequireAuth route boundary and browser/native Auth0 login initiation.
+- OnboardingRoute and Onboarding.tsx use localStorage-backed onboarding state.
+- Convex user functions scope records through authenticated tokenIdentifier values.
+- RELIABILITY.md defines the single sync path, queue behavior, recovery model, hydration state machine, and persistence contracts.
+
+Verification:
+- Repository metadata and the default branch were readable.
+- Source tree and key TypeScript/auth/Convex/reliability files were audited.
+- No application behavior was intentionally changed in this foundation commit.
