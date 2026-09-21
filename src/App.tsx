@@ -198,6 +198,7 @@ export default function App() {
         <React.Suspense fallback={<AppLoadingScreen />}>
           <Routes>
             <Route path="/" element={<RootRoute />} />
+            <Route path="/callback" element={<AppLoadingScreen />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
             <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
