@@ -45,15 +45,8 @@ function AppLoadingScreen() {
 }
 
 function RootRoute() {
-  const { isAuthenticated, isLoading } = useAuth0();
-
-  if (isLoading) return <AppLoadingScreen />;
-  if (isAuthenticated) return <Navigate to="/physical" replace />;
-
   const welcomeSeen = localStorage.getItem("wellmate_welcome_v1") === "1";
-  if (!welcomeSeen) return <WelcomePage />;
-
-  return <Navigate to="/physical" replace />;
+  return welcomeSeen ? <Navigate to="/physical" replace /> : <WelcomePage />;
 }
 
 function SignInScreen({ onSignIn, error }: { onSignIn: () => void; error?: string }) {
