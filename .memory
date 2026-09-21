@@ -20,6 +20,24 @@ This file is the persistent engineering ledger for repository changes.
 - Authentication changes require end-to-end flow analysis across browser and native paths.
 - Every completed code edit must be recorded below.
 
+## Non-negotiable deployment invariant
+
+**Do not regress the currently deployed application.** Existing production behavior is the compatibility baseline. Future work must build on that baseline unless an explicit migration is part of the task.
+
+Before every substantial edit:
+- Establish the current behavior and affected dependency chain.
+- Preserve existing routes, auth flow, persistence keys/data, Convex contracts, environment variables, sync/recovery semantics, build/deployment configuration, and native integration behavior unless explicitly changing them.
+- Prefer additive/compatibility-first migrations.
+- Validate both static correctness and affected runtime behavior.
+- Record every code change and its compatibility impact in this file.
+
+## Additional engineering controls
+
+- Legacy code must be proven unused before removal.
+- Persisted data changes require backwards-compatible reads or an explicit migration.
+- Cross-layer edits require dependency and integration tracing.
+- Substantial changes require release-style verification and a documented rollback/compatibility strategy.
+
 ## Change ledger
 
 ### 2026-09-21 — Engineering foundation initialized
