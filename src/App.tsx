@@ -45,6 +45,12 @@ function AppLoadingScreen() {
 }
 
 function RootRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const isAuthCallback =
+    params.has("code") || params.has("state") || params.has("error");
+
+  if (isAuthCallback) return <AppLoadingScreen />;
+
   const welcomeSeen = localStorage.getItem("wellmate_welcome_v1") === "1";
   return welcomeSeen ? <Navigate to="/physical" replace /> : <WelcomePage />;
 }
