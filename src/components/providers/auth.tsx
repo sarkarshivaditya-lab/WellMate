@@ -12,9 +12,19 @@ function resolveRedirectUri(): string {
   if (isCapacitorNative) return CAPACITOR_CALLBACK_URI;
 
   const envUri = import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined;
-  if (envUri) return envUri;
+  const baseUri = envUri || (typeof window !== "undefined" ? window.location.origin : "");
 
-  return typeof window !== "undefined" ? window.location.origin : "";
+  if (!baseUri) return "";
+
+  try {
+    const url = new URL(baseUri);
+    if (url.pathname === "/" || url.pathname === "") {
+      url.pathname = "/callback";
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return baseUri;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
