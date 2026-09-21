@@ -73,3 +73,20 @@ Findings:
 
 Compatibility constraint:
 - No existing auth, onboarding, route, persistence, sync, native callback, or deployment behavior should be removed. The fix must be additive/compatibility-first and validated against both first-time and returning authenticated users.
+
+
+### 2026-09-21 — Bounded cached Auth0-session recovery implemented
+Status: code change complete; runtime verification pending
+Changes:
+- Added `src/auth/auth0Recovery.ts` with a narrowly scoped Auth0 SPA cache cleanup helper using the Auth0 local-storage prefix.
+- Added a 10-second bounded recovery timer to `RequireAuth` in `src/App.tsx`. If the Auth0 SDK remains loading and an Auth0 client cache exists, the app clears that cached Auth0 state and reloads once so the SDK can initialize from a clean state.
+- Existing valid authenticated sessions are not proactively cleared; recovery activates only after a prolonged `isLoading` condition.
+- No application routes, onboarding storage, Convex contracts, native callback URI, or sync behavior were changed.
+
+Rationale:
+- Existing configuration uses persistent Auth0 localStorage caching + refresh tokens and disables refresh-token fallback. Auth0 documents that cached refresh-token restoration is part of session rehydration and that disabling fallback exposes refresh failures directly. citeturn835831search0turn835831search3turn835831search12
+- The observed pattern (returning profiles affected; incognito clean profile works) is consistent with stale/corrupt persisted auth state.
+- The application previously had no bounded recovery from an indefinitely loading Auth0 state, so users could remain on the loading/welcome surface.
+
+Important:
+- Runtime verification on an affected Android device and a previously authenticated desktop profile is still required before declaring the issue resolved.
