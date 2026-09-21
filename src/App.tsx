@@ -44,6 +44,14 @@ function AppLoadingScreen() {
   );
 }
 
+function RootRoute() {
+  const { isAuthenticated, isLoading } = useAuth0();
+
+  if (isLoading) return <AppLoadingScreen />;
+
+  return <Navigate to="/physical" replace />;
+}
+
 function SignInScreen({ onSignIn, error }: { onSignIn: () => void; error?: string }) {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
@@ -181,7 +189,7 @@ export default function App() {
       <BrowserRouter>
         <React.Suspense fallback={<AppLoadingScreen />}>
           <Routes>
-            <Route path="/" element={<WelcomePage />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
             <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
