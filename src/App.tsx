@@ -71,6 +71,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const loginInFlight = React.useRef(false);
   const [authRecoveryAttempted, setAuthRecoveryAttempted] = React.useState(false);
   const [authRecoveryReloading, setAuthRecoveryReloading] = React.useState(false);
+  const [authStartupTimedOut, setAuthStartupTimedOut] = React.useState(false);
 
   React.useEffect(() => {
     if (!isLoading || authRecoveryAttempted) return;
@@ -87,6 +88,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
           window.location.reload();
           return;
         }
+        setAuthStartupTimedOut(true);
       } finally {
         setAuthRecoveryAttempted(true);
       }
@@ -117,7 +119,12 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     }
   }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
-  if (isLoading || authRecoveryReloading) return <AppLoadingScreen />;
+  if (isLoading || authRecoveryReloading) {
+    if (authStartupTimedOut) {
+      return <SignInScreen onSignIn={() => void handleLogin()} error="Authentication is taking longer than expected. Please sign in again." />;
+    }
+    return <AppLoadingScreen />;
+  }
   if (isAuthenticated) {
     return (
       <AuthSyncBoundary>
