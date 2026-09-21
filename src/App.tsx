@@ -112,11 +112,15 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
         isCapacitorNative
           ? {
               appState: { returnTo: `${location.pathname}${location.search}${location.hash}` },
-              authorizationParams: { redirect_uri: CAPACITOR_CALLBACK_URI },
+              authorizationParams: {
+                redirect_uri: CAPACITOR_CALLBACK_URI,
+                prompt: "login" as const,
+              },
               openUrl: (url: string) => Browser.open({ url, windowName: "_self" }),
             }
           : {
               appState: { returnTo: `${location.pathname}${location.search}${location.hash}` },
+              authorizationParams: { prompt: "login" as const },
             },
       );
     } catch (error) {
