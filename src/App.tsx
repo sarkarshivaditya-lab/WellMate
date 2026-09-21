@@ -65,6 +65,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const loginInFlight = React.useRef(false);
   const [authRecoveryAttempted, setAuthRecoveryAttempted] = React.useState(false);
+  const [authRecoveryReloading, setAuthRecoveryReloading] = React.useState(false);
 
   React.useEffect(() => {
     if (!isLoading || authRecoveryAttempted) return;
@@ -77,6 +78,9 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
         if (hasAuth0Cache) {
           clearAuth0AppCache();
+          setAuthRecoveryReloading(true);
+          window.location.reload();
+          return;
         }
       } finally {
         setAuthRecoveryAttempted(true);
@@ -108,8 +112,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     }
   }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
-  if (isLoading && !authRecoveryAttempted) return <AppLoadingScreen />;
-  if (isLoading && authRecoveryAttempted) return <AppLoadingScreen />;
+  if (isLoading || authRecoveryReloading) return <AppLoadingScreen />;
   if (isAuthenticated) {
     return (
       <AuthSyncBoundary>
