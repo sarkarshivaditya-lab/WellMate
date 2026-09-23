@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AUTH0_CLIENT_CACHE_PREFIX, clearAuth0AppCache } from "./auth/auth0Recovery";
 import { Skeleton } from "@/components/ui/skeleton";
