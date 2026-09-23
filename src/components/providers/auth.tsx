@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }}
       cacheLocation="localstorage"
       useRefreshTokens
+      useRefreshTokensFallback={false}
       onRedirectCallback={(appState) => {
         const returnTo =
           typeof appState?.returnTo === "string" && appState.returnTo.startsWith("/")

@@ -240,14 +240,111 @@ function UserBootstrapGate({
   );
 }
 
+function ConvexAuthRecovery({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { isAuthenticated: auth0Authenticated, isLoading: auth0Loading, loginWithRedirect, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated: convexAuthenticated, isLoading: convexLoading } = useConvexAuth();
+  const [recovering, setRecovering] = React.useState(false);
+  const [tokenError, setTokenError] = React.useState<string | null>(null);
+  const recoveryAttemptedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (auth0Loading || convexLoading || !auth0Authenticated || convexAuthenticated || recoveryAttemptedRef.current) return;
+
+    recoveryAttemptedRef.current = true;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await getAccessTokenSilently({ cacheMode: "off" });
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : String(error);
+        setTokenError(message);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [auth0Authenticated, auth0Loading, convexAuthenticated, convexLoading, getAccessTokenSilently]);
+
+  if (convexAuthenticated) return <>{children}</>;
+
+  if (convexLoading || auth0Loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Securing your WellMate session…</div>
+      </div>
+    );
+  }
+
+  if (auth0Authenticated) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+        <p className="text-sm font-medium text-foreground">Your session needs to be refreshed.</p>
+        <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+          WellMate signed you in, but the backend could not validate the current session.
+          {tokenError ? " Please sign in again to establish a fresh session." : ""}
+        </p>
+        <button
+          type="button"
+          disabled={recovering}
+          onClick={async () => {
+            if (recovering) return;
+            setRecovering(true);
+            try {
+              clearAuth0AppCache();
+              await loginWithRedirect({
+                appState: { returnTo: window.location.pathname + window.location.search + window.location.hash },
+                authorizationParams: { prompt: "login" as const },
+              });
+            } catch (error) {
+              console.error("[WellMate Auth] Convex session recovery failed:", error);
+              setRecovering(false);
+            }
+          }}
+          className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {recovering ? "Redirecting…" : "Sign in again"}
+        </button>
+      </div>
+    );
+  }
+
+  return <SignInScreenFallback onSignIn={() => void loginWithRedirect()} />;
+}
+
+function SignInScreenFallback({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-5 px-8 text-center">
+      <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">WellMate</p>
+      <p className="text-sm font-medium text-foreground">Sign in to continue</p>
+      <button
+        type="button"
+        onClick={onSignIn}
+        className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground"
+      >
+        Sign in
+      </button>
+    </div>
+  );
+}
+
 export default function AuthSyncBoundary({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <Authenticated>
-      <UserBootstrapGate>{children}</UserBootstrapGate>
-    </Authenticated>
+    <ConvexAuthRecovery>
+      <Authenticated>
+        <UserBootstrapGate>{children}</UserBootstrapGate>
+      </Authenticated>
+    </ConvexAuthRecovery>
   );
 }
