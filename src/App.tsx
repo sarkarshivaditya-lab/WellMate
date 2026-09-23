@@ -88,11 +88,15 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
           window.location.reload();
           return;
         }
+
         setAuthStartupTimedOut(true);
-      } finally {
+        setAuthRecoveryAttempted(true);
+      } catch (error) {
+        console.error("[WellMate Auth] startup recovery failed:", error);
+        setAuthStartupTimedOut(true);
         setAuthRecoveryAttempted(true);
       }
-    }, 10000);
+    }, 15000);
 
     return () => window.clearTimeout(timer);
   }, [isLoading, authRecoveryAttempted]);
@@ -123,9 +127,13 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     }
   }, [location.hash, location.pathname, location.search, loginWithRedirect]);
 
-  if (isLoading || authRecoveryReloading) {
+  if (authRecoveryReloading) {
+    return <AppLoadingScreen />;
+  }
+
+  if (isLoading) {
     if (authStartupTimedOut) {
-      return <SignInScreen onSignIn={() => void handleLogin()} error="Authentication is taking longer than expected. Please sign in again." />;
+      return <SignInScreen onSignIn={() => void handleLogin()} error="Your saved sign-in session could not be restored. Please sign in again." />;
     }
     return <AppLoadingScreen />;
   }

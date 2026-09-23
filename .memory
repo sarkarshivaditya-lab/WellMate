@@ -109,3 +109,16 @@ Verification:
 - The newer deployment containing the final Auth0/root-route adjustment is currently BUILDING; runtime verification on affected Android Chrome profiles remains necessary.
 Research:
 - Auth0's current guidance confirms refresh-token failures with `useRefreshTokensFallback={false}` should be handled and can otherwise leave repeated authentication failures; Auth0 also documents browser cookie restrictions as a source of silent-auth failures. citeturn3search0turn3search3
+
+
+### 2026-09-23 — Production auth/session recovery hardening
+Status: code fixes applied as one logical change set; GitHub Contents API records a commit per file update.
+Changes:
+- Removed `useRefreshTokensFallback={false}` from the browser Auth0 provider. Auth0 documents that disabling fallback makes refresh-token failures surface immediately; retaining the SDK fallback gives the browser a recovery path when a persisted refresh token is rejected. Safari is particularly sensitive to cookie-based silent authentication because of ITP, while refresh-token flow avoids that cookie dependency.
+- Hardened the Auth0 startup timeout in `RequireAuth` so recovery cannot leave the UI trapped behind the loading state. After the bounded wait, a recoverable cached session is cleared and the page reloads once; otherwise the existing sign-in screen is shown.
+- Added pnpm `onlyBuiltDependencies: ["sharp"]` to package.json so Vercel's pnpm security policy permits sharp's install script. The supplied `fs.R_OK` message is a deprecation warning from sharp 0.32.6, not evidence of the browser runtime failure.
+- Existing application routes, Convex contracts, onboarding persistence, native Capacitor callback handling, and sync architecture were preserved.
+Evidence:
+- Current production deployment for `main` commit `8e4902d...` is READY in the linked Vercel `well-mate-app` project.
+- Supplied Safari console evidence shows repeated HTTP 403 failures followed by Convex WebSocket reconnect after `InactiveServer`.
+- The repository's engineering memory previously identified persisted Auth0 state plus `useRefreshTokensFallback={false}` as a primary failure surface.
