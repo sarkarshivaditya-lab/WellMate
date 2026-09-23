@@ -8,8 +8,14 @@ export const isCapacitorNative = Capacitor.isNativePlatform();
 // <packageId>://<auth0Domain>/capacitor/<packageId>/callback
 export const CAPACITOR_CALLBACK_URI = `com.wellmate.app://${import.meta.env.VITE_AUTH0_DOMAIN}/capacitor/com.wellmate.app/callback`;
 
+const WEB_PRODUCTION_CALLBACK_URI = "https://well-mate-app.vercel.app/callback";
+
 function resolveRedirectUri(): string {
   if (isCapacitorNative) return CAPACITOR_CALLBACK_URI;
+
+  if (import.meta.env.PROD) {
+    return WEB_PRODUCTION_CALLBACK_URI;
+  }
 
   const envUri = import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined;
   const baseUri = envUri || (typeof window !== "undefined" ? window.location.origin : "");
