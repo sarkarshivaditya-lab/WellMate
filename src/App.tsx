@@ -65,6 +65,75 @@ function SignInScreen({ onSignIn, error }: { onSignIn: () => void; error?: strin
   );
 }
 
+function AuthCallbackRoute() {
+  const { isAuthenticated, isLoading, error, loginWithRedirect } = useAuth0();
+  const navigate = useNavigate();
+  const [timedOut, setTimedOut] = React.useState(false);
+  const [retrying, setRetrying] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isLoading) return;
+
+    if (error) return;
+
+    if (isAuthenticated) {
+      navigate("/physical", { replace: true });
+      return;
+    }
+
+    navigate("/", { replace: true });
+  }, [error, isAuthenticated, isLoading, navigate]);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setTimedOut(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setTimedOut(true);
+    }, 15000);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoading]);
+
+  const retry = React.useCallback(async () => {
+    if (retrying) return;
+    setRetrying(true);
+
+    try {
+      clearAuth0AppCache();
+      await loginWithRedirect({
+        appState: { returnTo: "/physical" },
+        authorizationParams: { prompt: "login" as const },
+      });
+    } catch (retryError) {
+      console.error("[WellMate Auth] callback retry failed:", retryError);
+      setRetrying(false);
+    }
+  }, [loginWithRedirect, retrying]);
+
+  if (error) {
+    return (
+      <SignInScreen
+        onSignIn={() => void retry()}
+        error={`Auth0 callback failed: ${error.message}`}
+      />
+    );
+  }
+
+  if (timedOut) {
+    return (
+      <SignInScreen
+        onSignIn={() => void retry()}
+        error="Auth0 did not finish processing the sign-in callback. Please start a fresh sign-in."
+      />
+    );
+  }
+
+  return <AppLoadingScreen />;
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, error: authError, loginWithRedirect } = useAuth0();
   const location = useLocation();
@@ -206,7 +275,7 @@ export default function App() {
         <React.Suspense fallback={<AppLoadingScreen />}>
           <Routes>
             <Route path="/" element={<RootRoute />} />
-            <Route path="/callback" element={<AppLoadingScreen />} />
+            <Route path="/callback" element={<AuthCallbackRoute />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/transition" element={<TransitionGate><Navigate to="/physical" replace /></TransitionGate>} />
             <Route element={<RequireAuth><AppShell><Outlet /></AppShell></RequireAuth>}>
